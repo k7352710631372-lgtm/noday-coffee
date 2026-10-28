@@ -11,7 +11,7 @@
   <header class="bg-[#213c64] text-white p-4 shadow flex justify-between items-center">
     <div>
       <h1 class="text-xl font-bold">☕ NODAY 吧台管理後台</h1>
-      <p class="text-xs text-gray-200 mt-0.5">即時接單看板 ＆ 全品項獨立加價管理</p>
+      <p class="text-xs text-gray-200 mt-0.5">即時接單看板 ＆ 加價選項自由設定</p>
     </div>
     <div class="flex gap-2">
       <button onclick="openAddItemModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow">
@@ -27,7 +27,7 @@
     <!-- 即時接單區 -->
     <section class="bg-white p-5 rounded-2xl shadow-sm">
       <h2 class="text-base font-extrabold text-gray-900 mb-3 flex items-center justify-between">
-        <span>🔔 即時新訂單看板</span>
+        <span>🔔 即時新訂單看板 (外帶專用)</span>
         <span class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">新單自動提醒</span>
       </h2>
       <div id="orders-container" class="space-y-3">
@@ -131,7 +131,7 @@
         </div>
       </div>
 
-      <!-- 自訂加價規則 (燕麥奶、可可粉、黑糖粉、肉桂粉等) -->
+      <!-- 自訂加價規則 (加一份濃縮、更換燕麥奶等) -->
       <div>
         <label class="text-xs font-bold text-gray-600 block mb-1">其他加價項目 (格式：名稱:價錢，多個用逗號隔開)</label>
         <input type="text" id="edit-custom-rules" class="w-full border rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#2b4c7e]">
@@ -487,7 +487,7 @@
       snapshot.forEach(d => { if (d.data().status === "pending") pendingOrders.push({ id: d.id, ...d.data() }); });
 
       if (pendingOrders.length === 0) {
-        container.innerHTML = `<p class="text-gray-400 text-sm py-4 text-center">目前沒有待處理的新訂單...</p>`;
+        container.innerHTML = `<p class="text-gray-400 text-sm py-4 text-center">目前沒有待處理的訂單...</p>`;
         return;
       }
 
