@@ -187,25 +187,39 @@
       const opts = activeItem.options || {};
       let html = '';
 
-      if (opts.temp) {
+      // 獨立溫度選項
+      const temps = [];
+      if (opts.ice) temps.push('冰');
+      if (opts.hot) temps.push('熱');
+      if (temps.length > 0) {
         html += `
           <div>
             <label class="font-bold text-gray-700 block mb-1">飲品溫度：</label>
-            <div class="grid grid-cols-2 gap-2">
-              <label class="border p-2 rounded-xl text-center cursor-pointer font-bold"><input type="radio" name="opt-temp" value="冰" checked class="mr-1.5"> 冰飲</label>
-              <label class="border p-2 rounded-xl text-center cursor-pointer font-bold"><input type="radio" name="opt-temp" value="熱" class="mr-1.5"> 熱飲</label>
+            <div class="grid grid-cols-${temps.length} gap-2">
+              ${temps.map((t, idx) => `
+                <label class="border p-2 rounded-xl text-center cursor-pointer font-bold">
+                  <input type="radio" name="opt-temp" value="${t}" ${idx === 0 ? 'checked' : ''} class="mr-1.5"> ${t}飲
+                </label>
+              `).join('')}
             </div>
           </div>
         `;
       }
 
-      if (opts.bean) {
+      // 獨立配方豆選項
+      const beans = [];
+      if (opts.bean5) beans.push('5號配方(經典)');
+      if (opts.bean1) beans.push('1號配方(果香)');
+      if (beans.length > 0) {
         html += `
           <div>
             <label class="font-bold text-gray-700 block mb-1">選擇配方豆：</label>
-            <div class="grid grid-cols-2 gap-2">
-              <label class="border p-2 rounded-xl text-center cursor-pointer font-bold"><input type="radio" name="opt-bean" value="5號配方(經典)" checked class="mr-1.5"> 5號配方(經典)</label>
-              <label class="border p-2 rounded-xl text-center cursor-pointer font-bold"><input type="radio" name="opt-bean" value="1號配方(果香)" class="mr-1.5"> 1號配方(果香)</label>
+            <div class="grid grid-cols-${beans.length} gap-2">
+              ${beans.map((b, idx) => `
+                <label class="border p-2 rounded-xl text-center cursor-pointer font-bold text-[11px]">
+                  <input type="radio" name="opt-bean" value="${b}" ${idx === 0 ? 'checked' : ''} class="mr-1"> ${b}
+                </label>
+              `).join('')}
             </div>
           </div>
         `;
@@ -229,25 +243,32 @@
           <div>
             <label class="font-bold text-gray-700 block mb-1">加購選項：</label>
             <label class="flex items-center gap-2 border p-2.5 rounded-xl cursor-pointer">
-              <input type="checkbox" id="opt-addon-shot" value="加一份濃縮 (+NT$20)" class="w-4 h-4 text-[#213c64]">
+              <input type="checkbox" id="opt-addon-shot" data-price="20" value="加一份濃縮 (+NT$20)" class="w-4 h-4 text-[#213c64] custom-addon-checkbox" onchange="updateModalPrice()">
               <span class="font-bold">加一份濃縮 (+NT$20)</span>
             </label>
           </div>
         `;
       }
 
-      if (activeItem.customTag) {
-        const tags = activeItem.customTag.split(',').map(t => t.trim()).filter(Boolean);
-        if (tags.length > 0) {
+      // 自訂規則帶價錢渲染
+      if (activeItem.customRules) {
+        const rules = activeItem.customRules.split(',').map(r => r.trim()).filter(Boolean);
+        if (rules.length > 0) {
           html += `
             <div>
-              <label class="font-bold text-gray-700 block mb-1">自訂選項：</label>
-              <div class="flex flex-wrap gap-2">
-                ${tags.map((t, idx) => `
-                  <label class="border px-3 py-2 rounded-xl text-center cursor-pointer font-bold text-xs bg-gray-50">
-                    <input type="checkbox" name="custom-tag-option" value="${t}" class="mr-1.5"> ${t}
-                  </label>
-                `).join('')}
+              <label class="font-bold text-gray-700 block mb-1">自訂加價與選項：</label>
+              <div class="space-y-2">
+                ${rules.map(ruleStr => {
+                  let parts = ruleStr.split(':');
+                  let ruleName = parts[0].trim();
+                  let rulePrice = parts[1] ? Number(parts[1]) : 0;
+                  return `
+                    <label class="flex items-center justify-between border p-2.5 rounded-xl cursor-pointer">
+                      <span class="font-bold">${ruleName} ${rulePrice > 0 ? `(+NT$${rulePrice})` : ''}</span>
+                      <input type="checkbox" name="custom-rule-option" data-price="${rulePrice}" value="${ruleName}${rulePrice > 0 ? ` (+NT$${rulePrice})` : ''}" class="w-4 h-4 text-[#213c64] custom-addon-checkbox" onchange="updateModalPrice()">
+                    </label>
+                  `;
+                }).join('')}
               </div>
             </div>
           `;
@@ -258,6 +279,15 @@
       document.getElementById('customize-modal').classList.remove('hidden');
     };
 
+    window.updateModalPrice = function() {
+      if (!activeItem) return;
+      let base = activeItem.price;
+      document.querySelectorAll('.custom-addon-checkbox:checked').forEach(el => {
+        base += Number(el.getAttribute('data-price') || 0);
+      });
+      document.getElementById('modal-item-price').innerText = `NT$${base * currentQty}`;
+    };
+
     window.closeModal = function() {
       document.getElementById('customize-modal').classList.add('hidden');
     };
@@ -266,12 +296,13 @@
       currentQty += change;
       if (currentQty < 1) currentQty = 1;
       document.getElementById('modal-qty').innerText = currentQty;
+      updateModalPrice();
     };
 
     window.confirmAddToCart = function() {
       if (!activeItem) return;
       const modifiers = [];
-      let finalPrice = activeItem.price;
+      let finalUnitPrice = activeItem.price;
 
       const tempEl = document.querySelector('input[name="opt-temp"]:checked');
       if (tempEl) modifiers.push(tempEl.value);
@@ -285,11 +316,13 @@
       const addonEl = document.getElementById('opt-addon-shot');
       if (addonEl && addonEl.checked) {
         modifiers.push("加一份濃縮");
-        finalPrice += 20;
+        finalUnitPrice += 20;
       }
 
-      document.querySelectorAll('input[name="custom-tag-option"]:checked').forEach(el => {
-        modifiers.push(el.value);
+      document.querySelectorAll('input[name="custom-rule-option"]:checked').forEach(el => {
+        modifiers.push(el.value.split(' ')[0]); // 僅存名稱
+        let p = Number(el.getAttribute('data-price') || 0);
+        finalUnitPrice += p;
       });
 
       const note = document.getElementById('modal-note').value.trim();
@@ -297,7 +330,7 @@
       cart.push({
         id: activeItem.id,
         name: activeItem.name,
-        price: finalPrice,
+        price: finalUnitPrice,
         qty: currentQty,
         modifiers: modifiers,
         note: note
@@ -335,7 +368,6 @@
         }).join('');
         totalEl.innerText = `NT$${total}`;
       }
-      document.getElementById('cart-drawer').classList.add('hidden'); // Fix open state
       document.getElementById('cart-drawer').classList.remove('hidden');
     };
 
