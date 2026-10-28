@@ -11,7 +11,7 @@
   <header class="bg-[#213c64] text-white p-4 shadow flex justify-between items-center">
     <div>
       <h1 class="text-xl font-bold">☕ NODAY 吧台管理後台</h1>
-      <p class="text-xs text-gray-200 mt-0.5">即時接單看板 ＆ 進階自訂規則管理</p>
+      <p class="text-xs text-gray-200 mt-0.5">即時接單看板 ＆ 進階加價規則管理</p>
     </div>
     <div class="flex gap-2">
       <button onclick="openAddItemModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow">
@@ -37,8 +37,8 @@
 
     <!-- 菜單管理區 -->
     <section class="bg-white p-5 rounded-2xl shadow-sm">
-      <h2 class="text-base font-extrabold text-gray-900 mb-2">🛠️ 雲端菜單與細緻選項管理</h2>
-      <p class="text-xs text-gray-500 mb-4">您可以自由調整每個品項的獨立選項，或新增帶有價錢的自訂規則！</p>
+      <h2 class="text-base font-extrabold text-gray-900 mb-2">🛠️ 雲端菜單與加價規則管理</h2>
+      <p class="text-xs text-gray-500 mb-4">您可以自由調整每個品項的獨立選項，或設定帶有價錢的自訂規則！</p>
       <div id="admin-menu-list" class="space-y-4">
         <p class="text-gray-400 text-sm">正在載入菜單...</p>
       </div>
@@ -48,7 +48,7 @@
   <!-- 編輯品項 Modal -->
   <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
     <div class="bg-white w-full max-w-lg rounded-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-      <h3 class="text-lg font-bold text-gray-900">修改品項與細緻客製選項</h3>
+      <h3 class="text-lg font-bold text-gray-900">修改品項與加價規則</h3>
       <input type="hidden" id="edit-cat-name">
       <input type="hidden" id="edit-item-id">
       
@@ -68,9 +68,9 @@
         <input type="text" id="edit-desc" class="w-full border rounded-lg p-2.5 text-sm mt-1 focus:outline-none focus:border-[#2b4c7e]">
       </div>
 
-      <!-- 拆分獨立選項 -->
+      <!-- 獨立選項拆分 -->
       <div class="border rounded-xl p-3 bg-gray-50 space-y-3">
-        <label class="text-xs font-bold text-[#213c64] block">溫度與豆種選項拆分：</label>
+        <label class="text-xs font-bold text-[#213c64] block">溫度與豆種選項：</label>
         
         <div class="grid grid-cols-2 gap-2 text-xs">
           <label class="flex items-center gap-2 bg-white p-2.5 rounded-lg border cursor-pointer shadow-sm">
@@ -96,18 +96,14 @@
             <input type="checkbox" id="opt-sugar" class="w-4 h-4 text-[#213c64]">
             <span class="font-bold">提供「甜度調整」選項 (正常/半糖/微糖/無糖)</span>
           </label>
-          <label class="flex items-center gap-2 bg-white p-2.5 rounded-lg border cursor-pointer shadow-sm">
-            <input type="checkbox" id="opt-addons" class="w-4 h-4 text-[#213c64]">
-            <span class="font-bold">提供「加購濃縮」選項 (+NT$20)</span>
-          </label>
         </div>
       </div>
 
       <!-- 自訂帶價錢的新規則 -->
       <div>
         <label class="text-xs font-bold text-gray-600 block mb-1">自訂規則與加價 (格式：名稱:價錢，多個用逗號隔開)</label>
-        <input type="text" id="edit-custom-rules" placeholder="例如：加珍珠:15,換燕麥奶:20" class="w-full border rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#2b4c7e]">
-        <p class="text-[10px] text-gray-400 mt-1">提示：冒號左邊是選項名稱，右邊是加價金額。若不加價直接寫名稱即可。</p>
+        <input type="text" id="edit-custom-rules" class="w-full border rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#2b4c7e]">
+        <p class="text-[10px] text-gray-400 mt-1">範例：加一份濃縮:20,更換燕麥奶:25,可可粉:10,黑糖粉:10,肉桂粉:10</p>
       </div>
 
       <div class="flex gap-3 pt-2">
@@ -173,96 +169,98 @@
 
     let cachedCatalog = [];
 
+    const defaultAddons = "加一份濃縮:20,更換燕麥奶:25,可可粉:10,黑糖粉:10,肉桂粉:10";
+
     const defaultMenuCatalog = [
       {
         order: 1, category: "美式系列 Americano",
         items: [
-          { id: "a1", name: "美式咖啡", price: 80, desc: "16oz｜經典純粹配方", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: false, addons: true }, customRules: "", soldOut: false },
-          { id: "a2", name: "香橙美式", price: 90, desc: "16oz｜清爽果香融合濃縮咖啡", options: { ice: true, hot: false, bean5: false, bean1: false, sugar: false, addons: true }, customRules: "", soldOut: false },
-          { id: "a3", name: "荔枝美式", price: 90, desc: "16oz", options: { ice: true, hot: false, bean5: false, bean1: false, sugar: false, addons: true }, customRules: "", soldOut: false },
-          { id: "a4", name: "黑嘉麗美式", price: 90, desc: "16oz", options: { ice: true, hot: false, bean5: false, bean1: false, sugar: false, addons: true }, customRules: "", soldOut: false },
-          { id: "a5", name: "西西里氣泡美式", price: 110, desc: "16oz｜微氣泡清爽檸檬香", options: { ice: true, hot: false, bean5: false, bean1: false, sugar: true, addons: true }, customRules: "", soldOut: false },
-          { id: "a6", name: "西西里百香美式", price: 100, desc: "16oz", options: { ice: true, hot: false, bean5: false, bean1: false, sugar: true, addons: true }, customRules: "", soldOut: false }
+          { id: "a1", name: "美式咖啡", price: 80, desc: "16oz｜經典純粹配方", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: false }, customRules: defaultAddons, soldOut: false },
+          { id: "a2", name: "香橙美式", price: 90, desc: "16oz｜清爽果香融合濃縮咖啡", options: { ice: true, hot: false, bean5: false, bean1: false, sugar: false }, customRules: defaultAddons, soldOut: false },
+          { id: "a3", name: "荔枝美式", price: 90, desc: "16oz", options: { ice: true, hot: false, bean5: false, bean1: false, sugar: false }, customRules: defaultAddons, soldOut: false },
+          { id: "a4", name: "黑嘉麗美式", price: 90, desc: "16oz", options: { ice: true, hot: false, bean5: false, bean1: false, sugar: false }, customRules: defaultAddons, soldOut: false },
+          { id: "a5", name: "西西里氣泡美式", price: 110, desc: "16oz｜微氣泡清爽檸檬香", options: { ice: true, hot: false, bean5: false, bean1: false, sugar: true }, customRules: defaultAddons, soldOut: false },
+          { id: "a6", name: "西西里百香美式", price: 100, desc: "16oz", options: { ice: true, hot: false, bean5: false, bean1: false, sugar: true }, customRules: defaultAddons, soldOut: false }
         ]
       },
       {
         order: 2, category: "單品手沖 PourOver",
         items: [
-          { id: "p1", name: "衣索比亞西達馬桃子甜心水洗", price: 130, desc: "中淺培┃水果軟糖、白桃、烏龍茶", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "p2", name: "中國雲南雲頂莊園荊棘玫瑰日曬", price: 130, desc: "中淺培┃熱帶水果、葡萄、花香尾韻", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "p3", name: "蘇門答臘華漢納黑珍珠批次濕撥法", price: 130, desc: "中培｜雪松、焦糖、榛果巧可力", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "p4", name: "衣索比亞耶加雪菲日曬(非洲式烘培)", price: 130, desc: "中深培｜熱帶水果、黑巧克力、甜奶油", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "p5", name: "衣索比亞西達摩南希寶森林日曬", price: 150, desc: "中淺培┃鳳梨、芒果乾、甜桃、藍莓果醬", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "p6", name: "肯亞吉利尼亞加卡穆旺吉水洗", price: 150, desc: "中淺培┃柑橘、覆盆子、蜂蜜、榛果", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "p7", name: "哥斯大黎加莫扎特葡萄乾蜜處理", price: 150, desc: "中淺培┃葡萄乾、蜜餞、草莓果醬、紫羅蘭", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "p8", name: "衣索比亞古吉歐克羅有機日曬", price: 150, desc: "中淺培┃萊姆、佛手柑、檸檬紅茶", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "p9", name: "哥倫比亞薇拉卡斯提歐厭氧日曬", price: 170, desc: "中淺培｜熱帶水果、香蕉、奇異果、紅糖", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "p10", name: "哥倫比亞凡爾賽葡萄香檳水洗", price: 170, desc: "中淺培┃香檳汽水、葡萄軟糖、雞尾酒", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "p11", name: "哥倫比亞凡爾賽蜜桃果茶水洗", price: 170, desc: "中淺培┃蜜桃、無花果、花果茶", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "p12", name: "秘魯薇拉瑞卡花仙子藝妓水洗", price: 170, desc: "中淺培｜密蘋果、杏桃、雞蛋花", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "p13", name: "巴拿馬巴魯火山拓荒者藝妓熱發酵處理", price: 200, desc: "中淺培｜鳳梨、甜漬櫻桃、茉莉花", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "p14", name: "巴拿馬聖塔克拉拉午夜紫蝶水洗", price: 170, desc: "中淺培｜紫葡萄、紅花香、甜橙", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "p15", name: "哥倫比亞聖徒阿里歐愛情靈藥水洗", price: 130, desc: "", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false }
+          { id: "p1", name: "衣索比亞西達馬桃子甜心水洗", price: 130, desc: "中淺培┃水果軟糖、白桃、烏龍茶", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false }, customRules: "更換燕麥奶:25,黑糖粉:10,肉桂粉:10", soldOut: false },
+          { id: "p2", name: "中國雲南雲頂莊園荊棘玫瑰日曬", price: 130, desc: "中淺培┃熱帶水果、葡萄、花香尾韻", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false }, customRules: "更換燕麥奶:25,黑糖粉:10,肉桂粉:10", soldOut: false },
+          { id: "p3", name: "蘇門答臘華漢納黑珍珠批次濕撥法", price: 130, desc: "中培｜雪松、焦糖、榛果巧可力", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false }, customRules: "更換燕麥奶:25,黑糖粉:10,肉桂粉:10", soldOut: false },
+          { id: "p4", name: "衣索比亞耶加雪菲日曬(非洲式烘培)", price: 130, desc: "中深培｜熱帶水果、黑巧克力、甜奶油", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false }, customRules: "更換燕麥奶:25,黑糖粉:10,肉桂粉:10", soldOut: false },
+          { id: "p5", name: "衣索比亞西達摩南希寶森林日曬", price: 150, desc: "中淺培┃鳳梨、芒果乾、甜桃、藍莓果醬", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false }, customRules: "更換燕麥奶:25,黑糖粉:10,肉桂粉:10", soldOut: false },
+          { id: "p6", name: "肯亞吉利尼亞加卡穆旺吉水洗", price: 150, desc: "中淺培┃柑橘、覆盆子、蜂蜜、榛果", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false }, customRules: "更換燕麥奶:25,黑糖粉:10,肉桂粉:10", soldOut: false },
+          { id: "p7", name: "哥斯大黎加莫扎特葡萄乾蜜處理", price: 150, desc: "中淺培┃葡萄乾、蜜餞、草莓果醬、紫羅蘭", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false }, customRules: "更換燕麥奶:25,黑糖粉:10,肉桂粉:10", soldOut: false },
+          { id: "p8", name: "衣索比亞古吉歐克羅有機日曬", price: 150, desc: "中淺培┃萊姆、佛手柑、檸檬紅茶", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false }, customRules: "更換燕麥奶:25,黑糖粉:10,肉桂粉:10", soldOut: false },
+          { id: "p9", name: "哥倫比亞薇拉卡斯提歐厭氧日曬", price: 170, desc: "中淺培｜熱帶水果、香蕉、奇異果、紅糖", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false }, customRules: "更換燕麥奶:25,黑糖粉:10,肉桂粉:10", soldOut: false },
+          { id: "p10", name: "哥倫比亞凡爾賽葡萄香檳水洗", price: 170, desc: "中淺培┃香檳汽水、葡萄軟糖、雞尾酒", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false }, customRules: "更換燕麥奶:25,黑糖粉:10,肉桂粉:10", soldOut: false },
+          { id: "p11", name: "哥倫比亞凡爾賽蜜桃果茶水洗", price: 170, desc: "中淺培┃蜜桃、無花果、花果茶", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false }, customRules: "更換燕麥奶:25,黑糖粉:10,肉桂粉:10", soldOut: false },
+          { id: "p12", name: "秘魯薇拉瑞卡花仙子藝妓水洗", price: 170, desc: "中淺培｜密蘋果、杏桃、雞蛋花", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false }, customRules: "更換燕麥奶:25,黑糖粉:10,肉桂粉:10", soldOut: false },
+          { id: "p13", name: "巴拿馬巴魯火山拓荒者藝妓熱發酵處理", price: 200, desc: "中淺培｜鳳梨、甜漬櫻桃、茉莉花", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false }, customRules: "更換燕麥奶:25,黑糖粉:10,肉桂粉:10", soldOut: false },
+          { id: "p14", name: "巴拿馬聖塔克拉拉午夜紫蝶水洗", price: 170, desc: "中淺培｜紫葡萄、紅花香、甜橙", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false }, customRules: "更換燕麥奶:25,黑糖粉:10,肉桂粉:10", soldOut: false },
+          { id: "p15", name: "哥倫比亞聖徒阿里歐愛情靈藥水洗", price: 130, desc: "", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false }, customRules: "更換燕麥奶:25,黑糖粉:10,肉桂粉:10", soldOut: false }
         ]
       },
       {
         order: 3, category: "拿鐵系列 Cafe Latte",
         items: [
-          { id: "l1", name: "卡布奇諾", price: 120, desc: "16oz", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: false, addons: true }, customRules: "", soldOut: false },
-          { id: "l2", name: "拿鐵", price: 120, desc: "16oz", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: false, addons: true }, customRules: "", soldOut: false },
-          { id: "l3", name: "蜂蜜拿鐵", price: 125, desc: "16oz", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: true, addons: true }, customRules: "", soldOut: false },
-          { id: "l4", name: "香草拿鐵", price: 125, desc: "16oz", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: true, addons: true }, customRules: "", soldOut: false },
-          { id: "l5", name: "榛果拿鐵", price: 125, desc: "16oz", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: true, addons: true }, customRules: "", soldOut: false },
-          { id: "l6", name: "焦糖海鹽拿鐵", price: 125, desc: "16oz", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: true, addons: true }, customRules: "", soldOut: false },
-          { id: "l7", name: "玫瑰拿鐵", price: 125, desc: "16oz", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: true, addons: true }, customRules: "", soldOut: false },
-          { id: "l8", name: "半半拿鐵", price: 130, desc: "16oz", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: false, addons: true }, customRules: "", soldOut: false },
-          { id: "l9", name: "焦糖瑪其朵", price: 130, desc: "16oz", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: true, addons: true }, customRules: "", soldOut: false },
-          { id: "l10", name: "宇治抹茶拿鐵", price: 135, desc: "16oz", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: true, addons: true }, customRules: "", soldOut: false },
-          { id: "l11", name: "威士忌拿鐵", price: 135, desc: "16oz｜大人系微醺風味", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: true, addons: true }, customRules: "", soldOut: false },
-          { id: "l12", name: "貝里斯奶酒拿鐵", price: 135, desc: "16oz｜大人系微醺風味", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: true, addons: true }, customRules: "", soldOut: false },
-          { id: "l13", name: "君度橙酒拿鐵", price: 135, desc: "16oz｜大人系微醺風味", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: true, addons: true }, customRules: "", soldOut: false }
+          { id: "l1", name: "卡布奇諾", price: 120, desc: "16oz", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: false }, customRules: defaultAddons, soldOut: false },
+          { id: "l2", name: "拿鐵", price: 120, desc: "16oz", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: false }, customRules: defaultAddons, soldOut: false },
+          { id: "l3", name: "蜂蜜拿鐵", price: 125, desc: "16oz", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: true }, customRules: defaultAddons, soldOut: false },
+          { id: "l4", name: "香草拿鐵", price: 125, desc: "16oz", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: true }, customRules: defaultAddons, soldOut: false },
+          { id: "l5", name: "榛果拿鐵", price: 125, desc: "16oz", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: true }, customRules: defaultAddons, soldOut: false },
+          { id: "l6", name: "焦糖海鹽拿鐵", price: 125, desc: "16oz", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: true }, customRules: defaultAddons, soldOut: false },
+          { id: "l7", name: "玫瑰拿鐵", price: 125, desc: "16oz", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: true }, customRules: defaultAddons, soldOut: false },
+          { id: "l8", name: "半半拿鐵", price: 130, desc: "16oz", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: false }, customRules: defaultAddons, soldOut: false },
+          { id: "l9", name: "焦糖瑪其朵", price: 130, desc: "16oz", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: true }, customRules: defaultAddons, soldOut: false },
+          { id: "l10", name: "宇治抹茶拿鐵", price: 135, desc: "16oz", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: true }, customRules: defaultAddons, soldOut: false },
+          { id: "l11", name: "威士忌拿鐵", price: 135, desc: "16oz｜大人系微醺風味", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: true }, customRules: defaultAddons, soldOut: false },
+          { id: "l12", name: "貝里斯奶酒拿鐵", price: 135, desc: "16oz｜大人系微醺風味", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: true }, customRules: defaultAddons, soldOut: false },
+          { id: "l13", name: "君度橙酒拿鐵", price: 135, desc: "16oz｜大人系微醺風味", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: true }, customRules: defaultAddons, soldOut: false }
         ]
       },
       {
         order: 4, category: "風味飲品 Beverage",
         items: [
-          { id: "b1", name: "歐式花果茶", price: 90, desc: "無咖啡因", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "b2", name: "紅茶歐蕾", price: 100, desc: "16oz", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: true, addons: false }, customRules: "", soldOut: false },
-          { id: "b3", name: "風味紅茶歐蕾", price: 110, desc: "16oz", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: true, addons: false }, customRules: "", soldOut: false },
-          { id: "b4", name: "黑糖歐蕾", price: 120, desc: "16oz", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "b5", name: "榛果歐蕾", price: 120, desc: "16oz", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "b6", name: "香草歐蕾", price: 120, desc: "16oz", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "b7", name: "法芙娜可可歐蕾", price: 120, desc: "16oz", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "b8", name: "焦糖海鹽歐蕾", price: 120, desc: "16oz", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "b9", name: "玫瑰歐蕾", price: 120, desc: "16oz", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "b10", name: "宇治抹茶歐蕾", price: 120, desc: "16oz", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "b11", name: "濃情可可歐蕾", price: 135, desc: "16oz", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false }
+          { id: "b1", name: "歐式花果茶", price: 90, desc: "無咖啡因", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false }, customRules: "黑糖粉:10,肉桂粉:10", soldOut: false },
+          { id: "b2", name: "紅茶歐蕾", price: 100, desc: "16oz", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: true }, customRules: "珍珠:15,黑糖粉:10,肉桂粉:10", soldOut: false },
+          { id: "b3", name: "風味紅茶歐蕾", price: 110, desc: "16oz", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: true }, customRules: "珍珠:15,黑糖粉:10,肉桂粉:10", soldOut: false },
+          { id: "b4", name: "黑糖歐蕾", price: 120, desc: "16oz", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false }, customRules: "珍珠:15,黑糖粉:10,肉桂粉:10", soldOut: false },
+          { id: "b5", name: "榛果歐蕾", price: 120, desc: "16oz", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false }, customRules: "珍珠:15,黑糖粉:10,肉桂粉:10", soldOut: false },
+          { id: "b6", name: "香草歐蕾", price: 120, desc: "16oz", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false }, customRules: "珍珠:15,黑糖粉:10,肉桂粉:10", soldOut: false },
+          { id: "b7", name: "法芙娜可可歐蕾", price: 120, desc: "16oz", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false }, customRules: "珍珠:15,黑糖粉:10,肉桂粉:10", soldOut: false },
+          { id: "b8", name: "焦糖海鹽歐蕾", price: 120, desc: "16oz", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false }, customRules: "珍珠:15,黑糖粉:10,肉桂粉:10", soldOut: false },
+          { id: "b9", name: "玫瑰歐蕾", price: 120, desc: "16oz", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false }, customRules: "珍珠:15,黑糖粉:10,肉桂粉:10", soldOut: false },
+          { id: "b10", name: "宇治抹茶歐蕾", price: 120, desc: "16oz", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false }, customRules: "珍珠:15,黑糖粉:10,肉桂粉:10", soldOut: false },
+          { id: "b11", name: "濃情可可歐蕾", price: 135, desc: "16oz", options: { ice: true, hot: true, bean5: false, bean1: false, sugar: false }, customRules: "珍珠:15,黑糖粉:10,肉桂粉:10", soldOut: false }
         ]
       },
       {
         order: 5, category: "NODAY 周邊",
         items: [
-          { id: "m1", name: "脆皮可麗露", price: 70, desc: "", options: { ice: false, hot: false, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "m2", name: "OAT燕麥奶", price: 165, desc: "", options: { ice: false, hot: false, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "m3", name: "酵素漂白濾紙", price: 100, desc: "", options: { ice: false, hot: false, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false }
+          { id: "m1", name: "脆皮可麗露", price: 70, desc: "", options: { ice: false, hot: false, bean5: false, bean1: false, sugar: false }, customRules: "", soldOut: false },
+          { id: "m2", name: "OAT燕麥奶", price: 165, desc: "", options: { ice: false, hot: false, bean5: false, bean1: false, sugar: false }, customRules: "", soldOut: false },
+          { id: "m3", name: "酵素漂白濾紙", price: 100, desc: "", options: { ice: false, hot: false, bean5: false, bean1: false, sugar: false }, customRules: "", soldOut: false }
         ]
       },
       {
         order: 6, category: "微氣泡 Fizzy",
         items: [
-          { id: "f1", name: "蜂蜜檸檬氣泡", price: 110, desc: "", options: { ice: true, hot: false, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "f2", name: "黑嘉麗氣泡", price: 110, desc: "", options: { ice: true, hot: false, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "f3", name: "荔枝氣泡", price: 110, desc: "", options: { ice: true, hot: false, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false },
-          { id: "f4", name: "香橙氣泡", price: 110, desc: "", options: { ice: true, hot: false, bean5: false, bean1: false, sugar: false, addons: false }, customRules: "", soldOut: false }
+          { id: "f1", name: "蜂蜜檸檬氣泡", price: 110, desc: "", options: { ice: true, hot: false, bean5: false, bean1: false, sugar: false }, customRules: "", soldOut: false },
+          { id: "f2", name: "黑嘉麗氣泡", price: 110, desc: "", options: { ice: true, hot: false, bean5: false, bean1: false, sugar: false }, customRules: "", soldOut: false },
+          { id: "f3", name: "荔枝氣泡", price: 110, desc: "", options: { ice: true, hot: false, bean5: false, bean1: false, sugar: false }, customRules: "", soldOut: false },
+          { id: "f4", name: "香橙氣泡", price: 110, desc: "", options: { ice: true, hot: false, bean5: false, bean1: false, sugar: false }, customRules: "", soldOut: false }
         ]
       },
       {
         order: 7, category: "季節限定 ＮＥＷ",
         items: [
-          { id: "s1", name: "桂花釀美式", price: 100, desc: "俐落的黑咖啡遇見自帶仙氣的清甜桂花，清爽回甘不苦澀！", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: false, addons: true }, customRules: "", soldOut: false },
-          { id: "s2", name: "桂花釀美式-大人味", price: 115, desc: "黑咖啡遇上大吟釀，靈魂瞬間釋放的微醺小可愛", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: false, addons: true }, customRules: "", soldOut: false },
-          { id: "s3", name: "桂花釀拿鐵", price: 130, desc: "奶香與花香的雙重爆擊！溫柔又濃郁的續命快樂水～", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: false, addons: true }, customRules: "", soldOut: false },
-          { id: "s4", name: "桂花釀拿鐵-大人味", price: 145, desc: "溫柔的陷阱｜添加純米大吟釀風味，專屬大人味的浪漫～", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: false, addons: true }, customRules: "", soldOut: false }
+          { id: "s1", name: "桂花釀美式", price: 100, desc: "俐落的黑咖啡遇見自帶仙氣的清甜桂花，清爽回甘不苦澀！", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: false }, customRules: defaultAddons, soldOut: false },
+          { id: "s2", name: "桂花釀美式-大人味", price: 115, desc: "黑咖啡遇上大吟釀，靈魂瞬間釋放的微醺小可愛", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: false }, customRules: defaultAddons, soldOut: false },
+          { id: "s3", name: "桂花釀拿鐵", price: 130, desc: "奶香與花香的雙重爆擊！溫柔又濃郁的續命快樂水～", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: false }, customRules: defaultAddons, soldOut: false },
+          { id: "s4", name: "桂花釀拿鐵-大人味", price: 145, desc: "溫柔的陷阱｜添加純米大吟釀風味，專屬大人味的浪漫～", options: { ice: true, hot: true, bean5: true, bean1: true, sugar: false }, customRules: defaultAddons, soldOut: false }
         ]
       }
     ];
@@ -305,8 +303,7 @@
                       <span class="text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded">${item.options?.bean5 ? '5號豆✓' : '5號豆✕'}</span>
                       <span class="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded">${item.options?.bean1 ? '1號豆✓' : '1號豆✕'}</span>
                       <span class="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">${item.options?.sugar ? '甜度✓' : '甜度✕'}</span>
-                      <span class="text-[10px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded">${item.options?.addons ? '加購✓' : '加購✕'}</span>
-                      ${item.customRules ? `<span class="text-[10px] bg-orange-50 text-orange-700 px-1.5 py-0.5 rounded">自訂規則: ${item.customRules}</span>` : ''}
+                      ${item.customRules ? `<span class="text-[10px] bg-orange-50 text-orange-700 px-1.5 py-0.5 rounded">規則: ${item.customRules}</span>` : ''}
                     </div>
                   </div>
                   <div class="flex items-center gap-2 self-end sm:self-auto">
@@ -337,13 +334,12 @@
       document.getElementById('edit-desc').value = targetItem.desc || '';
       document.getElementById('edit-custom-rules').value = targetItem.customRules || '';
       
-      const opts = targetItem.options || { ice: true, hot: true, bean5: true, bean1: true, sugar: false, addons: true };
+      const opts = targetItem.options || { ice: true, hot: true, bean5: true, bean1: true, sugar: false };
       document.getElementById('opt-ice').checked = !!opts.ice;
       document.getElementById('opt-hot').checked = !!opts.hot;
       document.getElementById('opt-bean5').checked = !!opts.bean5;
       document.getElementById('opt-bean1').checked = !!opts.bean1;
       document.getElementById('opt-sugar').checked = !!opts.sugar;
-      document.getElementById('opt-addons').checked = !!opts.addons;
 
       document.getElementById('edit-modal').classList.remove('hidden');
     };
@@ -365,8 +361,7 @@
         hot: document.getElementById('opt-hot').checked,
         bean5: document.getElementById('opt-bean5').checked,
         bean1: document.getElementById('opt-bean1').checked,
-        sugar: document.getElementById('opt-sugar').checked,
-        addons: document.getElementById('opt-addons').checked
+        sugar: document.getElementById('opt-sugar').checked
       };
 
       if (!newName || !newPrice) { alert('請填寫品項名稱與價格！'); return; }
@@ -398,7 +393,7 @@
       const price = Number(document.getElementById('add-price').value);
       const desc = document.getElementById('add-desc').value.trim();
       
-      const newOptions = { ice: true, hot: true, bean5: true, bean1: true, sugar: false, addons: true };
+      const newOptions = { ice: true, hot: true, bean5: true, bean1: true, sugar: false };
 
       if (!name || !price) { alert('請填寫品項名稱與價格！'); return; }
 
@@ -407,7 +402,7 @@
         if (!catObj) {
           catObj = { order: 8, category: catName, items: [] };
         }
-        const newItem = { id: 'item_' + Date.now(), name, price, desc, options: newOptions, customRules: "", soldOut: false };
+        const newItem = { id: 'item_' + Date.now(), name, price, desc, options: newOptions, customRules: defaultAddons, soldOut: false };
         catObj.items.push(newItem);
         await setDoc(doc(db, "menu", catName), catObj);
         closeAddModal();
