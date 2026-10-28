@@ -219,7 +219,7 @@
         `;
       }
 
-      // 獨立甜度選項
+      // 甜度選項
       const sugars = [];
       if (opts.sugarFree) sugars.push({ name: '無糖', price: opts.priceSugarFree || 0 });
       if (opts.sugarMicro) sugars.push({ name: '微糖', price: opts.priceSugarMicro || 0 });
@@ -240,20 +240,20 @@
         `;
       }
 
-      // 自訂加價規則 (包含加一份濃縮、更換燕麥奶、黑糖粉、肉桂粉、可可粉等，每項均可帶各自加價)
+      // 加購專區 (包含加一份濃縮、更換燕麥奶等，每項均可帶各自加價)
       if (activeItem.customRules) {
         const rules = activeItem.customRules.split(',').map(r => r.trim()).filter(Boolean);
         if (rules.length > 0) {
           html += `
             <div>
-              <label class="font-bold text-gray-700 block mb-1">加價與客製選項：</label>
+              <label class="font-bold text-gray-700 block mb-1 text-[#213c64]">🎁 加購專區：</label>
               <div class="space-y-2">
                 ${rules.map(ruleStr => {
                   let parts = ruleStr.split(':');
                   let ruleName = parts[0].trim();
                   let rulePrice = parts[1] ? Number(parts[1]) : 0;
                   return `
-                    <label class="flex items-center justify-between border p-2.5 rounded-xl cursor-pointer">
+                    <label class="flex items-center justify-between border p-2.5 rounded-xl cursor-pointer bg-amber-50/30">
                       <span class="font-bold">${ruleName} ${rulePrice > 0 ? `(+NT$${rulePrice})` : ''}</span>
                       <input type="checkbox" name="custom-rule-option" data-price="${rulePrice}" value="${ruleName}${rulePrice > 0 ? ` (+NT$${rulePrice})` : ''}" class="w-4 h-4 text-[#213c64] custom-addon-checkbox" onchange="updateModalPrice()">
                     </label>
