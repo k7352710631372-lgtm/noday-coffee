@@ -3,169 +3,103 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NODAY Coffee Roasters | 吧台接單與後台管理</title>
+  <title>NODAY Coffee Roasters | 線上點餐</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 min-h-screen text-gray-800 pb-12">
+<body class="bg-gray-50 min-h-screen text-gray-800 pb-24">
 
-  <header class="bg-[#213c64] text-white p-4 shadow flex justify-between items-center">
-    <div>
-      <h1 class="text-xl font-bold">☕ NODAY 吧台管理後台</h1>
-      <p class="text-xs text-gray-200 mt-0.5">即時接單看板 ＆ 獨立品項客製管理</p>
-    </div>
-    <div class="flex gap-2">
-      <button onclick="openAddItemModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow">
-        ＋ 新增品項
-      </button>
-      <button onclick="initMenuToFirebase()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow">
-        ⚡ 還原預設菜單
+  <header class="bg-[#213c64] text-white p-4 shadow-md sticky top-0 z-30">
+    <div class="max-w-md mx-auto flex justify-between items-center">
+      <div>
+        <h1 class="text-xl font-extrabold tracking-wide">NODAY Coffee Roasters</h1>
+        <p class="text-xs text-amber-300 mt-0.5 flex items-center gap-1">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> 營業接單中
+        </p>
+      </div>
+      <button onclick="openCart()" class="bg-amber-500 hover:bg-amber-600 text-white px-3.5 py-2 rounded-xl text-xs font-extrabold shadow flex items-center gap-1.5 transition">
+        🛒 購物車 <span id="cart-badge" class="bg-white text-amber-700 px-1.5 py-0.5 rounded-full text-[10px]">0</span>
       </button>
     </div>
   </header>
 
-  <main class="max-w-4xl mx-auto p-4 space-y-6 mt-4">
-    <!-- 即時接單區 -->
-    <section class="bg-white p-5 rounded-2xl shadow-sm">
-      <h2 class="text-base font-extrabold text-gray-900 mb-3 flex items-center justify-between">
-        <span>🔔 即時新訂單看板</span>
-        <span class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">新單自動提醒</span>
-      </h2>
-      <div id="orders-container" class="space-y-3">
-        <p class="text-gray-400 text-sm py-4 text-center">目前沒有待處理的訂單...</p>
-      </div>
-    </section>
+  <main class="max-w-md mx-auto p-4 space-y-4">
+    <div class="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl text-xs text-amber-900 shadow-sm space-y-1">
+      <p class="font-extrabold flex items-center gap-1">📢 提醒事項</p>
+      <p class="text-[11px] text-amber-800">彰化最早開的咖啡店，每日為你提供高品質的美味咖啡。</p>
+    </div>
 
-    <!-- 菜單管理區 -->
-    <section class="bg-white p-5 rounded-2xl shadow-sm">
-      <h2 class="text-base font-extrabold text-gray-900 mb-2">🛠️ 雲端菜單與獨立客製選項管理</h2>
-      <p class="text-xs text-gray-500 mb-4">您可以針對「每一個單獨品項」自由調整價格、描述，或勾選這杯飲料要提供的客製選項！</p>
-      <div id="admin-menu-list" class="space-y-4">
-        <p class="text-gray-400 text-sm">正在載入菜單...</p>
-      </div>
-    </section>
+    <div class="bg-white p-3 rounded-2xl shadow-sm border flex gap-2">
+      <button onclick="setOrderType('外帶自取')" id="type-takeout" class="flex-1 py-2 rounded-xl text-xs font-bold transition bg-[#213c64] text-white shadow">🥡 外帶自取</button>
+      <button onclick="setOrderType('內用')" id="type-dinein" class="flex-1 py-2 rounded-xl text-xs font-bold transition bg-gray-100 text-gray-600">☕ 內用</button>
+    </div>
+
+    <div class="bg-white p-3 rounded-2xl shadow-sm border">
+      <label class="text-[11px] font-extrabold text-gray-600 block mb-1">訂位人姓名 / 桌號 (必填)</label>
+      <input type="text" id="customer-info" placeholder="例如：小鄭 / 桌號 3" class="w-full border rounded-xl p-2.5 text-xs focus:outline-none focus:border-[#2b4c7e] bg-gray-50">
+    </div>
+
+    <div id="category-tabs" class="flex gap-2 overflow-x-auto pb-1 no-scrollbar"></div>
+    <div id="menu-container" class="space-y-6">
+      <p class="text-center text-gray-400 py-10 text-xs">正在載入雲端菜單...</p>
+    </div>
   </main>
 
-  <!-- 編輯品項 Modal -->
-  <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-lg rounded-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-      <h3 class="text-lg font-bold text-gray-900">修改品項與獨立客製選項</h3>
-      <input type="hidden" id="edit-cat-name">
-      <input type="hidden" id="edit-item-id">
-      
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+  <!-- 客製化彈跳視窗 -->
+  <div id="customize-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div class="flex justify-between items-start border-b pb-3">
         <div>
-          <label class="text-xs font-bold text-gray-600">品項名稱</label>
-          <input type="text" id="edit-name" class="w-full border rounded-lg p-2.5 text-sm mt-1 focus:outline-none focus:border-[#2b4c7e]">
+          <h3 id="modal-item-name" class="font-extrabold text-base text-gray-950">品項名稱</h3>
+          <p id="modal-item-price" class="text-xs text-[#2b4c7e] font-extrabold mt-0.5">NT$0</p>
         </div>
-        <div>
-          <label class="text-xs font-bold text-gray-600">基本價格 (NT$)</label>
-          <input type="number" id="edit-price" class="w-full border rounded-lg p-2.5 text-sm mt-1 focus:outline-none focus:border-[#2b4c7e]">
-        </div>
+        <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 font-bold text-lg px-2">✕</button>
       </div>
+
+      <div id="modal-options-container" class="space-y-4 text-xs"></div>
 
       <div>
-        <label class="text-xs font-bold text-gray-600">品項描述 (容量/風味說明)</label>
-        <input type="text" id="edit-desc" class="w-full border rounded-lg p-2.5 text-sm mt-1 focus:outline-none focus:border-[#2b4c7e]">
+        <label class="text-[11px] font-bold text-gray-600 block mb-1">備註說明 (選填)</label>
+        <input type="text" id="modal-note" placeholder="例如：少冰、不要太甜" class="w-full border rounded-xl p-2.5 text-xs bg-gray-50 focus:outline-none focus:border-[#2b4c7e]">
       </div>
 
-      <!-- 獨立客製選項勾選區 -->
-      <div class="border rounded-xl p-3 bg-gray-50 space-y-3">
-        <label class="text-xs font-bold text-[#213c64] block">勾選此品項要提供的客製選項：</label>
-        
-        <div class="space-y-2 text-xs">
-          <label class="flex items-center gap-2 bg-white p-2 rounded border cursor-pointer">
-            <input type="checkbox" id="opt-temp" class="w-4 h-4 text-[#213c64]">
-            <span class="font-bold">提供「飲品溫度」選項 (冰 / 熱)</span>
-          </label>
-          
-          <label class="flex items-center gap-2 bg-white p-2 rounded border cursor-pointer">
-            <input type="checkbox" id="opt-bean" class="w-4 h-4 text-[#213c64]">
-            <span class="font-bold">提供「配方豆選擇」選項 (5號配方 / 1號配方等)</span>
-          </label>
-
-          <label class="flex items-center gap-2 bg-white p-2 rounded border cursor-pointer">
-            <input type="checkbox" id="opt-sugar" class="w-4 h-4 text-[#213c64]">
-            <span class="font-bold">提供「甜度調整」選項 (正常/半糖/微糖/無糖)</span>
-          </label>
-
-          <label class="flex items-center gap-2 bg-white p-2 rounded border cursor-pointer">
-            <input type="checkbox" id="opt-addons" class="w-4 h-4 text-[#213c64]">
-            <span class="font-bold">提供「加購選項」 (例如雙倍濃縮 +NT$20)</span>
-          </label>
+      <div class="flex items-center justify-between pt-2">
+        <div class="flex items-center gap-3">
+          <button onclick="adjustQty(-1)" class="w-9 h-9 rounded-xl border bg-gray-100 font-extrabold text-sm flex items-center justify-center">-</button>
+          <span id="modal-qty" class="font-extrabold text-sm w-4 text-center">1</span>
+          <button onclick="adjustQty(1)" class="w-9 h-9 rounded-xl border bg-gray-100 font-extrabold text-sm flex items-center justify-center">+</button>
         </div>
-      </div>
-
-      <div class="flex gap-3 pt-2">
-        <button onclick="closeEditModal()" class="flex-1 bg-gray-200 text-gray-700 py-2.5 rounded-lg font-bold text-sm">取消</button>
-        <button onclick="saveItemChanges()" class="flex-1 bg-[#2b4c7e] text-white py-2.5 rounded-lg font-bold text-sm">儲存修改</button>
+        <button onclick="confirmAddToCart()" class="bg-[#213c64] hover:bg-opacity-90 text-white px-6 py-3 rounded-xl font-extrabold text-xs shadow-lg">加入購物車</button>
       </div>
     </div>
   </div>
 
-  <!-- 新增品項 Modal -->
-  <div id="add-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-lg rounded-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-      <h3 class="text-lg font-bold text-gray-900">新增獨立品項</h3>
-      <div>
-        <label class="text-xs font-bold text-gray-600">選擇分類</label>
-        <select id="add-cat" class="w-full border rounded-lg p-2.5 text-sm mt-1 bg-white focus:outline-none focus:border-[#2b4c7e]">
-          <option value="美式系列 Americano">美式系列 Americano</option>
-          <option value="單品手沖 PourOver">單品手沖 PourOver</option>
-          <option value="拿鐵系列 Cafe Latte">拿鐵系列 Cafe Latte</option>
-          <option value="風味飲品 Beverage">風味飲品 Beverage</option>
-          <option value="NODAY 周邊">NODAY 周邊</option>
-          <option value="微氣泡 Fizzy">微氣泡 Fizzy</option>
-          <option value="季節限定 ＮＥＷ">季節限定 ＮＥＷ</option>
-        </select>
-      </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label class="text-xs font-bold text-gray-600">品項名稱</label>
-          <input type="text" id="add-name" placeholder="例如：特製拿鐵" class="w-full border rounded-lg p-2.5 text-sm mt-1 focus:outline-none focus:border-[#2b4c7e]">
-        </div>
-        <div>
-          <label class="text-xs font-bold text-gray-600">價格 (NT$)</label>
-          <input type="number" id="add-price" placeholder="120" class="w-full border rounded-lg p-2.5 text-sm mt-1 focus:outline-none focus:border-[#2b4c7e]">
-        </div>
-      </div>
-      <div>
-        <label class="text-xs font-bold text-gray-600">品項描述</label>
-        <input type="text" id="add-desc" placeholder="16oz｜風味說明" class="w-full border rounded-lg p-2.5 text-sm mt-1 focus:outline-none focus:border-[#2b4c7e]">
+  <!-- 購物車抽屜 -->
+  <div id="cart-drawer" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex justify-end">
+    <div class="bg-white w-full max-w-sm h-full p-5 flex flex-col justify-between shadow-2xl">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h2 class="font-extrabold text-base">🛒 您的購物車</h2>
+        <button onclick="closeCart()" class="text-gray-400 font-bold text-lg">✕</button>
       </div>
 
-      <!-- 新增時勾選客製選項 -->
-      <div class="border rounded-xl p-3 bg-gray-50 space-y-3">
-        <label class="text-xs font-bold text-[#213c64] block">勾選此新飲品要提供的客製選項：</label>
-        <div class="space-y-2 text-xs">
-          <label class="flex items-center gap-2 bg-white p-2 rounded border cursor-pointer">
-            <input type="checkbox" id="add-opt-temp" checked class="w-4 h-4 text-[#213c64]">
-            <span class="font-bold">提供「飲品溫度」選項 (冰 / 熱)</span>
-          </label>
-          <label class="flex items-center gap-2 bg-white p-2 rounded border cursor-pointer">
-            <input type="checkbox" id="add-opt-bean" checked class="w-4 h-4 text-[#213c64]">
-            <span class="font-bold">提供「配方豆選擇」選項</span>
-          </label>
-          <label class="flex items-center gap-2 bg-white p-2 rounded border cursor-pointer">
-            <input type="checkbox" id="add-opt-sugar" class="w-4 h-4 text-[#213c64]">
-            <span class="font-bold">提供「甜度調整」選項</span>
-          </label>
-          <label class="flex items-center gap-2 bg-white p-2 rounded border cursor-pointer">
-            <input type="checkbox" id="add-opt-addons" checked class="w-4 h-4 text-[#213c64]">
-            <span class="font-bold">提供「加購選項」 (雙倍濃縮)</span>
-          </label>
-        </div>
+      <div id="cart-items-list" class="flex-1 overflow-y-auto py-4 space-y-3">
+        <p class="text-center text-gray-400 text-xs py-10">購物車目前是空的...</p>
       </div>
 
-      <div class="flex gap-3 pt-2">
-        <button onclick="closeAddModal()" class="flex-1 bg-gray-200 text-gray-700 py-2.5 rounded-lg font-bold text-sm">取消</button>
-        <button onclick="confirmAddNewItem()" class="flex-1 bg-emerald-600 text-white py-2.5 rounded-lg font-bold text-sm">確認新增</button>
+      <div class="border-t pt-4 space-y-3">
+        <div class="flex justify-between items-center font-extrabold text-sm">
+          <span>總計金額：</span>
+          <span id="cart-total" class="text-amber-800 text-base">NT$0</span>
+        </div>
+        <button onclick="submitOrder()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-extrabold text-sm shadow-lg transition">
+          🚀 確認送出訂單
+        </button>
       </div>
     </div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, getDocs, doc, setDoc, updateDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBMdycidtvbE7JmQtvXn-lCqUwod5RxR44",
@@ -179,301 +113,271 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    let cachedCatalog = [];
+    let catalog = [];
+    let cart = [];
+    let currentOrderType = '外帶自取';
+    let activeItem = null;
+    let currentQty = 1;
 
-    const defaultMenuCatalog = [
-      {
-        order: 1, category: "美式系列 Americano",
-        items: [
-          { id: "a1", name: "美式咖啡", price: 80, desc: "16oz｜經典純粹配方", options: { temp: true, bean: true, sugar: false, addons: true }, soldOut: false },
-          { id: "a2", name: "香橙美式", price: 90, desc: "16oz｜清爽果香融合濃縮咖啡", options: { temp: false, bean: false, sugar: false, addons: true }, soldOut: false },
-          { id: "a3", name: "荔枝美式", price: 90, desc: "16oz", options: { temp: false, bean: false, sugar: false, addons: true }, soldOut: false },
-          { id: "a4", name: "黑嘉麗美式", price: 90, desc: "16oz", options: { temp: false, bean: false, sugar: false, addons: true }, soldOut: false },
-          { id: "a5", name: "西西里氣泡美式", price: 110, desc: "16oz｜微氣泡清爽檸檬香", options: { temp: false, bean: false, sugar: true, addons: true }, soldOut: false },
-          { id: "a6", name: "西西里百香美式", price: 100, desc: "16oz", options: { temp: false, bean: false, sugar: true, addons: true }, soldOut: false }
-        ]
-      },
-      {
-        order: 2, category: "單品手沖 PourOver",
-        items: [
-          { id: "p1", name: "衣索比亞西達馬桃子甜心水洗", price: 130, desc: "中淺培┃水果軟糖、白桃、烏龍茶", options: { temp: true, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "p2", name: "中國雲南雲頂莊園荊棘玫瑰日曬", price: 130, desc: "中淺培┃熱帶水果、葡萄、花香尾韻", options: { temp: true, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "p3", name: "蘇門答臘華漢納黑珍珠批次濕撥法", price: 130, desc: "中培｜雪松、焦糖、榛果巧可力", options: { temp: true, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "p4", name: "衣索比亞耶加雪菲日曬(非洲式烘培)", price: 130, desc: "中深培｜熱帶水果、黑巧克力、甜奶油", options: { temp: true, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "p5", name: "衣索比亞西達摩南希寶森林日曬", price: 150, desc: "中淺培┃鳳梨、芒果乾、甜桃、藍莓果醬", options: { temp: true, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "p6", name: "肯亞吉利尼亞加卡穆旺吉水洗", price: 150, desc: "中淺培┃柑橘、覆盆子、蜂蜜、榛果", options: { temp: true, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "p7", name: "哥斯大黎加莫扎特葡萄乾蜜處理", price: 150, desc: "中淺培┃葡萄乾、蜜餞、草莓果醬、紫羅蘭", options: { temp: true, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "p8", name: "衣索比亞古吉歐克羅有機日曬", price: 150, desc: "中淺培┃萊姆、佛手柑、檸檬紅茶", options: { temp: true, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "p9", name: "哥倫比亞薇拉卡斯提歐厭氧日曬", price: 170, desc: "中淺培｜熱帶水果、香蕉、奇異果、紅糖", options: { temp: true, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "p10", name: "哥倫比亞凡爾賽葡萄香檳水洗", price: 170, desc: "中淺培┃香檳汽水、葡萄軟糖、雞尾酒", options: { temp: true, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "p11", name: "哥倫比亞凡爾賽蜜桃果茶水洗", price: 170, desc: "中淺培┃蜜桃、無花果、花果茶", options: { temp: true, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "p12", name: "秘魯薇拉瑞卡花仙子藝妓水洗", price: 170, desc: "中淺培｜密蘋果、杏桃、雞蛋花", options: { temp: true, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "p13", name: "巴拿馬巴魯火山拓荒者藝妓熱發酵處理", price: 200, desc: "中淺培｜鳳梨、甜漬櫻桃、茉莉花", options: { temp: true, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "p14", name: "巴拿馬聖塔克拉拉午夜紫蝶水洗", price: 170, desc: "中淺培｜紫葡萄、紅花香、甜橙", options: { temp: true, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "p15", name: "哥倫比亞聖徒阿里歐愛情靈藥水洗", price: 130, desc: "", options: { temp: true, bean: false, sugar: false, addons: false }, soldOut: false }
-        ]
-      },
-      {
-        order: 3, category: "拿鐵系列 Cafe Latte",
-        items: [
-          { id: "l1", name: "卡布奇諾", price: 120, desc: "16oz", options: { temp: true, bean: true, sugar: false, addons: true }, soldOut: false },
-          { id: "l2", name: "拿鐵", price: 120, desc: "16oz", options: { temp: true, bean: true, sugar: false, addons: true }, soldOut: false },
-          { id: "l3", name: "蜂蜜拿鐵", price: 125, desc: "16oz", options: { temp: true, bean: true, sugar: true, addons: true }, soldOut: false },
-          { id: "l4", name: "香草拿鐵", price: 125, desc: "16oz", options: { temp: true, bean: true, sugar: true, addons: true }, soldOut: false },
-          { id: "l5", name: "榛果拿鐵", price: 125, desc: "16oz", options: { temp: true, bean: true, sugar: true, addons: true }, soldOut: false },
-          { id: "l6", name: "焦糖海鹽拿鐵", price: 125, desc: "16oz", options: { temp: true, bean: true, sugar: true, addons: true }, soldOut: false },
-          { id: "l7", name: "玫瑰拿鐵", price: 125, desc: "16oz", options: { temp: true, bean: true, sugar: true, addons: true }, soldOut: false },
-          { id: "l8", name: "半半拿鐵", price: 130, desc: "16oz", options: { temp: true, bean: true, sugar: false, addons: true }, soldOut: false },
-          { id: "l9", name: "焦糖瑪其朵", price: 130, desc: "16oz", options: { temp: true, bean: true, sugar: true, addons: true }, soldOut: false },
-          { id: "l10", name: "宇治抹茶拿鐵", price: 135, desc: "16oz", options: { temp: true, bean: true, sugar: true, addons: true }, soldOut: false },
-          { id: "l11", name: "威士忌拿鐵", price: 135, desc: "16oz｜大人系微醺風味", options: { temp: true, bean: true, sugar: true, addons: true }, soldOut: false },
-          { id: "l12", name: "貝里斯奶酒拿鐵", price: 135, desc: "16oz｜大人系微醺風味", options: { temp: true, bean: true, sugar: true, addons: true }, soldOut: false },
-          { id: "l13", name: "君度橙酒拿鐵", price: 135, desc: "16oz｜大人系微醺風味", options: { temp: true, bean: true, sugar: true, addons: true }, soldOut: false }
-        ]
-      },
-      {
-        order: 4, category: "風味飲品 Beverage",
-        items: [
-          { id: "b1", name: "歐式花果茶", price: 90, desc: "無咖啡因", options: { temp: true, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "b2", name: "紅茶歐蕾", price: 100, desc: "16oz", options: { temp: true, bean: false, sugar: true, addons: false }, soldOut: false },
-          { id: "b3", name: "風味紅茶歐蕾", price: 110, desc: "16oz", options: { temp: true, bean: false, sugar: true, addons: false }, soldOut: false },
-          { id: "b4", name: "黑糖歐蕾", price: 120, desc: "16oz", options: { temp: true, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "b5", name: "榛果歐蕾", price: 120, desc: "16oz", options: { temp: true, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "b6", name: "香草歐蕾", price: 120, desc: "16oz", options: { temp: true, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "b7", name: "法芙娜可可歐蕾", price: 120, desc: "16oz", options: { temp: true, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "b8", name: "焦糖海鹽歐蕾", price: 120, desc: "16oz", options: { temp: true, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "b9", name: "玫瑰歐蕾", price: 120, desc: "16oz", options: { temp: true, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "b10", name: "宇治抹茶歐蕾", price: 120, desc: "16oz", options: { temp: true, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "b11", name: "濃情可可歐蕾", price: 135, desc: "16oz", options: { temp: true, bean: false, sugar: false, addons: false }, soldOut: false }
-        ]
-      },
-      {
-        order: 5, category: "NODAY 周邊",
-        items: [
-          { id: "m1", name: "脆皮可麗露", price: 70, desc: "", options: { temp: false, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "m2", name: "OAT燕麥奶", price: 165, desc: "", options: { temp: false, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "m3", name: "酵素漂白濾紙", price: 100, desc: "", options: { temp: false, bean: false, sugar: false, addons: false }, soldOut: false }
-        ]
-      },
-      {
-        order: 6, category: "微氣泡 Fizzy",
-        items: [
-          { id: "f1", name: "蜂蜜檸檬氣泡", price: 110, desc: "", options: { temp: false, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "f2", name: "黑嘉麗氣泡", price: 110, desc: "", options: { temp: false, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "f3", name: "荔枝氣泡", price: 110, desc: "", options: { temp: false, bean: false, sugar: false, addons: false }, soldOut: false },
-          { id: "f4", name: "香橙氣泡", price: 110, desc: "", options: { temp: false, bean: false, sugar: false, addons: false }, soldOut: false }
-        ]
-      },
-      {
-        order: 7, category: "季節限定 ＮＥＷ",
-        items: [
-          { id: "s1", name: "桂花釀美式", price: 100, desc: "俐落的黑咖啡遇見自帶仙氣的清甜桂花，清爽回甘不苦澀！", options: { temp: true, bean: true, sugar: false, addons: true }, soldOut: false },
-          { id: "s2", name: "桂花釀美式-大人味", price: 115, desc: "黑咖啡遇上大吟釀，靈魂瞬間釋放的微醺小可愛", options: { temp: true, bean: true, sugar: false, addons: true }, soldOut: false },
-          { id: "s3", name: "桂花釀拿鐵", price: 130, desc: "奶香與花香的雙重爆擊！溫柔又濃郁的續命快樂水～", options: { temp: true, bean: true, sugar: false, addons: true }, soldOut: false },
-          { id: "s4", name: "桂花釀拿鐵-大人味", price: 145, desc: "溫柔的陷阱｜添加純米大吟釀風味，專屬大人味的浪漫～", options: { temp: true, bean: true, sugar: false, addons: true }, soldOut: false }
-        ]
-      }
-    ];
-
-    window.initMenuToFirebase = async function() {
-      if (!confirm("確定要將預設完整菜單（含獨立品項選項）重置並寫入雲端嗎？")) return;
-      try {
-        for (const cat of defaultMenuCatalog) {
-          await setDoc(doc(db, "menu", cat.category), cat);
-        }
-        alert("🎉 菜單已成功還原！");
-        loadAdminMenu();
-      } catch (e) { console.error(e); alert("操作失敗"); }
+    window.setOrderType = function(type) {
+      currentOrderType = type;
+      document.getElementById('type-takeout').className = type === '外帶自取' ? 'flex-1 py-2 rounded-xl text-xs font-bold transition bg-[#213c64] text-white shadow' : 'flex-1 py-2 rounded-xl text-xs font-bold transition bg-gray-100 text-gray-600';
+      document.getElementById('type-dinein').className = type === '內用' ? 'flex-1 py-2 rounded-xl text-xs font-bold transition bg-[#213c64] text-white shadow' : 'flex-1 py-2 rounded-xl text-xs font-bold transition bg-gray-100 text-gray-600';
     };
 
-    async function loadAdminMenu() {
-      const container = document.getElementById("admin-menu-list");
+    async function loadMenu() {
       try {
         const querySnapshot = await getDocs(collection(db, "menu"));
-        if (querySnapshot.empty) {
-          container.innerHTML = `<p class="text-amber-600 text-sm">尚無菜單，請點擊右上角「還原預設菜單」初始化。</p>`;
-          return;
-        }
-        cachedCatalog = [];
-        querySnapshot.forEach(d => cachedCatalog.push(d.data()));
-        cachedCatalog.sort((a, b) => a.order - b.order);
-
-        container.innerHTML = cachedCatalog.map(cat => `
-          <div class="border rounded-xl p-4 bg-gray-50">
-            <h3 class="font-bold text-gray-900 mb-3">${cat.category}</h3>
-            <div class="space-y-2">
-              ${cat.items.map(item => `
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-3 rounded-lg border gap-2">
-                  <div>
-                    <p class="font-bold text-sm text-gray-800">${item.name} <span class="text-xs text-[#2b4c7e] ml-2">NT$${item.price}</span></p>
-                    ${item.desc ? `<p class="text-xs text-gray-500 mt-0.5">${item.desc}</p>` : ''}
-                    <div class="flex gap-1 mt-1">
-                      <span class="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">${item.options?.temp ? '冰熱✓' : '冰熱✕'}</span>
-                      <span class="text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded">${item.options?.bean ? '配方豆✓' : '配方豆✕'}</span>
-                      <span class="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">${item.options?.sugar ? '甜度✓' : '甜度✕'}</span>
-                      <span class="text-[10px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded">${item.options?.addons ? '加購✓' : '加購✕'}</span>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-2 self-end sm:self-auto">
-                    <button onclick="openEditModal('${cat.category}', '${item.id}')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-bold">修改</button>
-                    <button onclick="deleteItem('${cat.category}', '${item.id}')" class="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold">刪除</button>
-                    <button onclick="toggleSoldOut('${cat.category}', '${item.id}', ${!item.soldOut})" class="px-3 py-1.5 rounded-lg text-xs font-bold ${item.soldOut ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-700'}">
-                      ${item.soldOut ? '已售完' : '販售中'}
-                    </button>
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        `).join('');
+        if (querySnapshot.empty) return;
+        catalog = [];
+        querySnapshot.forEach(d => catalog.push(d.data()));
+        catalog.sort((a, b) => a.order - b.order);
+        renderMenu();
       } catch (e) { console.error(e); }
     }
 
-    window.openEditModal = function(categoryName, itemId) {
-      let targetItem = null;
-      const cat = cachedCatalog.find(c => c.category === categoryName);
-      if (cat) targetItem = cat.items.find(i => i.id === itemId);
-      if (!targetItem) return;
+    function renderMenu() {
+      const tabs = document.getElementById('category-tabs');
+      const container = document.getElementById('menu-container');
 
-      document.getElementById('edit-cat-name').value = categoryName;
-      document.getElementById('edit-item-id').value = itemId;
-      document.getElementById('edit-name').value = targetItem.name;
-      document.getElementById('edit-price').value = targetItem.price;
-      document.getElementById('edit-desc').value = targetItem.desc || '';
-      
-      const opts = targetItem.options || { temp: true, bean: true, sugar: false, addons: true };
-      document.getElementById('opt-temp').checked = !!opts.temp;
-      document.getElementById('opt-bean').checked = !!opts.bean;
-      document.getElementById('opt-sugar').checked = !!opts.sugar;
-      document.getElementById('opt-addons').checked = !!opts.addons;
+      tabs.innerHTML = catalog.map((cat, idx) => `
+        <button onclick="scrollToCat('${cat.category}')" class="whitespace-nowrap px-3.5 py-1.5 rounded-xl text-xs font-bold ${idx === 0 ? 'bg-[#213c64] text-white' : 'bg-white text-gray-700 border'} shadow-sm">
+          ${cat.category}
+        </button>
+      `).join('');
 
-      document.getElementById('edit-modal').classList.remove('hidden');
-    };
-
-    window.closeEditModal = function() {
-      document.getElementById('edit-modal').classList.add('hidden');
-    };
-
-    window.saveItemChanges = async function() {
-      const catName = document.getElementById('edit-cat-name').value;
-      const itemId = document.getElementById('edit-item-id').value;
-      const newName = document.getElementById('edit-name').value.trim();
-      const newPrice = Number(document.getElementById('edit-price').value);
-      const newDesc = document.getElementById('edit-desc').value.trim();
-      
-      const newOptions = {
-        temp: document.getElementById('opt-temp').checked,
-        bean: document.getElementById('opt-bean').checked,
-        sugar: document.getElementById('opt-sugar').checked,
-        addons: document.getElementById('opt-addons').checked
-      };
-
-      if (!newName || !newPrice) { alert('請填寫品項名稱與價格！'); return; }
-
-      try {
-        const catObj = cachedCatalog.find(c => c.category === catName);
-        catObj.items = catObj.items.map(i => i.id === itemId ? { ...i, name: newName, price: newPrice, desc: newDesc, options: newOptions } : i);
-        await setDoc(doc(db, "menu", catName), catObj);
-        closeEditModal();
-        loadAdminMenu();
-        alert("✅ 修改成功！該品項的獨立客製選項已即時更新。");
-      } catch (e) { console.error(e); alert("儲存失敗"); }
-    };
-
-    window.openAddItemModal = function() {
-      document.getElementById('add-name').value = '';
-      document.getElementById('add-price').value = '';
-      document.getElementById('add-desc').value = '';
-      document.getElementById('add-modal').classList.remove('hidden');
-    };
-
-    window.closeAddModal = function() {
-      document.getElementById('add-modal').classList.add('hidden');
-    };
-
-    window.confirmAddNewItem = async function() {
-      const catName = document.getElementById('add-cat').value;
-      const name = document.getElementById('add-name').value.trim();
-      const price = Number(document.getElementById('add-price').value);
-      const desc = document.getElementById('add-desc').value.trim();
-      
-      const newOptions = {
-        temp: document.getElementById('add-opt-temp').checked,
-        bean: document.getElementById('add-opt-bean').checked,
-        sugar: document.getElementById('add-opt-sugar').checked,
-        addons: document.getElementById('add-opt-addons').checked
-      };
-
-      if (!name || !price) { alert('請填寫品項名稱與價格！'); return; }
-
-      try {
-        let catObj = cachedCatalog.find(c => c.category === catName);
-        if (!catObj) {
-          catObj = { order: 8, category: catName, items: [] };
-        }
-        const newItem = { id: 'item_' + Date.now(), name, price, desc, options: newOptions, soldOut: false };
-        catObj.items.push(newItem);
-        await setDoc(doc(db, "menu", catName), catObj);
-        closeAddModal();
-        loadAdminMenu();
-        alert("✅ 新增獨立品項成功！");
-      } catch (e) { console.error(e); alert("新增失敗"); }
-    };
-
-    window.deleteItem = async function(categoryName, itemId) {
-      if (!confirm("確定要刪除這個品項嗎？")) return;
-      try {
-        const catObj = cachedCatalog.find(c => c.category === categoryName);
-        catObj.items = catObj.items.filter(i => i.id !== itemId);
-        await setDoc(doc(db, "menu", categoryName), catObj);
-        loadAdminMenu();
-      } catch (e) { console.error(e); alert("刪除失敗"); }
-    };
-
-    window.toggleSoldOut = async function(categoryName, itemId, newStatus) {
-      try {
-        const catObj = cachedCatalog.find(c => c.category === categoryName);
-        catObj.items = catObj.items.map(i => i.id === itemId ? { ...i, soldOut: newStatus } : i);
-        await setDoc(doc(db, "menu", categoryName), catObj);
-        loadAdminMenu();
-      } catch (e) { console.error(e); alert("更新失敗"); }
-    };
-
-    const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
-    onSnapshot(q, (snapshot) => {
-      const container = document.getElementById("orders-container");
-      const pendingOrders = [];
-      snapshot.forEach(d => { if (d.data().status === "pending") pendingOrders.push({ id: d.id, ...d.data() }); });
-
-      if (pendingOrders.length === 0) {
-        container.innerHTML = `<p class="text-gray-400 text-sm py-4 text-center">目前沒有待處理的新訂單...</p>`;
-        return;
-      }
-
-      container.innerHTML = pendingOrders.map(order => `
-        <div class="border-2 border-amber-500 bg-amber-50/40 p-4 rounded-xl shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <div class="flex items-center space-x-2">
-              <span class="bg-amber-600 text-white text-xs font-extrabold px-2.5 py-1 rounded-full">${order.orderType}</span>
-              <h3 class="font-extrabold text-base text-gray-900">${order.customerInfo}</h3>
-            </div>
-            <div class="mt-2 space-y-1 text-sm text-gray-700">
-              ${order.items.map(i => `<p>• <b>${i.name}</b> x${i.qty} <span class="text-xs text-gray-500">(${i.modifiers.join(', ')})</span> ${i.note ? `[備註: ${i.note}]` : ''}</p>`).join('')}
-            </div>
-            <p class="font-extrabold text-amber-900 mt-2 text-sm">總金額：NT$${order.totalAmount}</p>
+      container.innerHTML = catalog.map(cat => `
+        <div id="cat-${cat.category}" class="space-y-3">
+          <h2 class="font-extrabold text-sm text-[#213c64] border-b pb-1.5">${cat.category}</h2>
+          <div class="grid grid-cols-1 gap-2.5">
+            ${cat.items.map(item => `
+              <div onclick="${item.soldOut ? '' : `openModal('${cat.category}', '${item.id}')`}" class="bg-white p-3.5 rounded-2xl border shadow-sm flex justify-between items-center ${item.soldOut ? 'opacity-50 bg-gray-100 cursor-not-allowed' : 'cursor-pointer hover:border-[#213c64] transition'}">
+                <div class="space-y-1">
+                  <h3 class="font-extrabold text-xs text-gray-900">${item.name}</h3>
+                  ${item.desc ? `<p class="text-[11px] text-gray-500">${item.desc}</p>` : ''}
+                  <p class="font-extrabold text-xs text-[#213c64]">NT$${item.price}</p>
+                </div>
+                <div>
+                  ${item.soldOut ? '<span class="bg-red-500 text-white px-2.5 py-1 rounded-xl text-[10px] font-bold">已售完</span>' : '<span class="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-xl text-xs font-bold">選購 ＋</span>'}
+                </div>
+              </div>
+            `).join('')}
           </div>
-          <button onclick="completeOrder('${order.id}')" class="w-full md:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3 rounded-xl font-bold text-sm shadow">
-            ✓ 完成製作 (結單)
-          </button>
         </div>
       `).join('');
-    });
+    }
 
-    window.completeOrder = async function(orderId) {
-      await updateDoc(doc(db, "orders", orderId), { status: "completed" });
+    window.scrollToCat = function(catName) {
+      const el = document.getElementById(`cat-${catName}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
     };
 
-    loadAdminMenu();
+    window.openModal = function(catName, itemId) {
+      const cat = catalog.find(c => c.category === catName);
+      if (!cat) return;
+      activeItem = cat.items.find(i => i.id === itemId);
+      if (!activeItem) return;
+
+      currentQty = 1;
+      document.getElementById('modal-item-name').innerText = activeItem.name;
+      document.getElementById('modal-item-price').innerText = `NT$${activeItem.price}`;
+      document.getElementById('modal-qty').innerText = currentQty;
+      document.getElementById('modal-note').value = '';
+
+      const opts = activeItem.options || {};
+      let html = '';
+
+      if (opts.temp) {
+        html += `
+          <div>
+            <label class="font-bold text-gray-700 block mb-1">飲品溫度：</label>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="border p-2 rounded-xl text-center cursor-pointer font-bold"><input type="radio" name="opt-temp" value="冰" checked class="mr-1.5"> 冰飲</label>
+              <label class="border p-2 rounded-xl text-center cursor-pointer font-bold"><input type="radio" name="opt-temp" value="熱" class="mr-1.5"> 熱飲</label>
+            </div>
+          </div>
+        `;
+      }
+
+      if (opts.bean) {
+        html += `
+          <div>
+            <label class="font-bold text-gray-700 block mb-1">選擇配方豆：</label>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="border p-2 rounded-xl text-center cursor-pointer font-bold"><input type="radio" name="opt-bean" value="5號配方(經典)" checked class="mr-1.5"> 5號配方(經典)</label>
+              <label class="border p-2 rounded-xl text-center cursor-pointer font-bold"><input type="radio" name="opt-bean" value="1號配方(果香)" class="mr-1.5"> 1號配方(果香)</label>
+            </div>
+          </div>
+        `;
+      }
+
+      if (opts.sugar) {
+        html += `
+          <div>
+            <label class="font-bold text-gray-700 block mb-1">甜度選擇：</label>
+            <div class="grid grid-cols-3 gap-2">
+              <label class="border p-2 rounded-xl text-center cursor-pointer font-bold"><input type="radio" name="opt-sugar" value="正常甜" checked class="mr-1"> 正常</label>
+              <label class="border p-2 rounded-xl text-center cursor-pointer font-bold"><input type="radio" name="opt-sugar" value="半糖" class="mr-1"> 半糖</label>
+              <label class="border p-2 rounded-xl text-center cursor-pointer font-bold"><input type="radio" name="opt-sugar" value="微/無糖" class="mr-1"> 微/無糖</label>
+            </div>
+          </div>
+        `;
+      }
+
+      if (opts.addons) {
+        html += `
+          <div>
+            <label class="font-bold text-gray-700 block mb-1">加購選項：</label>
+            <label class="flex items-center gap-2 border p-2.5 rounded-xl cursor-pointer">
+              <input type="checkbox" id="opt-addon-shot" value="加一份濃縮 (+NT$20)" class="w-4 h-4 text-[#213c64]">
+              <span class="font-bold">加一份濃縮 (+NT$20)</span>
+            </label>
+          </div>
+        `;
+      }
+
+      if (activeItem.customTag) {
+        const tags = activeItem.customTag.split(',').map(t => t.trim()).filter(Boolean);
+        if (tags.length > 0) {
+          html += `
+            <div>
+              <label class="font-bold text-gray-700 block mb-1">自訂選項：</label>
+              <div class="flex flex-wrap gap-2">
+                ${tags.map((t, idx) => `
+                  <label class="border px-3 py-2 rounded-xl text-center cursor-pointer font-bold text-xs bg-gray-50">
+                    <input type="checkbox" name="custom-tag-option" value="${t}" class="mr-1.5"> ${t}
+                  </label>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }
+      }
+
+      document.getElementById('modal-options-container').innerHTML = html;
+      document.getElementById('customize-modal').classList.remove('hidden');
+    };
+
+    window.closeModal = function() {
+      document.getElementById('customize-modal').classList.add('hidden');
+    };
+
+    window.adjustQty = function(change) {
+      currentQty += change;
+      if (currentQty < 1) currentQty = 1;
+      document.getElementById('modal-qty').innerText = currentQty;
+    };
+
+    window.confirmAddToCart = function() {
+      if (!activeItem) return;
+      const modifiers = [];
+      let finalPrice = activeItem.price;
+
+      const tempEl = document.querySelector('input[name="opt-temp"]:checked');
+      if (tempEl) modifiers.push(tempEl.value);
+
+      const beanEl = document.querySelector('input[name="opt-bean"]:checked');
+      if (beanEl) modifiers.push(beanEl.value);
+
+      const sugarEl = document.querySelector('input[name="opt-sugar"]:checked');
+      if (sugarEl) modifiers.push(sugarEl.value);
+
+      const addonEl = document.getElementById('opt-addon-shot');
+      if (addonEl && addonEl.checked) {
+        modifiers.push("加一份濃縮");
+        finalPrice += 20;
+      }
+
+      document.querySelectorAll('input[name="custom-tag-option"]:checked').forEach(el => {
+        modifiers.push(el.value);
+      });
+
+      const note = document.getElementById('modal-note').value.trim();
+
+      cart.push({
+        id: activeItem.id,
+        name: activeItem.name,
+        price: finalPrice,
+        qty: currentQty,
+        modifiers: modifiers,
+        note: note
+      });
+
+      updateCartBadge();
+      closeModal();
+      alert("✅ 已成功加入購物車！");
+    };
+
+    window.openCart = function() {
+      const listEl = document.getElementById('cart-items-list');
+      const totalEl = document.getElementById('cart-total');
+
+      if (cart.length === 0) {
+        listEl.innerHTML = `<p class="text-center text-gray-400 text-xs py-10">購物車目前是空的...</p>`;
+        totalEl.innerText = 'NT$0';
+      } else {
+        let total = 0;
+        listEl.innerHTML = cart.map((item, idx) => {
+          const itemTotal = item.price * item.qty;
+          total += itemTotal;
+          return `
+            <div class="flex justify-between items-center border-b pb-3 text-xs">
+              <div>
+                <p class="font-extrabold text-gray-900">${item.name} x${item.qty}</p>
+                <p class="text-[11px] text-gray-500">${item.modifiers.join(' / ')} ${item.note ? `[${item.note}]` : ''}</p>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="font-extrabold text-[#213c64]">NT$${itemTotal}</span>
+                <button onclick="removeFromCart(${idx})" class="text-red-500 font-bold px-1.5 py-0.5 rounded bg-red-50">刪除</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+        totalEl.innerText = `NT$${total}`;
+      }
+      document.getElementById('cart-drawer').classList.add('hidden'); // Fix open state
+      document.getElementById('cart-drawer').classList.remove('hidden');
+    };
+
+    window.closeCart = function() {
+      document.getElementById('cart-drawer').classList.add('hidden');
+    };
+
+    window.removeFromCart = function(idx) {
+      cart.splice(idx, 1);
+      updateCartBadge();
+      openCart();
+    };
+
+    function updateCartBadge() {
+      const count = cart.reduce((sum, item) => sum + item.qty, 0);
+      document.getElementById('cart-badge').innerText = count;
+    }
+
+    window.submitOrder = async function() {
+      const customerInfo = document.getElementById('customer-info').value.trim();
+      if (!customerInfo) { alert('請填寫訂位人姓名或桌號！'); return; }
+      if (cart.length === 0) { alert('購物車是空的喔！'); return; }
+
+      const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+
+      try {
+        await addDoc(collection(db, "orders"), {
+          orderType: currentOrderType,
+          customerInfo: customerInfo,
+          items: cart,
+          totalAmount: totalAmount,
+          status: "pending",
+          createdAt: serverTimestamp()
+        });
+        alert("🎉 訂單已成功送出！");
+        cart = [];
+        updateCartBadge();
+        closeCart();
+      } catch (e) { console.error(e); alert("送出失敗"); }
+    };
+
+    loadMenu();
   </script>
 </body>
 </html>
