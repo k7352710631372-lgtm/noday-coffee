@@ -2,118 +2,101 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NODAY Coffee Roasters | 線上點餐</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background-color: #ffffff; color: #262626; scroll-behavior: smooth; }
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    .cat-pill { background-color: #f3f4f6; color: #374151; transition: all 0.2s; }
-    .cat-pill.active { background-color: #213c64; color: #ffffff; font-weight: 600; }
-    .ichef-btn { background-color: #2b4c7e; }
-    .ichef-btn:active { background-color: #1e365a; }
-    .radio-circle { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #9ca3af; display: flex; align-items: center; justify-content: center; }
-    .radio-circle.checked { border-color: #2b4c7e; }
-    .radio-circle.checked::after { content: ""; width: 12px; height: 12px; border-radius: 50%; background-color: #2b4c7e; }
-    .checkbox-square { width: 20px; height: 20px; border-radius: 3px; border: 2px solid #9ca3af; display: flex; align-items: center; justify-content: center; }
-    .checkbox-square.checked { border-color: #2b4c7e; background-color: #2b4c7e; color: white; }
-  </style>
 </head>
-<body class="pb-28 max-w-xl mx-auto border-x border-gray-100 min-h-screen">
+<body class="bg-gray-50 min-h-screen text-gray-800 pb-24">
 
-  <header class="p-4 bg-white">
-    <div class="flex justify-between items-center mb-3">
-      <h1 class="text-xl font-extrabold tracking-tight text-gray-900">NODAY Coffee Roasters</h1>
-      <span class="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">營業接單中</span>
-    </div>
-    <div class="bg-gray-50 p-3.5 rounded-xl border border-gray-200 text-xs text-gray-600 space-y-1 leading-relaxed">
-      <p class="font-bold text-gray-800 text-sm mb-1">提醒事項</p>
-      <p>彰化最早開的咖啡店，每日為你提供高品質的美味咖啡。</p>
-      <p class="font-bold text-gray-900">訂餐系統異常請來電 <a href="tel:047237933" class="text-[#2b4c7e] underline">04-7237933</a> 市話</p>
-      <p>咖啡飲品容量冰熱均為16oz</p>
-      <p>手沖咖啡容量為10oz/冰12oz(含冰塊)</p>
-    </div>
-    <div class="mt-3 pt-3 border-t grid grid-cols-3 gap-2">
-      <select id="order-type" onchange="toggleInputPlaceholder()" class="col-span-1 border border-gray-300 rounded-lg p-2.5 text-sm font-bold bg-white focus:outline-none focus:border-[#2b4c7e]">
-        <option value="外帶自取">外帶自取</option>
-        <option value="內用">內用</option>
-      </select>
-      <input type="text" id="customer-info" placeholder="請輸入稱呼與電話末三碼" class="col-span-2 border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#2b4c7e]">
+  <header class="bg-[#213c64] text-white p-4 shadow-md sticky top-0 z-30">
+    <div class="max-w-md mx-auto flex justify-between items-center">
+      <div>
+        <h1 class="text-xl font-extrabold tracking-wide">NODAY Coffee Roasters</h1>
+        <p class="text-xs text-amber-300 mt-0.5 flex items-center gap-1">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> 營業接單中
+        </p>
+      </div>
+      <button onclick="openCart()" class="bg-amber-500 hover:bg-amber-600 text-white px-3.5 py-2 rounded-xl text-xs font-extrabold shadow flex items-center gap-1.5 transition">
+        🛒 購物車 <span id="cart-badge" class="bg-white text-amber-700 px-1.5 py-0.5 rounded-full text-[10px]">0</span>
+      </button>
     </div>
   </header>
 
-  <nav class="sticky top-0 bg-white border-y border-gray-200 z-20 py-2.5 px-3 shadow-sm">
-    <div id="category-nav" class="flex overflow-x-auto no-scrollbar space-x-2 items-center"></div>
-  </nav>
+  <main class="max-w-md mx-auto p-4 space-y-4">
+    <div class="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl text-xs text-amber-900 shadow-sm space-y-1">
+      <p class="font-extrabold flex items-center gap-1">📢 提醒事項</p>
+      <p class="text-[11px] text-amber-800">彰化最早開的咖啡店，每日為你提供高品質的美味咖啡。</p>
+    </div>
 
-  <main id="menu-sections" class="divide-y-8 divide-gray-100">
-    <div class="text-center py-12 text-gray-400">正在從雲端載入菜單...</div>
+    <div class="bg-white p-3 rounded-2xl shadow-sm border flex gap-2">
+      <button onclick="setOrderType('外帶自取')" id="type-takeout" class="flex-1 py-2 rounded-xl text-xs font-bold transition bg-[#213c64] text-white shadow">🥡 外帶自取</button>
+      <button onclick="setOrderType('內用')" id="type-dinein" class="flex-1 py-2 rounded-xl text-xs font-bold transition bg-gray-100 text-gray-600">☕ 內用</button>
+    </div>
+
+    <div class="bg-white p-3 rounded-2xl shadow-sm border">
+      <label class="text-[11px] font-extrabold text-gray-600 block mb-1">訂位人姓名 / 桌號 (必填)</label>
+      <input type="text" id="customer-info" placeholder="例如：小鄭 / 桌號 3" class="w-full border rounded-xl p-2.5 text-xs focus:outline-none focus:border-[#2b4c7e] bg-gray-50">
+    </div>
+
+    <div id="category-tabs" class="flex gap-2 overflow-x-auto pb-1 no-scrollbar"></div>
+    <div id="menu-container" class="space-y-6">
+      <p class="text-center text-gray-400 py-10 text-xs">正在載入雲端菜單...</p>
+    </div>
   </main>
 
-  <div id="bottom-cart-bar" class="fixed bottom-0 left-0 right-0 bg-white border-t p-3 shadow-2xl z-30 max-w-xl mx-auto hidden">
-    <div class="flex items-center justify-between gap-3">
-      <div onclick="toggleCartModal()" class="flex items-center gap-3 cursor-pointer pl-1">
-        <div class="relative bg-[#213c64] text-white w-11 h-11 rounded-xl flex items-center justify-center font-bold">
-          🛒
-          <span id="badge-count" class="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">0</span>
-        </div>
+  <!-- 客製化彈跳視窗 -->
+  <div id="customize-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div class="flex justify-between items-start border-b pb-3">
         <div>
-          <p class="text-xs text-gray-500">點擊查看明細 ▲</p>
-          <p class="text-lg font-extrabold text-gray-900">NT$<span id="bar-total">0</span></p>
+          <h3 id="modal-item-name" class="font-extrabold text-base text-gray-950">品項名稱</h3>
+          <p id="modal-item-price" class="text-xs text-[#2b4c7e] font-extrabold mt-0.5">NT$0</p>
         </div>
+        <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 font-bold text-lg px-2">✕</button>
       </div>
-      <button onclick="toggleCartModal()" class="ichef-btn text-white px-7 py-3 rounded-lg font-bold text-sm shadow">查看購物車</button>
+
+      <div id="modal-options-container" class="space-y-4 text-xs"></div>
+
+      <div>
+        <label class="text-[11px] font-bold text-gray-600 block mb-1">備註說明 (選填)</label>
+        <input type="text" id="modal-note" placeholder="例如：少冰、不要太甜" class="w-full border rounded-xl p-2.5 text-xs bg-gray-50 focus:outline-none focus:border-[#2b4c7e]">
+      </div>
+
+      <div class="flex items-center justify-between pt-2">
+        <div class="flex items-center gap-3">
+          <button onclick="adjustQty(-1)" class="w-9 h-9 rounded-xl border bg-gray-100 font-extrabold text-sm flex items-center justify-center">-</button>
+          <span id="modal-qty" class="font-extrabold text-sm w-4 text-center">1</span>
+          <button onclick="adjustQty(1)" class="w-9 h-9 rounded-xl border bg-gray-100 font-extrabold text-sm flex items-center justify-center">+</button>
+        </div>
+        <button onclick="confirmAddToCart()" class="bg-[#213c64] hover:bg-opacity-90 text-white px-6 py-3 rounded-xl font-extrabold text-xs shadow-lg">加入購物車</button>
+      </div>
     </div>
   </div>
 
-  <div id="item-modal" class="fixed inset-0 bg-white z-50 hidden flex flex-col max-w-xl mx-auto">
-    <div class="flex items-center justify-between px-4 py-3.5 border-b sticky top-0 bg-white z-10">
-      <button onclick="closeItemModal()" class="text-xl font-bold text-gray-700 px-2">‹</button>
-      <h3 id="modal-header-title" class="text-base font-bold text-gray-900 truncate max-w-[75%]">商品名稱</h3>
-      <div class="w-6"></div>
-    </div>
-    <div class="flex-1 overflow-y-auto divide-y-8 divide-gray-100 pb-28">
-      <div class="p-4">
-        <h2 id="modal-title" class="text-xl font-extrabold text-gray-900">商品名稱</h2>
-        <p id="modal-desc" class="text-xs text-gray-500 mt-1 leading-relaxed"></p>
+  <!-- 購物車抽屜 -->
+  <div id="cart-drawer" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex justify-end">
+    <div class="bg-white w-full max-w-sm h-full p-5 flex flex-col justify-between shadow-2xl">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h2 class="font-extrabold text-base">🛒 您的購物車</h2>
+        <button onclick="closeCart()" class="text-gray-400 font-bold text-lg">✕</button>
       </div>
-      <div id="modifier-groups-container" class="divide-y-8 divide-gray-100"></div>
-      <div class="p-4 space-y-6">
-        <div>
-          <h4 class="text-base font-bold text-gray-900 mb-3">餐點備註</h4>
-          <input type="text" id="item-note" placeholder="新增備註" class="w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:border-[#2b4c7e]">
-        </div>
-        <div class="flex items-center justify-center space-x-6 py-2">
-          <button onclick="changeQty(-1)" class="w-11 h-11 rounded-full bg-gray-100 text-gray-600 text-xl font-bold flex items-center justify-center">－</button>
-          <span id="modal-qty" class="text-lg font-bold text-gray-900 w-6 text-center">1</span>
-          <button onclick="changeQty(1)" class="w-11 h-11 rounded-full bg-gray-100 text-gray-800 text-xl font-bold flex items-center justify-center">＋</button>
-        </div>
-      </div>
-    </div>
-    <div class="p-3 border-t bg-white sticky bottom-0 z-10">
-      <button onclick="confirmAddToCart()" class="w-full ichef-btn text-white py-3.5 rounded-md font-bold text-sm shadow">
-        新增 <span id="btn-qty">1</span> 份至購物車 • NT$<span id="modal-total-price">0</span>
-      </button>
-    </div>
-  </div>
 
-  <div id="cart-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-40 flex items-end justify-center">
-    <div class="bg-white w-full max-w-xl rounded-t-2xl max-h-[85vh] flex flex-col">
-      <div class="p-4 border-b flex justify-between items-center">
-        <h3 class="text-base font-extrabold text-gray-900">購物車明細</h3>
-        <button onclick="toggleCartModal()" class="text-gray-400 text-2xl leading-none px-2">&times;</button>
+      <div id="cart-items-list" class="flex-1 overflow-y-auto py-4 space-y-3">
+        <p class="text-center text-gray-400 text-xs py-10">購物車目前是空的...</p>
       </div>
-      <div id="cart-items-list" class="p-4 overflow-y-auto space-y-3 flex-1"></div>
-      <div class="p-4 border-t bg-gray-50">
-        <button onclick="submitFinalOrder()" class="w-full ichef-btn text-white py-3.5 rounded-md font-bold text-base shadow">
-          確認送出訂單 • NT$<span id="cart-modal-total">0</span>
+
+      <div class="border-t pt-4 space-y-3">
+        <div class="flex justify-between items-center font-extrabold text-sm">
+          <span>總計金額：</span>
+          <span id="cart-total" class="text-amber-800 text-base">NT$0</span>
+        </div>
+        <button onclick="submitOrder()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-extrabold text-sm shadow-lg transition">
+          🚀 確認送出訂單
         </button>
       </div>
     </div>
   </div>
 
-  <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, collection, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -130,320 +113,271 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    const modifierTemplates = {
-      temp_both: { id: "temp", title: "飲品溫度", required: true, min: 1, max: 1, options: [{ name: "冰", price: 0 }, { name: "熱", price: 0 }] },
-      temp_ice_only: { id: "temp", title: "飲品溫度", required: true, min: 1, max: 1, autoSelectFirst: true, options: [{ name: "冰", price: 0 }] },
-      sweetness: { id: "sweet", title: "甜度選項", required: false, min: 0, max: 1, options: [{ name: "半糖", price: 0 }, { name: "微糖", price: 0 }, { name: "無糖", price: 0 }, { name: "正常甜", price: 0 }] },
-      bean_choice: { id: "bean", title: "配方豆選擇", required: false, min: 0, max: 1, options: [{ name: "5號配方 | 中培 (5)", price: 0 }, { name: "1號配方 | 淺培 (1)", price: 10 }] },
-      double_shot: { id: "addon", title: "平台加購", required: false, min: 0, max: 1, options: [{ name: "雙倍濃縮", price: 20 }] },
-      cap_powder: { id: "powder", title: "其他註記", required: false, min: 0, max: 3, options: [{ name: "可可粉", price: 0 }, { name: "黑糖粉", price: 0 }, { name: "肉桂粉", price: 0 }] }
-    };
-
-    const ruleMappings = {
-      americano_basic: ["temp_both", "bean_choice", "double_shot"],
-      americano_fruit: ["temp_ice_only", "double_shot"],
-      sicilian_fizzy: ["temp_ice_only", "sweetness", "double_shot"],
-      sicilian_passion: ["temp_ice_only", "double_shot"],
-      pourover: ["temp_both"],
-      cappuccino: ["temp_both", "double_shot", "bean_choice", "cap_powder"],
-      latte_basic: ["temp_both", "bean_choice", "double_shot"],
-      latte_flavored: ["temp_both", "sweetness", "bean_choice", "double_shot"],
-      beverage_sweet: ["temp_both", "sweetness"],
-      beverage_basic: ["temp_both"],
-      fizzy: ["temp_ice_only"],
-      merch: []
-    };
-
-    let menuCatalog = [];
+    let catalog = [];
     let cart = [];
+    let currentOrderType = '外帶自取';
     let activeItem = null;
-    let activeGroups = [];
-    let selections = {};
     let currentQty = 1;
 
-    async function loadMenuFromFirebase() {
+    window.setOrderType = function(type) {
+      currentOrderType = type;
+      document.getElementById('type-takeout').className = type === '外帶自取' ? 'flex-1 py-2 rounded-xl text-xs font-bold transition bg-[#213c64] text-white shadow' : 'flex-1 py-2 rounded-xl text-xs font-bold transition bg-gray-100 text-gray-600';
+      document.getElementById('type-dinein').className = type === '內用' ? 'flex-1 py-2 rounded-xl text-xs font-bold transition bg-[#213c64] text-white shadow' : 'flex-1 py-2 rounded-xl text-xs font-bold transition bg-gray-100 text-gray-600';
+    };
+
+    async function loadMenu() {
       try {
         const querySnapshot = await getDocs(collection(db, "menu"));
-        if (querySnapshot.empty) {
-          document.getElementById("menu-sections").innerHTML = `<div class="p-8 text-center text-red-500">尚未初始化菜單！請先至管理後台點擊「一鍵初始化菜單」。</div>`;
-          return;
-        }
-        menuCatalog = [];
-        querySnapshot.forEach((doc) => {
-          menuCatalog.push(doc.data());
-        });
-        menuCatalog.sort((a, b) => a.order - b.order);
+        if (querySnapshot.empty) return;
+        catalog = [];
+        querySnapshot.forEach(d => catalog.push(d.data()));
+        catalog.sort((a, b) => a.order - b.order);
         renderMenu();
-      } catch (e) {
-        console.error("載入菜單失敗：", e);
-        document.getElementById("menu-sections").innerHTML = `<div class="p-8 text-center text-red-500">載入菜單失敗，請確認 Firebase 設定。</div>`;
-      }
+      } catch (e) { console.error(e); }
     }
 
     function renderMenu() {
-      const nav = document.getElementById("category-nav");
-      const main = document.getElementById("menu-sections");
-      nav.innerHTML = "";
-      main.innerHTML = "";
+      const tabs = document.getElementById('category-tabs');
+      const container = document.getElementById('menu-container');
 
-      menuCatalog.forEach((cat, idx) => {
-        const secId = `sec-${idx}`;
-        nav.innerHTML += `
-          <a href="#${secId}" onclick="activatePill(this)" class="cat-pill whitespace-nowrap px-4 py-1.5 rounded-full text-sm ${idx === 0 ? 'active' : ''}">
-            ${cat.category}
-          </a>
-        `;
+      tabs.innerHTML = catalog.map((cat, idx) => `
+        <button onclick="scrollToCat('${cat.category}')" class="whitespace-nowrap px-3.5 py-1.5 rounded-xl text-xs font-bold ${idx === 0 ? 'bg-[#213c64] text-white' : 'bg-white text-gray-700 border'} shadow-sm">
+          ${cat.category}
+        </button>
+      `).join('');
 
-        const itemsHtml = cat.items.map(item => {
-          if (item.soldOut) {
-            return `
-              <div class="py-4 border-b border-gray-100 flex justify-between items-start opacity-50">
-                <div class="pr-4">
-                  <h3 class="font-bold text-gray-900 text-base">${item.name} <span class="text-xs text-red-500 font-bold ml-2">【今日售完】</span></h3>
-                  ${item.desc ? `<p class="text-xs text-gray-400 mt-1">${item.desc}</p>` : ''}
-                  <p class="text-sm text-gray-500 mt-2">NT$${item.price}</p>
+      container.innerHTML = catalog.map(cat => `
+        <div id="cat-${cat.category}" class="space-y-3">
+          <h2 class="font-extrabold text-sm text-[#213c64] border-b pb-1.5">${cat.category}</h2>
+          <div class="grid grid-cols-1 gap-2.5">
+            ${cat.items.map(item => `
+              <div onclick="${item.soldOut ? '' : `openModal('${cat.category}', '${item.id}')`}" class="bg-white p-3.5 rounded-2xl border shadow-sm flex justify-between items-center ${item.soldOut ? 'opacity-50 bg-gray-100 cursor-not-allowed' : 'cursor-pointer hover:border-[#213c64] transition'}">
+                <div class="space-y-1">
+                  <h3 class="font-extrabold text-xs text-gray-900">${item.name}</h3>
+                  ${item.desc ? `<p class="text-[11px] text-gray-500">${item.desc}</p>` : ''}
+                  <p class="font-extrabold text-xs text-[#213c64]">NT$${item.price}</p>
+                </div>
+                <div>
+                  ${item.soldOut ? '<span class="bg-red-500 text-white px-2.5 py-1 rounded-xl text-[10px] font-bold">已售完</span>' : '<span class="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-xl text-xs font-bold">選購 ＋</span>'}
                 </div>
               </div>
-            `;
-          }
-          return `
-            <div onclick="openItemModal('${item.id}')" class="py-4 border-b border-gray-100 flex justify-between items-start cursor-pointer active:bg-gray-50">
-              <div class="pr-4">
-                <h3 class="font-bold text-gray-900 text-base">${item.name}</h3>
-                ${item.desc ? `<p class="text-xs text-gray-500 mt-1 leading-relaxed">${item.desc}</p>` : ''}
-                <p class="text-sm text-gray-800 mt-2">NT$${item.price}</p>
-              </div>
-            </div>
-          `;
-        }).join("");
-
-        main.innerHTML += `
-          <section id="${secId}" class="px-4 py-5 scroll-mt-14">
-            <h2 class="text-xl font-extrabold text-gray-900 mb-2">${cat.category}</h2>
-            <div>${itemsHtml}</div>
-          </section>
-        `;
-      });
-    }
-
-    window.activatePill = function(el) {
-      document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
-      el.classList.add('active');
-    };
-
-    window.toggleInputPlaceholder = function() {
-      const type = document.getElementById('order-type').value;
-      document.getElementById('customer-info').placeholder = type === '內用' ? '請輸入桌號 (例：3號桌)' : '請輸入稱呼與電話末三碼';
-    };
-
-    window.openItemModal = function(itemId) {
-      for (const cat of menuCatalog) {
-        const found = cat.items.find(i => i.id === itemId);
-        if (found) { activeItem = found; break; }
-      }
-      currentQty = 1;
-      document.getElementById('item-note').value = '';
-      document.getElementById('modal-qty').innerText = 1;
-      document.getElementById('btn-qty').innerText = 1;
-      document.getElementById('modal-header-title').innerText = activeItem.name;
-      document.getElementById('modal-title').innerText = activeItem.name;
-      document.getElementById('modal-desc').innerText = activeItem.desc || '';
-
-      const groupKeys = ruleMappings[activeItem.rule] || [];
-      activeGroups = groupKeys.map(k => modifierTemplates[k]);
-      selections = {};
-
-      activeGroups.forEach(g => {
-        selections[g.id] = [];
-        if (g.autoSelectFirst && g.options.length > 0) selections[g.id].push(g.options[0]);
-      });
-
-      renderModifierGroups();
-      updateModalPrice();
-      document.getElementById('item-modal').classList.remove('hidden');
-    };
-
-    window.closeItemModal = function() {
-      document.getElementById('item-modal').classList.add('hidden');
-    };
-
-    function renderModifierGroups() {
-      const container = document.getElementById('modifier-groups-container');
-      if (activeGroups.length === 0) { container.innerHTML = ''; return; }
-
-      container.innerHTML = activeGroups.map(group => {
-        const selectedList = selections[group.id] || [];
-        const subText = group.required ? `<span class="text-xs font-bold text-[#2b4c7e]">必選 ${group.max} 個</span>` : `<span class="text-xs text-gray-500">選填最多 ${group.max} 個</span>`;
-        const optionsHtml = group.options.map((opt, optIdx) => {
-          const isChecked = selectedList.some(s => s.name === opt.name);
-          const iconHtml = group.required ? `<div class="radio-circle ${isChecked ? 'checked' : ''}"></div>` : `<div class="checkbox-square ${isChecked ? 'checked' : ''}">${isChecked ? '✓' : ''}</div>`;
-          return `
-            <div onclick="window.toggleModifier('${group.id}', ${optIdx})" class="py-3 flex items-center space-x-3.5 cursor-pointer select-none">
-              ${iconHtml}
-              <div class="flex-1">
-                <p class="text-sm text-gray-800">${opt.name}</p>
-                ${opt.price > 0 ? `<p class="text-xs text-gray-500 mt-0.5">+NT$${opt.price}</p>` : ''}
-              </div>
-            </div>
-          `;
-        }).join('');
-
-        return `
-          <div class="p-4">
-            <div class="flex justify-between items-start mb-2">
-              <div>
-                <h4 class="text-base font-bold text-gray-900">${group.title}</h4>
-                ${subText}
-              </div>
-              <span class="bg-gray-100 text-gray-600 text-xs font-bold px-2.5 py-1 rounded">已選 ${selectedList.length}</span>
-            </div>
-            <div class="mt-2 divide-y divide-gray-50">${optionsHtml}</div>
+            `).join('')}
           </div>
-        `;
-      }).join('');
-    }
-
-    window.toggleModifier = function(groupId, optIdx) {
-      const group = activeGroups.find(g => g.id === groupId);
-      const opt = group.options[optIdx];
-      const currentList = selections[groupId];
-      const existingIdx = currentList.findIndex(s => s.name === opt.name);
-
-      if (group.required && group.max === 1) {
-        selections[groupId] = [opt];
-      } else {
-        if (existingIdx > -1) {
-          currentList.splice(existingIdx, 1);
-        } else {
-          if (group.max === 1) selections[groupId] = [opt];
-          else if (currentList.length < group.max) currentList.push(opt);
-          else { alert(`最多只能選擇 ${group.max} 個喔！`); return; }
-        }
-      }
-      renderModifierGroups();
-      updateModalPrice();
-    };
-
-    window.changeQty = function(delta) {
-      if (currentQty + delta >= 1) {
-        currentQty += delta;
-        document.getElementById('modal-qty').innerText = currentQty;
-        document.getElementById('btn-qty').innerText = currentQty;
-        updateModalPrice();
-      }
-    };
-
-    function updateModalPrice() {
-      let extra = 0;
-      Object.values(selections).forEach(list => list.forEach(opt => extra += opt.price));
-      const total = (activeItem.price + extra) * currentQty;
-      document.getElementById('modal-total-price').innerText = total;
-    }
-
-    window.confirmAddToCart = function() {
-      for (const group of activeGroups) {
-        if (group.required && (!selections[group.id] || selections[group.id].length < group.min)) {
-          alert(`請先選擇「${group.title}」喔！`);
-          return;
-        }
-      }
-      let extra = 0;
-      let chosenTags = [];
-      activeGroups.forEach(g => {
-        (selections[g.id] || []).forEach(opt => {
-          extra += opt.price;
-          chosenTags.push(opt.price > 0 ? `${opt.name}(+$${opt.price})` : opt.name);
-        });
-      });
-      const note = document.getElementById('item-note').value.trim();
-      const unitPrice = activeItem.price + extra;
-
-      cart.push({
-        name: activeItem.name,
-        modifiers: chosenTags,
-        note: note,
-        qty: currentQty,
-        unitPrice: unitPrice,
-        subtotal: unitPrice * currentQty
-      });
-
-      closeItemModal();
-      refreshCartUI();
-    };
-
-    function refreshCartUI() {
-      const totalCount = cart.reduce((s, i) => s + i.qty, 0);
-      const totalPrice = cart.reduce((s, i) => s + i.subtotal, 0);
-      document.getElementById('badge-count').innerText = totalCount;
-      document.getElementById('bar-total').innerText = totalPrice;
-      document.getElementById('cart-modal-total').innerText = totalPrice;
-
-      const cartBar = document.getElementById('bottom-cart-bar');
-      if (cart.length > 0) cartBar.classList.remove('hidden');
-      else cartBar.classList.add('hidden');
-
-      const list = document.getElementById('cart-items-list');
-      if (cart.length === 0) { list.innerHTML = `<p class="text-center text-gray-400 text-sm py-8">購物車目前是空的喔</p>`; return; }
-
-      list.innerHTML = cart.map((item, idx) => `
-        <div class="flex justify-between items-start border-b pb-3">
-          <div class="pr-3">
-            <p class="font-bold text-sm text-gray-900">${item.name} <span class="text-[#2b4c7e]">x${item.qty}</span></p>
-            ${item.modifiers.length ? `<p class="text-xs text-gray-500 mt-0.5">${item.modifiers.join(' / ')}</p>` : ''}
-            ${item.note ? `<p class="text-xs text-amber-700 mt-0.5">備註：${item.note}</p>` : ''}
-            <p class="text-xs font-bold text-gray-800 mt-1">NT$${item.subtotal}</p>
-          </div>
-          <button onclick="window.removeCartItem(${idx})" class="text-red-500 text-xs font-bold px-2.5 py-1 border border-red-200 rounded shrink-0">刪除</button>
         </div>
       `).join('');
     }
 
-    window.removeCartItem = function(idx) {
-      cart.splice(idx, 1);
-      refreshCartUI();
-      if (cart.length === 0) document.getElementById('cart-modal').classList.add('hidden');
+    window.scrollToCat = function(catName) {
+      const el = document.getElementById(`cat-${catName}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
     };
 
-    window.toggleCartModal = function() {
-      if (cart.length === 0) { alert('購物車目前是空的喔！'); return; }
-      document.getElementById('cart-modal').classList.toggle('hidden');
-    };
+    window.openModal = function(catName, itemId) {
+      const cat = catalog.find(c => c.category === catName);
+      if (!cat) return;
+      activeItem = cat.items.find(i => i.id === itemId);
+      if (!activeItem) return;
 
-    window.submitFinalOrder = async function() {
-      if (cart.length === 0) return;
-      const customerInfo = document.getElementById('customer-info').value.trim();
-      if (!customerInfo) {
-        alert('請先在畫面上方填寫「稱呼與電話末三碼」或「內用桌號」喔！');
-        document.getElementById('cart-modal').classList.add('hidden');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        setTimeout(() => document.getElementById('customer-info').focus(), 400);
-        return;
+      currentQty = 1;
+      document.getElementById('modal-item-name').innerText = activeItem.name;
+      document.getElementById('modal-item-price').innerText = `NT$${activeItem.price}`;
+      document.getElementById('modal-qty').innerText = currentQty;
+      document.getElementById('modal-note').value = '';
+
+      const opts = activeItem.options || {};
+      let html = '';
+
+      if (opts.temp) {
+        html += `
+          <div>
+            <label class="font-bold text-gray-700 block mb-1">飲品溫度：</label>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="border p-2 rounded-xl text-center cursor-pointer font-bold"><input type="radio" name="opt-temp" value="冰" checked class="mr-1.5"> 冰飲</label>
+              <label class="border p-2 rounded-xl text-center cursor-pointer font-bold"><input type="radio" name="opt-temp" value="熱" class="mr-1.5"> 熱飲</label>
+            </div>
+          </div>
+        `;
       }
 
-      const orderType = document.getElementById('order-type').value;
-      const totalAmount = cart.reduce((s, i) => s + i.subtotal, 0);
+      if (opts.bean) {
+        html += `
+          <div>
+            <label class="font-bold text-gray-700 block mb-1">選擇配方豆：</label>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="border p-2 rounded-xl text-center cursor-pointer font-bold"><input type="radio" name="opt-bean" value="5號配方(經典)" checked class="mr-1.5"> 5號配方(經典)</label>
+              <label class="border p-2 rounded-xl text-center cursor-pointer font-bold"><input type="radio" name="opt-bean" value="1號配方(果香)" class="mr-1.5"> 1號配方(果香)</label>
+            </div>
+          </div>
+        `;
+      }
+
+      if (opts.sugar) {
+        html += `
+          <div>
+            <label class="font-bold text-gray-700 block mb-1">甜度選擇：</label>
+            <div class="grid grid-cols-3 gap-2">
+              <label class="border p-2 rounded-xl text-center cursor-pointer font-bold"><input type="radio" name="opt-sugar" value="正常甜" checked class="mr-1"> 正常</label>
+              <label class="border p-2 rounded-xl text-center cursor-pointer font-bold"><input type="radio" name="opt-sugar" value="半糖" class="mr-1"> 半糖</label>
+              <label class="border p-2 rounded-xl text-center cursor-pointer font-bold"><input type="radio" name="opt-sugar" value="微/無糖" class="mr-1"> 微/無糖</label>
+            </div>
+          </div>
+        `;
+      }
+
+      if (opts.addons) {
+        html += `
+          <div>
+            <label class="font-bold text-gray-700 block mb-1">加購選項：</label>
+            <label class="flex items-center gap-2 border p-2.5 rounded-xl cursor-pointer">
+              <input type="checkbox" id="opt-addon-shot" value="加一份濃縮 (+NT$20)" class="w-4 h-4 text-[#213c64]">
+              <span class="font-bold">加一份濃縮 (+NT$20)</span>
+            </label>
+          </div>
+        `;
+      }
+
+      if (activeItem.customTag) {
+        const tags = activeItem.customTag.split(',').map(t => t.trim()).filter(Boolean);
+        if (tags.length > 0) {
+          html += `
+            <div>
+              <label class="font-bold text-gray-700 block mb-1">自訂選項：</label>
+              <div class="flex flex-wrap gap-2">
+                ${tags.map((t, idx) => `
+                  <label class="border px-3 py-2 rounded-xl text-center cursor-pointer font-bold text-xs bg-gray-50">
+                    <input type="checkbox" name="custom-tag-option" value="${t}" class="mr-1.5"> ${t}
+                  </label>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }
+      }
+
+      document.getElementById('modal-options-container').innerHTML = html;
+      document.getElementById('customize-modal').classList.remove('hidden');
+    };
+
+    window.closeModal = function() {
+      document.getElementById('customize-modal').classList.add('hidden');
+    };
+
+    window.adjustQty = function(change) {
+      currentQty += change;
+      if (currentQty < 1) currentQty = 1;
+      document.getElementById('modal-qty').innerText = currentQty;
+    };
+
+    window.confirmAddToCart = function() {
+      if (!activeItem) return;
+      const modifiers = [];
+      let finalPrice = activeItem.price;
+
+      const tempEl = document.querySelector('input[name="opt-temp"]:checked');
+      if (tempEl) modifiers.push(tempEl.value);
+
+      const beanEl = document.querySelector('input[name="opt-bean"]:checked');
+      if (beanEl) modifiers.push(beanEl.value);
+
+      const sugarEl = document.querySelector('input[name="opt-sugar"]:checked');
+      if (sugarEl) modifiers.push(sugarEl.value);
+
+      const addonEl = document.getElementById('opt-addon-shot');
+      if (addonEl && addonEl.checked) {
+        modifiers.push("加一份濃縮");
+        finalPrice += 20;
+      }
+
+      document.querySelectorAll('input[name="custom-tag-option"]:checked').forEach(el => {
+        modifiers.push(el.value);
+      });
+
+      const note = document.getElementById('modal-note').value.trim();
+
+      cart.push({
+        id: activeItem.id,
+        name: activeItem.name,
+        price: finalPrice,
+        qty: currentQty,
+        modifiers: modifiers,
+        note: note
+      });
+
+      updateCartBadge();
+      closeModal();
+      alert("✅ 已成功加入購物車！");
+    };
+
+    window.openCart = function() {
+      const listEl = document.getElementById('cart-items-list');
+      const totalEl = document.getElementById('cart-total');
+
+      if (cart.length === 0) {
+        listEl.innerHTML = `<p class="text-center text-gray-400 text-xs py-10">購物車目前是空的...</p>`;
+        totalEl.innerText = 'NT$0';
+      } else {
+        let total = 0;
+        listEl.innerHTML = cart.map((item, idx) => {
+          const itemTotal = item.price * item.qty;
+          total += itemTotal;
+          return `
+            <div class="flex justify-between items-center border-b pb-3 text-xs">
+              <div>
+                <p class="font-extrabold text-gray-900">${item.name} x${item.qty}</p>
+                <p class="text-[11px] text-gray-500">${item.modifiers.join(' / ')} ${item.note ? `[${item.note}]` : ''}</p>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="font-extrabold text-[#213c64]">NT$${itemTotal}</span>
+                <button onclick="removeFromCart(${idx})" class="text-red-500 font-bold px-1.5 py-0.5 rounded bg-red-50">刪除</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+        totalEl.innerText = `NT$${total}`;
+      }
+      document.getElementById('cart-drawer').classList.add('hidden'); // Fix open state
+      document.getElementById('cart-drawer').classList.remove('hidden');
+    };
+
+    window.closeCart = function() {
+      document.getElementById('cart-drawer').classList.add('hidden');
+    };
+
+    window.removeFromCart = function(idx) {
+      cart.splice(idx, 1);
+      updateCartBadge();
+      openCart();
+    };
+
+    function updateCartBadge() {
+      const count = cart.reduce((sum, item) => sum + item.qty, 0);
+      document.getElementById('cart-badge').innerText = count;
+    }
+
+    window.submitOrder = async function() {
+      const customerInfo = document.getElementById('customer-info').value.trim();
+      if (!customerInfo) { alert('請填寫訂位人姓名或桌號！'); return; }
+      if (cart.length === 0) { alert('購物車是空的喔！'); return; }
+
+      const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
 
       try {
         await addDoc(collection(db, "orders"), {
-          store: "NODAY Coffee Roasters",
-          orderType,
-          customerInfo,
+          orderType: currentOrderType,
+          customerInfo: customerInfo,
           items: cart,
-          totalAmount,
+          totalAmount: totalAmount,
           status: "pending",
           createdAt: serverTimestamp()
         });
-        alert(`✅ 訂單已送出！\n【${orderType}】${customerInfo}\n共計 NT$${totalAmount}\n\n吧台已收到您的點餐，將立即為您製作！`);
+        alert("🎉 訂單已成功送出！");
         cart = [];
-        refreshCartUI();
-        document.getElementById('cart-modal').classList.add('hidden');
-      } catch (e) {
-        console.error("送出訂單失敗：", e);
-        alert("送出訂單發生錯誤，請稍後再試。");
-      }
+        updateCartBadge();
+        closeCart();
+      } catch (e) { console.error(e); alert("送出失敗"); }
     };
 
-    loadMenuFromFirebase();
+    loadMenu();
   </script>
 </body>
 </html>
