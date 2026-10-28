@@ -186,7 +186,7 @@
       const opts = activeItem.options || {};
       let html = '';
 
-      // 獨立溫度選項 (可單選或複選)
+      // 溫度選項
       const temps = [];
       if (opts.ice) temps.push('冰');
       if (opts.hot) temps.push('熱');
@@ -205,7 +205,7 @@
         `;
       }
 
-      // 獨立配方豆選項 (可單選，帶各自加價)
+      // 配方豆選項
       const beans = [];
       if (opts.bean5) beans.push({ name: '5號配方(經典)', price: opts.priceBean5 || 0 });
       if (opts.bean1) beans.push({ name: '1號配方(果香)', price: opts.priceBean1 || 0 });
@@ -224,21 +224,28 @@
         `;
       }
 
-      // 獨立甜度選項 (改為可單選的按鈕)
-      if (opts.sugar) {
+      // 獨立甜度選項 (改為可單選的按鈕，帶各自加價)
+      const sugars = [];
+      if (opts.sugarFree) sugars.push({ name: '無糖', price: opts.priceSugarFree || 0 });
+      if (opts.sugarMicro) sugars.push({ name: '微糖', price: opts.priceSugarMicro || 0 });
+      if (opts.sugarHalf) sugars.push({ name: '半糖', price: opts.priceSugarHalf || 0 });
+      if (opts.sugarNormal) sugars.push({ name: '正常甜', price: opts.priceSugarNormal || 0 });
+      if (sugars.length > 0) {
         html += `
           <div>
             <label class="font-bold text-gray-700 block mb-1">甜度選擇：</label>
-            <div class="grid grid-cols-3 gap-2">
-              <label class="border p-2 rounded-xl text-center cursor-pointer font-bold"><input type="radio" name="opt-sugar" value="正常甜" checked class="mr-1"> 正常</label>
-              <label class="border p-2 rounded-xl text-center cursor-pointer font-bold"><input type="radio" name="opt-sugar" value="半糖" class="mr-1"> 半糖</label>
-              <label class="border p-2 rounded-xl text-center cursor-pointer font-bold"><input type="radio" name="opt-sugar" value="微/無糖" class="mr-1"> 微/無糖</label>
+            <div class="grid grid-cols-${sugars.length > 2 ? 2 : sugars.length} gap-2">
+              ${sugars.map((s, idx) => `
+                <label class="border p-2 rounded-xl text-center cursor-pointer font-bold text-[11px]">
+                  <input type="radio" name="opt-sugar" value="${s.name}" data-price="${s.price}" ${idx === 0 ? 'checked' : ''} class="mr-1 custom-sugar-radio" onchange="updateModalPrice()"> ${s.name} ${s.price > 0 ? `(+$${s.price})` : ''}
+                </label>
+              `).join('')}
             </div>
           </div>
         `;
       }
 
-      // 自訂加價規則 (燕麥奶、黑糖粉、肉桂粉等)
+      // 自訂加價規則 (燕麥奶、可可粉、黑糖粉、肉桂粉等)
       if (activeItem.customRules) {
         const rules = activeItem.customRules.split(',').map(r => r.trim()).filter(Boolean);
         if (rules.length > 0) {
@@ -272,13 +279,19 @@
       if (!activeItem) return;
       let base = activeItem.price;
 
-      // 計算選中的配方豆加價
+      // 配方豆加價
       const beanEl = document.querySelector('input[name="opt-bean"]:checked');
       if (beanEl) {
         base += Number(beanEl.getAttribute('data-price') || 0);
       }
 
-      // 計算勾選的加價規則
+      // 甜度加價
+      const sugarEl = document.querySelector('input[name="opt-sugar"]:checked');
+      if (sugarEl) {
+        base += Number(sugarEl.getAttribute('data-price') || 0);
+      }
+
+      // 勾選的加價規則
       document.querySelectorAll('.custom-addon-checkbox:checked').forEach(el => {
         base += Number(el.getAttribute('data-price') || 0);
       });
@@ -312,7 +325,10 @@
       }
 
       const sugarEl = document.querySelector('input[name="opt-sugar"]:checked');
-      if (sugarEl) modifiers.push(sugarEl.value);
+      if (sugarEl) {
+        modifiers.push(sugarEl.value);
+        finalUnitPrice += Number(sugarEl.getAttribute('data-price') || 0);
+      }
 
       document.querySelectorAll('input[name="custom-rule-option"]:checked').forEach(el => {
         modifiers.push(el.value);
