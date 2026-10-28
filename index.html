@@ -186,6 +186,7 @@
       const opts = activeItem.options || {};
       let html = '';
 
+      // 獨立溫度選項 (可單選或複選)
       const temps = [];
       if (opts.ice) temps.push('冰');
       if (opts.hot) temps.push('熱');
@@ -204,9 +205,10 @@
         `;
       }
 
+      // 獨立配方豆選項 (可單選，帶各自加價)
       const beans = [];
-      if (opts.bean5) beans.push('5號配方(經典)');
-      if (opts.bean1) beans.push('1號配方(果香)');
+      if (opts.bean5) beans.push({ name: '5號配方(經典)', price: opts.priceBean5 || 0 });
+      if (opts.bean1) beans.push({ name: '1號配方(果香)', price: opts.priceBean1 || 0 });
       if (beans.length > 0) {
         html += `
           <div>
@@ -214,7 +216,7 @@
             <div class="grid grid-cols-${beans.length} gap-2">
               ${beans.map((b, idx) => `
                 <label class="border p-2 rounded-xl text-center cursor-pointer font-bold text-[11px]">
-                  <input type="radio" name="opt-bean" value="${b}" ${idx === 0 ? 'checked' : ''} class="mr-1"> ${b}
+                  <input type="radio" name="opt-bean" value="${b.name}" data-price="${b.price}" ${idx === 0 ? 'checked' : ''} class="mr-1 custom-bean-radio" onchange="updateModalPrice()"> ${b.name} ${b.price > 0 ? `(+$${b.price})` : ''}
                 </label>
               `).join('')}
             </div>
@@ -222,6 +224,7 @@
         `;
       }
 
+      // 獨立甜度選項 (改為可單選的按鈕)
       if (opts.sugar) {
         html += `
           <div>
@@ -235,6 +238,7 @@
         `;
       }
 
+      // 自訂加價規則 (燕麥奶、黑糖粉、肉桂粉等)
       if (activeItem.customRules) {
         const rules = activeItem.customRules.split(',').map(r => r.trim()).filter(Boolean);
         if (rules.length > 0) {
@@ -267,9 +271,18 @@
     window.updateModalPrice = function() {
       if (!activeItem) return;
       let base = activeItem.price;
+
+      // 計算選中的配方豆加價
+      const beanEl = document.querySelector('input[name="opt-bean"]:checked');
+      if (beanEl) {
+        base += Number(beanEl.getAttribute('data-price') || 0);
+      }
+
+      // 計算勾選的加價規則
       document.querySelectorAll('.custom-addon-checkbox:checked').forEach(el => {
         base += Number(el.getAttribute('data-price') || 0);
       });
+
       document.getElementById('modal-item-price').innerText = `NT$${base * currentQty}`;
     };
 
@@ -293,7 +306,10 @@
       if (tempEl) modifiers.push(tempEl.value);
 
       const beanEl = document.querySelector('input[name="opt-bean"]:checked');
-      if (beanEl) modifiers.push(beanEl.value);
+      if (beanEl) {
+        modifiers.push(beanEl.value);
+        finalUnitPrice += Number(beanEl.getAttribute('data-price') || 0);
+      }
 
       const sugarEl = document.querySelector('input[name="opt-sugar"]:checked');
       if (sugarEl) modifiers.push(sugarEl.value);
