@@ -13,9 +13,14 @@
       <h1 class="text-xl font-bold">☕ NODAY 吧台管理後台</h1>
       <p class="text-xs text-gray-200 mt-0.5">即時接單看板 ＆ 雲端菜單管理</p>
     </div>
-    <button onclick="initMenuToFirebase()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow">
-      ⚡ 一鍵初始化完整菜單
-    </button>
+    <div class="flex gap-2">
+      <button onclick="openAddItemModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow">
+        ＋ 新增品項
+      </button>
+      <button onclick="initMenuToFirebase()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow">
+        ⚡ 還原預設菜單
+      </button>
+    </div>
   </header>
 
   <main class="max-w-4xl mx-auto p-4 space-y-6 mt-4">
@@ -30,17 +35,89 @@
       </div>
     </section>
 
-    <!-- 菜單售完管理區 -->
+    <!-- 菜單管理區 -->
     <section class="bg-white p-5 rounded-2xl shadow-sm">
-      <h2 class="text-base font-extrabold text-gray-900 mb-3">🛠️ 菜單品項與售完管理</h2>
-      <p class="text-xs text-gray-500 mb-4">點擊「設為售完」，客人的點餐頁面會立即同步顯示售完並無法點選。</p>
+      <h2 class="text-base font-extrabold text-gray-900 mb-2">🛠️ 雲端菜單編輯與售完管理</h2>
+      <p class="text-xs text-gray-500 mb-4">您可以直接修改價格、品項名稱、描述，或設定為今日售完。</p>
       <div id="admin-menu-list" class="space-y-4">
         <p class="text-gray-400 text-sm">正在載入菜單...</p>
       </div>
     </section>
   </main>
 
-  <!-- Firebase 接order與menu -->
+  <!-- 編輯品項 Modal -->
+  <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl p-6 space-y-4">
+      <h3 id="edit-modal-title" class="text-lg font-bold text-gray-900">修改品項</h3>
+      <input type="hidden" id="edit-cat-name">
+      <input type="hidden" id="edit-item-id">
+      <div>
+        <label class="text-xs font-bold text-gray-600">品項名稱</label>
+        <input type="text" id="edit-name" class="w-full border rounded-lg p-2.5 text-sm mt-1 focus:outline-none focus:border-[#2b4c7e]">
+      </div>
+      <div>
+        <label class="text-xs font-bold text-gray-600">價格 (NT$)</label>
+        <input type="number" id="edit-price" class="w-full border rounded-lg p-2.5 text-sm mt-1 focus:outline-none focus:border-[#2b4c7e]">
+      </div>
+      <div>
+        <label class="text-xs font-bold text-gray-600">品項描述 (容量/風味說明)</label>
+        <input type="text" id="edit-desc" class="w-full border rounded-lg p-2.5 text-sm mt-1 focus:outline-none focus:border-[#2b4c7e]">
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button onclick="closeEditModal()" class="flex-1 bg-gray-200 text-gray-700 py-2.5 rounded-lg font-bold text-sm">取消</button>
+        <button onclick="saveItemChanges()" class="flex-1 bg-[#2b4c7e] text-white py-2.5 rounded-lg font-bold text-sm">儲存修改</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新增品項 Modal -->
+  <div id="add-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl p-6 space-y-4">
+      <h3 class="text-lg font-bold text-gray-900">新增飲品/商品</h3>
+      <div>
+        <label class="text-xs font-bold text-gray-600">選擇分類</label>
+        <select id="add-cat" class="w-full border rounded-lg p-2.5 text-sm mt-1 bg-white focus:outline-none focus:border-[#2b4c7e]">
+          <option value="美式系列 Americano">美式系列 Americano</option>
+          <option value="單品手沖 PourOver">單品手沖 PourOver</option>
+          <option value="拿鐵系列 Cafe Latte">拿鐵系列 Cafe Latte</option>
+          <option value="風味飲品 Beverage">風味飲品 Beverage</option>
+          <option value="NODAY 周邊">NODAY 周邊</option>
+          <option value="微氣泡 Fizzy">微氣泡 Fizzy</option>
+          <option value="季節限定 ＮＥＷ">季節限定 ＮＥＷ</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs font-bold text-gray-600">品項名稱</label>
+        <input type="text" id="add-name" placeholder="例如：特濃黑咖啡" class="w-full border rounded-lg p-2.5 text-sm mt-1 focus:outline-none focus:border-[#2b4c7e]">
+      </div>
+      <div>
+        <label class="text-xs font-bold text-gray-600">價格 (NT$)</label>
+        <input type="number" id="add-price" placeholder="100" class="w-full border rounded-lg p-2.5 text-sm mt-1 focus:outline-none focus:border-[#2b4c7e]">
+      </div>
+      <div>
+        <label class="text-xs font-bold text-gray-600">品項描述</label>
+        <input type="text" id="add-desc" placeholder="16oz｜風味說明" class="w-full border rounded-lg p-2.5 text-sm mt-1 focus:outline-none focus:border-[#2b4c7e]">
+      </div>
+      <div>
+        <label class="text-xs font-bold text-gray-600">點餐選項規則</label>
+        <select id="add-rule" class="w-full border rounded-lg p-2.5 text-sm mt-1 bg-white focus:outline-none focus:border-[#2b4c7e]">
+          <option value="americano_basic">美式規則 (冰熱+配方豆+雙倍濃縮)</option>
+          <option value="latte_basic">拿鐵規則 (冰熱+配方豆+雙倍濃縮)</option>
+          <option value="latte_flavored">風味拿鐵 (冰熱+甜度+配方豆+雙倍濃縮)</option>
+          <option value="pourover">手沖規則 (冰熱)</option>
+          <option value="beverage_sweet">風味飲品 (冰熱+甜度)</option>
+          <option value="beverage_basic">基本飲品 (冰熱)</option>
+          <option value="fizzy">氣泡飲 (限冰)</option>
+          <option value="merch">周邊商品 (無客製選項)</option>
+        </select>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button onclick="closeAddModal()" class="flex-1 bg-gray-200 text-gray-700 py-2.5 rounded-lg font-bold text-sm">取消</button>
+        <button onclick="confirmAddNewItem()" class="flex-1 bg-emerald-600 text-white py-2.5 rounded-lg font-bold text-sm">確認新增</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, collection, getDocs, doc, setDoc, updateDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -57,7 +134,8 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // 完整的 NODAY 原始預設菜單資料結構
+    let cachedCatalog = [];
+
     const defaultMenuCatalog = [
       {
         order: 1, category: "美式系列 Americano",
@@ -152,129 +230,179 @@
       }
     ];
 
-    // 一鍵初始化寫入 Firebase
     window.initMenuToFirebase = async function() {
-      if (!confirm("確定要將完整預設菜單寫入 Firebase 雲端資料庫嗎？")) return;
+      if (!confirm("確定要將預設完整菜單重置並寫入雲端嗎？")) return;
       try {
         for (const cat of defaultMenuCatalog) {
           await setDoc(doc(db, "menu", cat.category), cat);
         }
-        alert("🎉 菜單初始化成功！客人端重新整理即可看到完整菜單。");
+        alert("🎉 菜單已成功還原！");
         loadAdminMenu();
-      } catch (e) {
-        console.error(e);
-        alert("初始化失敗，請檢查權限設定。");
-      }
+      } catch (e) { console.error(e); alert("操作失敗"); }
     };
 
-    // 載入後台菜單管理列表
     async function loadAdminMenu() {
       const container = document.getElementById("admin-menu-list");
       try {
         const querySnapshot = await getDocs(collection(db, "menu"));
         if (querySnapshot.empty) {
-          container.innerHTML = `<p class="text-amber-600 text-sm">目前資料庫無菜單，請點擊右上角「一鍵初始化完整菜單」。</p>`;
+          container.innerHTML = `<p class="text-amber-600 text-sm">尚無菜單，請點擊右上角「還原預設菜單」初始化。</p>`;
           return;
         }
-        let categories = [];
-        querySnapshot.forEach(doc => categories.push(doc.data()));
-        categories.sort((a, b) => a.order - b.order);
+        cachedCatalog = [];
+        querySnapshot.forEach(d => cachedCatalog.push(d.data()));
+        cachedCatalog.sort((a, b) => a.order - b.order);
 
-        container.innerHTML = categories.map(cat => `
+        container.innerHTML = cachedCatalog.map(cat => `
           <div class="border rounded-xl p-4 bg-gray-50">
             <h3 class="font-bold text-gray-900 mb-3">${cat.category}</h3>
             <div class="space-y-2">
               ${cat.items.map(item => `
-                <div class="flex justify-between items-center bg-white p-3 rounded-lg border">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-3 rounded-lg border gap-2">
                   <div>
-                    <p class="font-bold text-sm text-gray-800">${item.name} <span class="text-xs text-gray-500 ml-2">NT$${item.price}</span></p>
-                    ${item.desc ? `<p class="text-xs text-gray-400 mt-0.5">${item.desc}</p>` : ''}
+                    <p class="font-bold text-sm text-gray-800">${item.name} <span class="text-xs text-[#2b4c7e] ml-2">NT$${item.price}</span></p>
+                    ${item.desc ? `<p class="text-xs text-gray-500 mt-0.5">${item.desc}</p>` : ''}
                   </div>
-                  <button onclick="toggleSoldOut('${cat.category}', '${item.id}', ${!item.soldOut})" class="px-3 py-1.5 rounded-lg text-xs font-bold ${item.soldOut ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}">
-                    ${item.soldOut ? '已售完 (點擊恢復)' : '設為售完'}
-                  </button>
+                  <div class="flex items-center gap-2 self-end sm:self-auto">
+                    <button onclick="openEditModal('${cat.category}', '${item.id}')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-bold">修改</button>
+                    <button onclick="deleteItem('${cat.category}', '${item.id}')" class="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold">刪除</button>
+                    <button onclick="toggleSoldOut('${cat.category}', '${item.id}', ${!item.soldOut})" class="px-3 py-1.5 rounded-lg text-xs font-bold ${item.soldOut ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-700'}">
+                      ${item.soldOut ? '已售完' : '販售中'}
+                    </button>
+                  </div>
                 </div>
               `).join('')}
             </div>
           </div>
         `).join('');
-      } catch (e) {
-        console.error(e);
-      }
+      } catch (e) { console.error(e); }
     }
 
-    // 切換售完狀態
-    window.toggleSoldOut = async function(categoryName, itemId, newStatus) {
-      try {
-        const querySnapshot = await getDocs(collection(db, "menu"));
-        let targetCat = null;
-        querySnapshot.forEach(d => {
-          if (d.data().category === categoryName) targetCat = { id: d.id, ...d.data() };
-        });
+    window.openEditModal = function(categoryName, itemId) {
+      let targetItem = null;
+      const cat = cachedCatalog.find(c => c.category === categoryName);
+      if (cat) targetItem = cat.items.find(i => i.id === itemId);
+      if (!targetItem) return;
 
-        if (targetCat) {
-          targetCat.items = targetCat.items.map(i => i.id === itemId ? { ...i, soldOut: newStatus } : i);
-          await setDoc(doc(db, "menu", targetCat.id), targetCat);
-          loadAdminMenu();
-        }
-      } catch (e) {
-        console.error(e);
-        alert("更新失敗");
-      }
+      document.getElementById('edit-cat-name').value = categoryName;
+      document.getElementById('edit-item-id').value = itemId;
+      document.getElementById('edit-name').value = targetItem.name;
+      document.getElementById('edit-price').value = targetItem.price;
+      document.getElementById('edit-desc').value = targetItem.desc || '';
+      document.getElementById('edit-modal').classList.remove('hidden');
     };
 
-    // 即時監聽訂單
-    function listenOrders() {
-      const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
-      onSnapshot(q, (snapshot) => {
-        const container = document.getElementById("orders-container");
-        const pendingOrders = [];
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          if (data.status === "pending") {
-            pendingOrders.push({ id: doc.id, ...data });
-          }
-        });
+    window.closeEditModal = function() {
+      document.getElementById('edit-modal').classList.add('hidden');
+    };
 
-        if (pendingOrders.length === 0) {
-          container.innerHTML = `<p class="text-gray-400 text-sm py-4 text-center">目前沒有待處理的新訂單...</p>`;
-          return;
+    window.saveItemChanges = async function() {
+      const catName = document.getElementById('edit-cat-name').value;
+      const itemId = document.getElementById('edit-item-id').value;
+      const newName = document.getElementById('edit-name').value.trim();
+      const newPrice = Number(document.getElementById('edit-price').value);
+      const newDesc = document.getElementById('edit-desc').value.trim();
+
+      if (!newName || !newPrice) { alert('請填寫品項名稱與價格！'); return; }
+
+      try {
+        const catObj = cachedCatalog.find(c => c.category === catName);
+        catObj.items = catObj.items.map(i => i.id === itemId ? { ...i, name: newName, price: newPrice, desc: newDesc } : i);
+        await setDoc(doc(db, "menu", catName), catObj);
+        closeEditModal();
+        loadAdminMenu();
+        alert("✅ 修改成功！客人端將立即同步。");
+      } catch (e) { console.error(e); alert("儲存失敗"); }
+    };
+
+    window.openAddItemModal = function() {
+      document.getElementById('add-name').value = '';
+      document.getElementById('add-price').value = '';
+      document.getElementById('add-desc').value = '';
+      document.getElementById('add-modal').classList.remove('hidden');
+    };
+
+    window.closeAddModal = function() {
+      document.getElementById('add-modal').classList.add('hidden');
+    };
+
+    window.confirmAddNewItem = async function() {
+      const catName = document.getElementById('add-cat').value;
+      const name = document.getElementById('add-name').value.trim();
+      const price = Number(document.getElementById('add-price').value);
+      const desc = document.getElementById('add-desc').value.trim();
+      const rule = document.getElementById('add-rule').value;
+
+      if (!name || !price) { alert('請填寫品項名稱與價格！'); return; }
+
+      try {
+        let catObj = cachedCatalog.find(c => c.category === catName);
+        if (!catObj) {
+          catObj = { order: 8, category: catName, items: [] };
         }
+        const newItem = { id: 'item_' + Date.now(), name, price, desc, rule, soldOut: false };
+        catObj.items.push(newItem);
+        await setDoc(doc(db, "menu", catName), catObj);
+        closeAddModal();
+        loadAdminMenu();
+        alert("✅ 新增品項成功！");
+      } catch (e) { console.error(e); alert("新增失敗"); }
+    };
 
-        container.innerHTML = pendingOrders.map(order => `
-          <div class="border-2 border-amber-500 bg-amber-50/40 p-4 rounded-xl shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-              <div class="flex items-center space-x-2">
-                <span class="bg-amber-600 text-white text-xs font-extrabold px-2.5 py-1 rounded-full">${order.orderType}</span>
-                <h3 class="font-extrabold text-base text-gray-900">${order.customerInfo}</h3>
-                <span class="text-xs text-gray-400">${order.createdAt ? new Date(order.createdAt.toDate()).toLocaleTimeString() : ''}</span>
-              </div>
-              <div class="mt-2 space-y-1 text-sm text-gray-700">
-                ${order.items.map(i => `
-                  <p>• <b>${i.name}</b> x${i.qty} <span class="text-xs text-gray-500">(${i.modifiers.join(', ')})</span> ${i.note ? `[備註: ${i.note}]` : ''}</p>
-                `).join('')}
-              </div>
-              <p class="font-extrabold text-amber-900 mt-2 text-sm">總金額：NT$${order.totalAmount}</p>
+    window.deleteItem = async function(categoryName, itemId) {
+      if (!confirm("確定要刪除這個品項嗎？")) return;
+      try {
+        const catObj = cachedCatalog.find(c => c.category === categoryName);
+        catObj.items = catObj.items.filter(i => i.id !== itemId);
+        await setDoc(doc(db, "menu", categoryName), catObj);
+        loadAdminMenu();
+      } catch (e) { console.error(e); alert("刪除失敗"); }
+    };
+
+    window.toggleSoldOut = async function(categoryName, itemId, newStatus) {
+      try {
+        const catObj = cachedCatalog.find(c => c.category === categoryName);
+        catObj.items = catObj.items.map(i => i.id === itemId ? { ...i, soldOut: newStatus } : i);
+        await setDoc(doc(db, "menu", categoryName), catObj);
+        loadAdminMenu();
+      } catch (e) { console.error(e); alert("更新失敗"); }
+    };
+
+    const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
+    onSnapshot(q, (snapshot) => {
+      const container = document.getElementById("orders-container");
+      const pendingOrders = [];
+      snapshot.forEach(d => { if (d.data().status === "pending") pendingOrders.push({ id: d.id, ...d.data() }); });
+
+      if (pendingOrders.length === 0) {
+        container.innerHTML = `<p class="text-gray-400 text-sm py-4 text-center">目前沒有待處理的新訂單...</p>`;
+        return;
+      }
+
+      container.innerHTML = pendingOrders.map(order => `
+        <div class="border-2 border-amber-500 bg-amber-50/40 p-4 rounded-xl shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="bg-amber-600 text-white text-xs font-extrabold px-2.5 py-1 rounded-full">${order.orderType}</span>
+              <h3 class="font-extrabold text-base text-gray-900">${order.customerInfo}</h3>
             </div>
-            <button onclick="completeOrder('${order.id}')" class="w-full md:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3 rounded-xl font-bold text-sm shadow">
-              ✓ 完成製作 (結單)
-            </button>
+            <div class="mt-2 space-y-1 text-sm text-gray-700">
+              ${order.items.map(i => `<p>• <b>${i.name}</b> x${i.qty} <span class="text-xs text-gray-500">(${i.modifiers.join(', ')})</span> ${i.note ? `[備註: ${i.note}]` : ''}</p>`).join('')}
+            </div>
+            <p class="font-extrabold text-amber-900 mt-2 text-sm">總金額：NT$${order.totalAmount}</p>
           </div>
-        `).join('');
-      });
-    }
+          <button onclick="completeOrder('${order.id}')" class="w-full md:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3 rounded-xl font-bold text-sm shadow">
+            ✓ 完成製作 (結單)
+          </button>
+        </div>
+      `).join('');
+    });
 
     window.completeOrder = async function(orderId) {
-      try {
-        await updateDoc(doc(db, "orders", orderId), { status: "completed" });
-      } catch (e) {
-        console.error(e);
-        alert("操作失敗");
-      }
+      await updateDoc(doc(db, "orders", orderId), { status: "completed" });
     };
 
     loadAdminMenu();
-    listenOrders();
   </script>
 </body>
 </html>
