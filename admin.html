@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NODAY Coffee Roasters | 吧台接單與後台管理</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen text-gray-800 pb-12">
+
+  <header class="bg-[#213c64] text-white p-4 shadow flex justify-between items-center">
+    <div>
+      <h1 class="text-xl font-bold">☕ NODAY 吧台管理後台</h1>
+      <p class="text-xs text-gray-200 mt-0.5">即時接單看板 ＆ 雲端菜單管理</p>
+    </div>
+    <button onclick="initMenuToFirebase()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow">
+      ⚡ 一鍵初始化完整菜單
+    </button>
+  </header>
+
+  <main class="max-w-4xl mx-auto p-4 space-y-6 mt-4">
+    <!-- 即時接單區 -->
+    <section class="bg-white p-5 rounded-2xl shadow-sm">
+      <h2 class="text-base font-extrabold text-gray-900 mb-3 flex items-center justify-between">
+        <span>🔔 即時新訂單看板</span>
+        <span class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">新單自動提醒</span>
+      </h2>
+      <div id="orders-container" class="space-y-3">
+        <p class="text-gray-400 text-sm py-4 text-center">目前沒有待處理的訂單...</p>
+      </div>
+    </section>
+
+    <!-- 菜單售完管理區 -->
+    <section class="bg-white p-5 rounded-2xl shadow-sm">
+      <h2 class="text-base font-extrabold text-gray-900 mb-3">🛠️ 菜單品項與售完管理</h2>
+      <p class="text-xs text-gray-500 mb-4">點擊「設為售完」，客人的點餐頁面會立即同步顯示售完並無法點選。</p>
+      <div id="admin-menu-list" class="space-y-4">
+        <p class="text-gray-400 text-sm">正在載入菜單...</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Firebase 接order與menu -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, getDocs, doc, setDoc, updateDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBMdycidtvbE7JmQtvXn-lCqUwod5RxR44",
+      authDomain: "noday-coffee.firebaseapp.com",
+      projectId: "noday-coffee",
+      storageBucket: "noday-coffee.firebasestorage.app",
+      messagingSenderId: "1001674084827",
+      appId: "1:1001674084827:web:18b47455008c89e70b97fe"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // 完整的 NODAY 原始預設菜單資料結構
+    const defaultMenuCatalog = [
+      {
+        order: 1, category: "美式系列 Americano",
+        items: [
+          { id: "a1", name: "美式咖啡", price: 80, desc: "16oz｜經典純粹配方", rule: "americano_basic", soldOut: false },
+          { id: "a2", name: "香橙美式", price: 90, desc: "16oz｜清爽果香融合濃縮咖啡", rule: "americano_fruit", soldOut: false },
+          { id: "a3", name: "荔枝美式", price: 90, desc: "16oz", rule: "americano_fruit", soldOut: false },
+          { id: "a4", name: "黑嘉麗美式", price: 90, desc: "16oz", rule: "americano_fruit", soldOut: false },
+          { id: "a5", name: "西西里氣泡美式", price: 110, desc: "16oz｜微氣泡清爽檸檬香", rule: "sicilian_fizzy", soldOut: false },
+          { id: "a6", name: "西西里百香美式", price: 100, desc: "16oz", rule: "sicilian_passion", soldOut: false }
+        ]
+      },
+      {
+        order: 2, category: "單品手沖 PourOver",
+        items: [
+          { id: "p1", name: "衣索比亞西達馬桃子甜心水洗", price: 130, desc: "中淺培┃水果軟糖、白桃、烏龍茶", rule: "pourover", soldOut: false },
+          { id: "p2", name: "中國雲南雲頂莊園荊棘玫瑰日曬", price: 130, desc: "中淺培┃熱帶水果、葡萄、花香尾韻", rule: "pourover", soldOut: false },
+          { id: "p3", name: "蘇門答臘華漢納黑珍珠批次濕撥法", price: 130, desc: "中培｜雪松、焦糖、榛果巧可力", rule: "pourover", soldOut: false },
+          { id: "p4", name: "衣索比亞耶加雪菲日曬(非洲式烘培)", price: 130, desc: "中深培｜熱帶水果、黑巧克力、甜奶油", rule: "pourover", soldOut: false },
+          { id: "p5", name: "衣索比亞西達摩南希寶森林日曬", price: 150, desc: "中淺培┃鳳梨、芒果乾、甜桃、藍莓果醬", rule: "pourover", soldOut: false },
+          { id: "p6", name: "肯亞吉利尼亞加卡穆旺吉水洗", price: 150, desc: "中淺培┃柑橘、覆盆子、蜂蜜、榛果", rule: "pourover", soldOut: false },
+          { id: "p7", name: "哥斯大黎加莫扎特葡萄乾蜜處理", price: 150, desc: "中淺培┃葡萄乾、蜜餞、草莓果醬、紫羅蘭", rule: "pourover", soldOut: false },
+          { id: "p8", name: "衣索比亞古吉歐克羅有機日曬", price: 150, desc: "中淺培┃萊姆、佛手柑、檸檬紅茶", rule: "pourover", soldOut: false },
+          { id: "p9", name: "哥倫比亞薇拉卡斯提歐厭氧日曬", price: 170, desc: "中淺培｜熱帶水果、香蕉、奇異果、紅糖", rule: "pourover", soldOut: false },
+          { id: "p10", name: "哥倫比亞凡爾賽葡萄香檳水洗", price: 170, desc: "中淺培┃香檳汽水、葡萄軟糖、雞尾酒", rule: "pourover", soldOut: false },
+          { id: "p11", name: "哥倫比亞凡爾賽蜜桃果茶水洗", price: 170, desc: "中淺培┃蜜桃、無花果、花果茶", rule: "pourover", soldOut: false },
+          { id: "p12", name: "秘魯薇拉瑞卡花仙子藝妓水洗", price: 170, desc: "中淺培｜密蘋果、杏桃、雞蛋花", rule: "pourover", soldOut: false },
+          { id: "p13", name: "巴拿馬巴魯火山拓荒者藝妓熱發酵處理", price: 200, desc: "中淺培｜鳳梨、甜漬櫻桃、茉莉花", rule: "pourover", soldOut: false },
+          { id: "p14", name: "巴拿馬聖塔克拉拉午夜紫蝶水洗", price: 170, desc: "中淺培｜紫葡萄、紅花香、甜橙", rule: "pourover", soldOut: false },
+          { id: "p15", name: "哥倫比亞聖徒阿里歐愛情靈藥水洗", price: 130, desc: "", rule: "pourover", soldOut: false }
+        ]
+      },
+      {
+        order: 3, category: "拿鐵系列 Cafe Latte",
+        items: [
+          { id: "l1", name: "卡布奇諾", price: 120, desc: "16oz", rule: "cappuccino", soldOut: false },
+          { id: "l2", name: "拿鐵", price: 120, desc: "16oz", rule: "latte_basic", soldOut: false },
+          { id: "l3", name: "蜂蜜拿鐵", price: 125, desc: "16oz", rule: "latte_flavored", soldOut: false },
+          { id: "l4", name: "香草拿鐵", price: 125, desc: "16oz", rule: "latte_flavored", soldOut: false },
+          { id: "l5", name: "榛果拿鐵", price: 125, desc: "16oz", rule: "latte_flavored", soldOut: false },
+          { id: "l6", name: "焦糖海鹽拿鐵", price: 125, desc: "16oz", rule: "latte_flavored", soldOut: false },
+          { id: "l7", name: "玫瑰拿鐵", price: 125, desc: "16oz", rule: "latte_flavored", soldOut: false },
+          { id: "l8", name: "半半拿鐵", price: 130, desc: "16oz", rule: "latte_basic", soldOut: false },
+          { id: "l9", name: "焦糖瑪其朵", price: 130, desc: "16oz", rule: "latte_flavored", soldOut: false },
+          { id: "l10", name: "宇治抹茶拿鐵", price: 135, desc: "16oz", rule: "latte_flavored", soldOut: false },
+          { id: "l11", name: "威士忌拿鐵", price: 135, desc: "16oz｜大人系微醺風味", rule: "latte_flavored", soldOut: false },
+          { id: "l12", name: "貝里斯奶酒拿鐵", price: 135, desc: "16oz｜大人系微醺風味", rule: "latte_flavored", soldOut: false },
+          { id: "l13", name: "君度橙酒拿鐵", price: 135, desc: "16oz｜大人系微醺風味", rule: "latte_flavored", soldOut: false }
+        ]
+      },
+      {
+        order: 4, category: "風味飲品 Beverage",
+        items: [
+          { id: "b1", name: "歐式花果茶", price: 90, desc: "無咖啡因", rule: "beverage_basic", soldOut: false },
+          { id: "b2", name: "紅茶歐蕾", price: 100, desc: "16oz", rule: "beverage_sweet", soldOut: false },
+          { id: "b3", name: "風味紅茶歐蕾", price: 110, desc: "16oz", rule: "beverage_sweet", soldOut: false },
+          { id: "b4", name: "黑糖歐蕾", price: 120, desc: "16oz", rule: "beverage_basic", soldOut: false },
+          { id: "b5", name: "榛果歐蕾", price: 120, desc: "16oz", rule: "beverage_basic", soldOut: false },
+          { id: "b6", name: "香草歐蕾", price: 120, desc: "16oz", rule: "beverage_basic", soldOut: false },
+          { id: "b7", name: "法芙娜可可歐蕾", price: 120, desc: "16oz", rule: "beverage_basic", soldOut: false },
+          { id: "b8", name: "焦糖海鹽歐蕾", price: 120, desc: "16oz", rule: "beverage_basic", soldOut: false },
+          { id: "b9", name: "玫瑰歐蕾", price: 120, desc: "16oz", rule: "beverage_basic", soldOut: false },
+          { id: "b10", name: "宇治抹茶歐蕾", price: 120, desc: "16oz", rule: "beverage_basic", soldOut: false },
+          { id: "b11", name: "濃情可可歐蕾", price: 135, desc: "16oz", rule: "beverage_basic", soldOut: false }
+        ]
+      },
+      {
+        order: 5, category: "NODAY 周邊",
+        items: [
+          { id: "m1", name: "脆皮可麗露", price: 70, desc: "", rule: "merch", soldOut: false },
+          { id: "m2", name: "OAT燕麥奶", price: 165, desc: "", rule: "merch", soldOut: false },
+          { id: "m3", name: "酵素漂白濾紙", price: 100, desc: "", rule: "merch", soldOut: false }
+        ]
+      },
+      {
+        order: 6, category: "微氣泡 Fizzy",
+        items: [
+          { id: "f1", name: "蜂蜜檸檬氣泡", price: 110, desc: "", rule: "fizzy", soldOut: false },
+          { id: "f2", name: "黑嘉麗氣泡", price: 110, desc: "", rule: "fizzy", soldOut: false },
+          { id: "f3", name: "荔枝氣泡", price: 110, desc: "", rule: "fizzy", soldOut: false },
+          { id: "f4", name: "香橙氣泡", price: 110, desc: "", rule: "fizzy", soldOut: false }
+        ]
+      },
+      {
+        order: 7, category: "季節限定 ＮＥＷ",
+        items: [
+          { id: "s1", name: "桂花釀美式", price: 100, desc: "俐落的黑咖啡遇見自帶仙氣的清甜桂花，清爽回甘不苦澀！", rule: "americano_basic", soldOut: false },
+          { id: "s2", name: "桂花釀美式-大人味", price: 115, desc: "黑咖啡遇上大吟釀，靈魂瞬間釋放的微醺小可愛", rule: "americano_basic", soldOut: false },
+          { id: "s3", name: "桂花釀拿鐵", price: 130, desc: "奶香與花香的雙重爆擊！溫柔又濃郁的續命快樂水～", rule: "latte_basic", soldOut: false },
+          { id: "s4", name: "桂花釀拿鐵-大人味", price: 145, desc: "溫柔的陷阱｜添加純米大吟釀風味，專屬大人味的浪漫～", rule: "latte_basic", soldOut: false }
+        ]
+      }
+    ];
+
+    // 一鍵初始化寫入 Firebase
+    window.initMenuToFirebase = async function() {
+      if (!confirm("確定要將完整預設菜單寫入 Firebase 雲端資料庫嗎？")) return;
+      try {
+        for (const cat of defaultMenuCatalog) {
+          await setDoc(doc(db, "menu", cat.category), cat);
+        }
+        alert("🎉 菜單初始化成功！客人端重新整理即可看到完整菜單。");
+        loadAdminMenu();
+      } catch (e) {
+        console.error(e);
+        alert("初始化失敗，請檢查權限設定。");
+      }
+    };
+
+    // 載入後台菜單管理列表
+    async function loadAdminMenu() {
+      const container = document.getElementById("admin-menu-list");
+      try {
+        const querySnapshot = await getDocs(collection(db, "menu"));
+        if (querySnapshot.empty) {
+          container.innerHTML = `<p class="text-amber-600 text-sm">目前資料庫無菜單，請點擊右上角「一鍵初始化完整菜單」。</p>`;
+          return;
+        }
+        let categories = [];
+        querySnapshot.forEach(doc => categories.push(doc.data()));
+        categories.sort((a, b) => a.order - b.order);
+
+        container.innerHTML = categories.map(cat => `
+          <div class="border rounded-xl p-4 bg-gray-50">
+            <h3 class="font-bold text-gray-900 mb-3">${cat.category}</h3>
+            <div class="space-y-2">
+              ${cat.items.map(item => `
+                <div class="flex justify-between items-center bg-white p-3 rounded-lg border">
+                  <div>
+                    <p class="font-bold text-sm text-gray-800">${item.name} <span class="text-xs text-gray-500 ml-2">NT$${item.price}</span></p>
+                    ${item.desc ? `<p class="text-xs text-gray-400 mt-0.5">${item.desc}</p>` : ''}
+                  </div>
+                  <button onclick="toggleSoldOut('${cat.category}', '${item.id}', ${!item.soldOut})" class="px-3 py-1.5 rounded-lg text-xs font-bold ${item.soldOut ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}">
+                    ${item.soldOut ? '已售完 (點擊恢復)' : '設為售完'}
+                  </button>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // 切換售完狀態
+    window.toggleSoldOut = async function(categoryName, itemId, newStatus) {
+      try {
+        const querySnapshot = await getDocs(collection(db, "menu"));
+        let targetCat = null;
+        querySnapshot.forEach(d => {
+          if (d.data().category === categoryName) targetCat = { id: d.id, ...d.data() };
+        });
+
+        if (targetCat) {
+          targetCat.items = targetCat.items.map(i => i.id === itemId ? { ...i, soldOut: newStatus } : i);
+          await setDoc(doc(db, "menu", targetCat.id), targetCat);
+          loadAdminMenu();
+        }
+      } catch (e) {
+        console.error(e);
+        alert("更新失敗");
+      }
+    };
+
+    // 即時監聽訂單
+    function listenOrders() {
+      const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
+      onSnapshot(q, (snapshot) => {
+        const container = document.getElementById("orders-container");
+        const pendingOrders = [];
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.status === "pending") {
+            pendingOrders.push({ id: doc.id, ...data });
+          }
+        });
+
+        if (pendingOrders.length === 0) {
+          container.innerHTML = `<p class="text-gray-400 text-sm py-4 text-center">目前沒有待處理的新訂單...</p>`;
+          return;
+        }
+
+        container.innerHTML = pendingOrders.map(order => `
+          <div class="border-2 border-amber-500 bg-amber-50/40 p-4 rounded-xl shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <div class="flex items-center space-x-2">
+                <span class="bg-amber-600 text-white text-xs font-extrabold px-2.5 py-1 rounded-full">${order.orderType}</span>
+                <h3 class="font-extrabold text-base text-gray-900">${order.customerInfo}</h3>
+                <span class="text-xs text-gray-400">${order.createdAt ? new Date(order.createdAt.toDate()).toLocaleTimeString() : ''}</span>
+              </div>
+              <div class="mt-2 space-y-1 text-sm text-gray-700">
+                ${order.items.map(i => `
+                  <p>• <b>${i.name}</b> x${i.qty} <span class="text-xs text-gray-500">(${i.modifiers.join(', ')})</span> ${i.note ? `[備註: ${i.note}]` : ''}</p>
+                `).join('')}
+              </div>
+              <p class="font-extrabold text-amber-900 mt-2 text-sm">總金額：NT$${order.totalAmount}</p>
+            </div>
+            <button onclick="completeOrder('${order.id}')" class="w-full md:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3 rounded-xl font-bold text-sm shadow">
+              ✓ 完成製作 (結單)
+            </button>
+          </div>
+        `).join('');
+      });
+    }
+
+    window.completeOrder = async function(orderId) {
+      try {
+        await updateDoc(doc(db, "orders", orderId), { status: "completed" });
+      } catch (e) {
+        console.error(e);
+        alert("操作失敗");
+      }
+    };
+
+    loadAdminMenu();
+    listenOrders();
+  </script>
+</body>
+</html>
