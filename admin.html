@@ -37,8 +37,8 @@
 
     <!-- 菜單管理區 -->
     <section class="bg-white p-5 rounded-2xl shadow-sm">
-      <h2 class="text-base font-extrabold text-gray-900 mb-2">🛠️ 雲端菜單編輯與售完管理</h2>
-      <p class="text-xs text-gray-500 mb-4">您可以直接修改價格、品項名稱、描述，或設定為今日售完。</p>
+      <h2 class="text-base font-extrabold text-gray-900 mb-2">🛠️ 雲端菜單編輯與客製規則管理</h2>
+      <p class="text-xs text-gray-500 mb-4">您可以隨時修改價格、描述、售完狀態，或自訂這杯飲料要有哪些客製化選項！</p>
       <div id="admin-menu-list" class="space-y-4">
         <p class="text-gray-400 text-sm">正在載入菜單...</p>
       </div>
@@ -47,8 +47,8 @@
 
   <!-- 編輯品項 Modal -->
   <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-md rounded-2xl p-6 space-y-4">
-      <h3 id="edit-modal-title" class="text-lg font-bold text-gray-900">修改品項</h3>
+    <div class="bg-white w-full max-w-md rounded-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+      <h3 class="text-lg font-bold text-gray-900">修改品項與客製選項</h3>
       <input type="hidden" id="edit-cat-name">
       <input type="hidden" id="edit-item-id">
       <div>
@@ -60,8 +60,23 @@
         <input type="number" id="edit-price" class="w-full border rounded-lg p-2.5 text-sm mt-1 focus:outline-none focus:border-[#2b4c7e]">
       </div>
       <div>
-        <label class="text-xs font-bold text-gray-600">品項描述 (容量/風味說明)</label>
+        <label class="text-xs font-bold text-gray-600">品項描述</label>
         <input type="text" id="edit-desc" class="w-full border rounded-lg p-2.5 text-sm mt-1 focus:outline-none focus:border-[#2b4c7e]">
+      </div>
+      <div>
+        <label class="text-xs font-bold text-gray-600">客製化選項規則 (客人點餐時會顯示這些選項)</label>
+        <select id="edit-rule" class="w-full border rounded-lg p-2.5 text-sm mt-1 bg-white focus:outline-none focus:border-[#2b4c7e]">
+          <option value="americano_basic">美式規則 (冰/熱 + 配方豆 + 雙倍濃縮)</option>
+          <option value="americano_fruit">水果美式 (限冰 + 雙倍濃縮)</option>
+          <option value="sicilian_fizzy">西西里氣泡美式 (限冰 + 甜度 + 雙倍濃縮)</option>
+          <option value="latte_basic">拿鐵規則 (冰/熱 + 配方豆 + 雙倍濃縮)</option>
+          <option value="latte_flavored">風味拿鐵 (冰/熱 + 甜度 + 配方豆 + 雙倍濃縮)</option>
+          <option value="pourover">手沖規則 (冰/熱)</option>
+          <option value="beverage_sweet">風味飲品 (冰/熱 + 甜度)</option>
+          <option value="beverage_basic">基本飲品 (冰/熱)</option>
+          <option value="fizzy">氣泡飲 (限冰)</option>
+          <option value="merch">周邊商品 (無任何客製選項)</option>
+        </select>
       </div>
       <div class="flex gap-3 pt-2">
         <button onclick="closeEditModal()" class="flex-1 bg-gray-200 text-gray-700 py-2.5 rounded-lg font-bold text-sm">取消</button>
@@ -72,7 +87,7 @@
 
   <!-- 新增品項 Modal -->
   <div id="add-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-md rounded-2xl p-6 space-y-4">
+    <div class="bg-white w-full max-w-md rounded-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
       <h3 class="text-lg font-bold text-gray-900">新增飲品/商品</h3>
       <div>
         <label class="text-xs font-bold text-gray-600">選擇分類</label>
@@ -99,16 +114,18 @@
         <input type="text" id="add-desc" placeholder="16oz｜風味說明" class="w-full border rounded-lg p-2.5 text-sm mt-1 focus:outline-none focus:border-[#2b4c7e]">
       </div>
       <div>
-        <label class="text-xs font-bold text-gray-600">點餐選項規則</label>
+        <label class="text-xs font-bold text-gray-600">點餐客製選項規則</label>
         <select id="add-rule" class="w-full border rounded-lg p-2.5 text-sm mt-1 bg-white focus:outline-none focus:border-[#2b4c7e]">
-          <option value="americano_basic">美式規則 (冰熱+配方豆+雙倍濃縮)</option>
-          <option value="latte_basic">拿鐵規則 (冰熱+配方豆+雙倍濃縮)</option>
-          <option value="latte_flavored">風味拿鐵 (冰熱+甜度+配方豆+雙倍濃縮)</option>
-          <option value="pourover">手沖規則 (冰熱)</option>
-          <option value="beverage_sweet">風味飲品 (冰熱+甜度)</option>
-          <option value="beverage_basic">基本飲品 (冰熱)</option>
+          <option value="americano_basic">美式規則 (冰/熱 + 配方豆 + 雙倍濃縮)</option>
+          <option value="americano_fruit">水果美式 (限冰 + 雙倍濃縮)</option>
+          <option value="sicilian_fizzy">西西里氣泡美式 (限冰 + 甜度 + 雙倍濃縮)</option>
+          <option value="latte_basic">拿鐵規則 (冰/熱 + 配方豆 + 雙倍濃縮)</option>
+          <option value="latte_flavored">風味拿鐵 (冰/熱 + 甜度 + 配方豆 + 雙倍濃縮)</option>
+          <option value="pourover">手沖規則 (冰/熱)</option>
+          <option value="beverage_sweet">風味飲品 (冰/熱 + 甜度)</option>
+          <option value="beverage_basic">基本飲品 (冰/熱)</option>
           <option value="fizzy">氣泡飲 (限冰)</option>
-          <option value="merch">周邊商品 (無客製選項)</option>
+          <option value="merch">周邊商品 (無任何客製選項)</option>
         </select>
       </div>
       <div class="flex gap-3 pt-2">
@@ -145,7 +162,7 @@
           { id: "a3", name: "荔枝美式", price: 90, desc: "16oz", rule: "americano_fruit", soldOut: false },
           { id: "a4", name: "黑嘉麗美式", price: 90, desc: "16oz", rule: "americano_fruit", soldOut: false },
           { id: "a5", name: "西西里氣泡美式", price: 110, desc: "16oz｜微氣泡清爽檸檬香", rule: "sicilian_fizzy", soldOut: false },
-          { id: "a6", name: "西西里百香美式", price: 100, desc: "16oz", rule: "sicilian_passion", soldOut: false }
+          { id: "a6", name: "西西里百香美式", price: 100, desc: "16oz", rule: "sicilian_fizzy", soldOut: false }
         ]
       },
       {
@@ -171,7 +188,7 @@
       {
         order: 3, category: "拿鐵系列 Cafe Latte",
         items: [
-          { id: "l1", name: "卡布奇諾", price: 120, desc: "16oz", rule: "cappuccino", soldOut: false },
+          { id: "l1", name: "卡布奇諾", price: 120, desc: "16oz", rule: "latte_basic", soldOut: false },
           { id: "l2", name: "拿鐵", price: 120, desc: "16oz", rule: "latte_basic", soldOut: false },
           { id: "l3", name: "蜂蜜拿鐵", price: 125, desc: "16oz", rule: "latte_flavored", soldOut: false },
           { id: "l4", name: "香草拿鐵", price: 125, desc: "16oz", rule: "latte_flavored", soldOut: false },
@@ -260,7 +277,7 @@
               ${cat.items.map(item => `
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-3 rounded-lg border gap-2">
                   <div>
-                    <p class="font-bold text-sm text-gray-800">${item.name} <span class="text-xs text-[#2b4c7e] ml-2">NT$${item.price}</span></p>
+                    <p class="font-bold text-sm text-gray-800">${item.name} <span class="text-xs text-[#2b4c7e] ml-2">NT$${item.price}</span> <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded ml-2">規則: ${item.rule || 'americano_basic'}</span></p>
                     ${item.desc ? `<p class="text-xs text-gray-500 mt-0.5">${item.desc}</p>` : ''}
                   </div>
                   <div class="flex items-center gap-2 self-end sm:self-auto">
@@ -289,6 +306,7 @@
       document.getElementById('edit-name').value = targetItem.name;
       document.getElementById('edit-price').value = targetItem.price;
       document.getElementById('edit-desc').value = targetItem.desc || '';
+      document.getElementById('edit-rule').value = targetItem.rule || 'americano_basic';
       document.getElementById('edit-modal').classList.remove('hidden');
     };
 
@@ -302,16 +320,17 @@
       const newName = document.getElementById('edit-name').value.trim();
       const newPrice = Number(document.getElementById('edit-price').value);
       const newDesc = document.getElementById('edit-desc').value.trim();
+      const newRule = document.getElementById('edit-rule').value;
 
       if (!newName || !newPrice) { alert('請填寫品項名稱與價格！'); return; }
 
       try {
         const catObj = cachedCatalog.find(c => c.category === catName);
-        catObj.items = catObj.items.map(i => i.id === itemId ? { ...i, name: newName, price: newPrice, desc: newDesc } : i);
+        catObj.items = catObj.items.map(i => i.id === itemId ? { ...i, name: newName, price: newPrice, desc: newDesc, rule: newRule } : i);
         await setDoc(doc(db, "menu", catName), catObj);
         closeEditModal();
         loadAdminMenu();
-        alert("✅ 修改成功！客人端將立即同步。");
+        alert("✅ 修改成功！客人端將立即同步客製選項。");
       } catch (e) { console.error(e); alert("儲存失敗"); }
     };
 
