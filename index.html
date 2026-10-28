@@ -180,14 +180,12 @@
 
       currentQty = 1;
       document.getElementById('modal-item-name').innerText = activeItem.name;
-      document.getElementById('modal-item-price').innerText = `NT$${activeItem.price}`;
       document.getElementById('modal-qty').innerText = currentQty;
       document.getElementById('modal-note').value = '';
 
       const opts = activeItem.options || {};
       let html = '';
 
-      // 獨立溫度選項
       const temps = [];
       if (opts.ice) temps.push('冰');
       if (opts.hot) temps.push('熱');
@@ -206,7 +204,6 @@
         `;
       }
 
-      // 獨立配方豆選項
       const beans = [];
       if (opts.bean5) beans.push('5號配方(經典)');
       if (opts.bean1) beans.push('1號配方(果香)');
@@ -238,25 +235,12 @@
         `;
       }
 
-      if (opts.addons) {
-        html += `
-          <div>
-            <label class="font-bold text-gray-700 block mb-1">加購選項：</label>
-            <label class="flex items-center gap-2 border p-2.5 rounded-xl cursor-pointer">
-              <input type="checkbox" id="opt-addon-shot" data-price="20" value="加一份濃縮 (+NT$20)" class="w-4 h-4 text-[#213c64] custom-addon-checkbox" onchange="updateModalPrice()">
-              <span class="font-bold">加一份濃縮 (+NT$20)</span>
-            </label>
-          </div>
-        `;
-      }
-
-      // 自訂規則帶價錢渲染
       if (activeItem.customRules) {
         const rules = activeItem.customRules.split(',').map(r => r.trim()).filter(Boolean);
         if (rules.length > 0) {
           html += `
             <div>
-              <label class="font-bold text-gray-700 block mb-1">自訂加價與選項：</label>
+              <label class="font-bold text-gray-700 block mb-1">加價與客製選項：</label>
               <div class="space-y-2">
                 ${rules.map(ruleStr => {
                   let parts = ruleStr.split(':');
@@ -276,6 +260,7 @@
       }
 
       document.getElementById('modal-options-container').innerHTML = html;
+      updateModalPrice();
       document.getElementById('customize-modal').classList.remove('hidden');
     };
 
@@ -313,14 +298,8 @@
       const sugarEl = document.querySelector('input[name="opt-sugar"]:checked');
       if (sugarEl) modifiers.push(sugarEl.value);
 
-      const addonEl = document.getElementById('opt-addon-shot');
-      if (addonEl && addonEl.checked) {
-        modifiers.push("加一份濃縮");
-        finalUnitPrice += 20;
-      }
-
       document.querySelectorAll('input[name="custom-rule-option"]:checked').forEach(el => {
-        modifiers.push(el.value.split(' ')[0]); // 僅存名稱
+        modifiers.push(el.value);
         let p = Number(el.getAttribute('data-price') || 0);
         finalUnitPrice += p;
       });
