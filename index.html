@@ -17,8 +17,9 @@
     <div class="max-w-md mx-auto flex justify-between items-center">
       <div>
         <h1 class="text-lg font-extrabold tracking-wide">NODAY Coffee Roasters</h1>
-        <p class="text-[11px] text-amber-300 mt-0.5 flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> 外帶自取・線上點餐
+        <p id="store-status-header" class="text-[11px] text-amber-300 mt-0.5 flex items-center gap-1.5">
+          <span id="store-status-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="store-status-label">載入營業狀態中...</span>
         </p>
       </div>
       <button onclick="openCart()" class="bg-amber-500 hover:bg-amber-600 text-white px-3.5 py-2 rounded-xl text-xs font-extrabold shadow flex items-center gap-1.5 transition">
@@ -28,22 +29,49 @@
   </header>
 
   <main class="max-w-md mx-auto p-4 space-y-4">
-    <!-- 即時訂單狀態追蹤卡 (送出訂單後自動顯示) -->
+
+    <!-- 非營業時間 / 預約休假 醒目提示卡 (非營業時自動顯示) -->
+    <div id="closed-notice-banner" class="hidden bg-red-50 border-2 border-red-400 p-4 rounded-2xl shadow-sm space-y-1.5">
+      <div class="flex justify-between items-center">
+        <p id="closed-notice-title" class="text-sm font-extrabold text-red-700">🌙 目前非營業時間（僅供瀏覽菜單）</p>
+        <button onclick="toggleScheduleModal()" class="text-[11px] bg-white border border-red-300 text-red-700 px-2.5 py-1 rounded-lg font-bold">查看營業時間</button>
+      </div>
+      <p id="closed-notice-sub" class="text-xs text-red-600 font-bold">您仍可瀏覽完整菜單與價格，營業時間開始後即可下單。</p>
+    </div>
+
+    <!-- 即時訂單狀態追蹤卡 (含取餐號碼牌與取餐提醒音效) -->
     <div id="active-order-banner" class="hidden bg-white border-2 border-[#213c64] p-4 rounded-2xl shadow-md space-y-2">
       <div class="flex justify-between items-center">
-        <span class="text-xs font-extrabold text-[#213c64]">☕ 您的外帶訂單狀態</span>
-        <span id="order-status-badge" class="bg-amber-100 text-amber-800 text-xs font-extrabold px-2.5 py-0.5 rounded-full">⏳ 吧台製作中</span>
+        <div class="flex items-center gap-2">
+          <span id="order-number-badge" class="bg-[#213c64] text-white text-sm font-extrabold px-3 py-1 rounded-xl">#001</span>
+          <span class="text-xs font-extrabold text-[#213c64]">外帶取餐進度</span>
+        </div>
+        <span id="order-status-badge" class="bg-amber-100 text-amber-800 text-xs font-extrabold px-2.5 py-1 rounded-full">⏳ 等待吧台接單</span>
       </div>
-      <p id="order-status-text" class="text-xs text-gray-600">已收到您的訂單，正在為您現磨萃取中！</p>
+      <p id="order-status-text" class="text-xs text-gray-700 font-bold">訂單已送出，等待吧台人員確認接單中...</p>
     </div>
 
-    <!-- 店家公告 -->
+    <!-- 店家動態公告 (由後台即時同步) -->
     <div class="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl text-xs text-amber-900 shadow-sm space-y-1">
-      <p class="font-extrabold flex items-center gap-1">📢 外帶取餐提醒</p>
-      <p class="text-[11px] text-amber-800">本店為外帶專門店（無內用），現點現做請耐心等候。訂餐問題請電洽：<a href="tel:047237933" class="underline font-bold">04-7237933</a></p>
+      <div class="flex justify-between items-center">
+        <p id="ann-title" class="font-extrabold flex items-center gap-1">📢 外帶取餐提醒</p>
+        <button onclick="toggleScheduleModal()" class="text-[11px] text-[#213c64] underline font-bold">營業與休假時間</button>
+      </div>
+      <p id="ann-text" class="text-[11px] text-amber-800 whitespace-pre-line leading-relaxed">本店為外帶專門店（無內用），現點現做請耐心等候。</p>
     </div>
 
-    <!-- 取餐人姓名與電話 (自動記憶) -->
+    <!-- 熟客快速點餐：上次點的咖啡 (一鍵再買一次) -->
+    <div id="reorder-section" class="hidden bg-white p-3.5 rounded-2xl shadow-sm border border-blue-100 space-y-2">
+      <div class="flex justify-between items-center">
+        <span class="text-xs font-extrabold text-[#213c64]">🔄 熟客快速點餐（您上次點的咖啡）</span>
+        <button onclick="reorderLastItems()" class="bg-[#213c64] hover:bg-[#192e4d] text-white px-3 py-1 rounded-lg text-[11px] font-extrabold shadow-sm transition">
+          ＋ 一鍵再買一次
+        </button>
+      </div>
+      <p id="reorder-summary" class="text-[11px] text-gray-600 font-bold"></p>
+    </div>
+
+    <!-- 取餐人姓名、電話 ＆ 預計取餐時間 -->
     <div class="bg-white p-3.5 rounded-2xl shadow-sm border space-y-3">
       <div class="grid grid-cols-2 gap-2.5">
         <div>
@@ -53,6 +81,21 @@
         <div>
           <label class="text-[11px] font-extrabold text-gray-600 block mb-1">連絡電話 <span class="text-red-500">*</span></label>
           <input type="tel" id="customer-phone" placeholder="0912345678" class="w-full border rounded-xl p-2.5 text-xs focus:outline-none focus:border-[#213c64] bg-gray-50 font-bold">
+        </div>
+      </div>
+
+      <!-- 預計取餐時間選擇 -->
+      <div class="pt-1 border-t">
+        <label class="text-[11px] font-extrabold text-gray-600 block mb-1.5">⏰ 預計取餐時間：</label>
+        <div class="grid grid-cols-4 gap-1.5 text-[11px]">
+          <button type="button" onclick="selectPickupMode('現場立即製作')" id="pk-now" class="py-2 rounded-xl font-extrabold border bg-[#213c64] text-white">立即製作</button>
+          <button type="button" onclick="selectPickupMode('15分鐘後取餐')" id="pk-15" class="py-2 rounded-xl font-bold border bg-gray-50 text-gray-700">15分後</button>
+          <button type="button" onclick="selectPickupMode('30分鐘後取餐')" id="pk-30" class="py-2 rounded-xl font-bold border bg-gray-50 text-gray-700">30分後</button>
+          <button type="button" onclick="selectPickupMode('custom')" id="pk-custom" class="py-2 rounded-xl font-bold border bg-gray-50 text-gray-700">指定時間</button>
+        </div>
+        <div id="custom-pickup-box" class="hidden mt-2 flex items-center gap-2">
+          <span class="text-xs font-bold text-gray-600">選擇取餐時間：</span>
+          <input type="time" id="custom-pickup-time" class="border rounded-xl p-2 text-xs font-extrabold bg-gray-50 flex-1">
         </div>
       </div>
     </div>
@@ -84,6 +127,17 @@
     ✅ 已加入購物車
   </div>
 
+  <!-- 營業時間與公休日說明視窗 -->
+  <div id="schedule-modal" class="fixed inset-0 bg-black/60 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-extrabold text-base text-[#213c64]">🕒 營業時間 ＆ 休假公告</h3>
+        <button onclick="toggleScheduleModal()" class="text-gray-400 font-bold text-lg">✕</button>
+      </div>
+      <div id="schedule-modal-body" class="space-y-2 text-xs"></div>
+    </div>
+  </div>
+
   <!-- 飲品客製與加購彈跳視窗 -->
   <div id="customize-modal" class="fixed inset-0 bg-black/60 hidden z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 space-y-4 max-h-[88vh] overflow-y-auto shadow-2xl">
@@ -99,7 +153,7 @@
 
       <div>
         <label class="text-[11px] font-bold text-gray-600 block mb-1">特別備註 (選填)</label>
-        <input type="text" id="modal-note" placeholder="例如：少冰、去冰" class="w-full border rounded-xl p-2.5 text-xs bg-gray-50 focus:outline-none focus:border-[#213c64]">
+        <input type="text" id="modal-note" placeholder="例如：杯蓋貼紙註記、分開裝" class="w-full border rounded-xl p-2.5 text-xs bg-gray-50 focus:outline-none focus:border-[#213c64]">
       </div>
 
       <div class="flex items-center justify-between pt-2 border-t">
@@ -108,8 +162,8 @@
           <span id="modal-qty" class="font-extrabold text-sm w-5 text-center">1</span>
           <button onclick="adjustQty(1)" class="w-9 h-9 rounded-xl border bg-gray-100 font-extrabold text-base flex items-center justify-center">+</button>
         </div>
-        <button onclick="confirmAddToCart()" class="bg-[#213c64] hover:bg-opacity-90 text-white px-6 py-3 rounded-xl font-extrabold text-xs shadow-lg flex items-center gap-2">
-          <span>加入購物車</span>
+        <button id="modal-add-btn" onclick="confirmAddToCart()" class="bg-[#213c64] hover:bg-opacity-90 text-white px-6 py-3 rounded-xl font-extrabold text-xs shadow-lg flex items-center gap-2">
+          <span id="modal-add-btn-text">加入購物車</span>
           <span id="modal-item-price" class="bg-white/20 px-2 py-0.5 rounded-lg">NT$0</span>
         </button>
       </div>
@@ -160,11 +214,165 @@
     let cart = [];
     let activeItem = null;
     let currentQty = 1;
+    let pickupMode = "現場立即製作";
+    let isStoreCurrentlyOpen = true;
+    let storeCloseReason = "";
+    let latestStoreSettings = {};
+    let customerAudioCtx = null;
 
-    // 載入記憶的顧客姓名電話
+    // 載入記憶的顧客姓名電話與熟客上次訂單
     document.getElementById('customer-name').value = localStorage.getItem('noday_name') || '';
     document.getElementById('customer-phone').value = localStorage.getItem('noday_phone') || '';
 
+    function loadLastOrderHistory() {
+      try {
+        const lastItems = JSON.parse(localStorage.getItem('noday_last_order') || '[]');
+        if (Array.isArray(lastItems) && lastItems.length > 0) {
+          document.getElementById('reorder-section').classList.remove('hidden');
+          document.getElementById('reorder-summary').innerText = lastItems.map(i => `${i.name} x${i.qty} (${(i.modifiers || []).join('/')})`).join('、');
+        }
+      } catch (e) {}
+    }
+    loadLastOrderHistory();
+
+    window.reorderLastItems = function() {
+      if (!isStoreCurrentlyOpen) {
+        alert(`抱歉，${storeCloseReason}，目前僅供瀏覽菜單喔！`);
+        return;
+      }
+      try {
+        const lastItems = JSON.parse(localStorage.getItem('noday_last_order') || '[]');
+        if (lastItems.length > 0) {
+          lastItems.forEach(i => cart.push({ ...i }));
+          updateCartBadge();
+          showToast("✅ 已將上次點的咖啡加入購物車！");
+        }
+      } catch (e) {}
+    };
+
+    // 選擇預計取餐時間
+    window.selectPickupMode = function(mode) {
+      pickupMode = mode;
+      const modes = { '現場立即製作': 'pk-now', '15分鐘後取餐': 'pk-15', '30分鐘後取餐': 'pk-30', 'custom': 'pk-custom' };
+      Object.entries(modes).forEach(([k, id]) => {
+        document.getElementById(id).className = (k === mode)
+          ? "py-2 rounded-xl font-extrabold border bg-[#213c64] text-white"
+          : "py-2 rounded-xl font-bold border bg-gray-50 text-gray-700";
+      });
+      const customBox = document.getElementById('custom-pickup-box');
+      if (mode === 'custom') customBox.classList.remove('hidden');
+      else customBox.classList.add('hidden');
+    };
+
+    // ==================== 監聽店家營業狀態、營業時間、休假與公告 ====================
+    const dayNames = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
+
+    function evaluateOpenStatus(settings) {
+      const mode = settings.storeMode || 'auto';
+      if (mode === 'open') return { isOpen: true, reason: '外帶自取・營業接單中', sub: '' };
+      if (mode === 'closed') return { isOpen: false, reason: '目前店家暫停接單 / 休息中', sub: '目前僅供瀏覽菜單，暫無法點餐' };
+
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const todayStr = `${yyyy}-${mm}-${dd}`;
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const dayIdx = String(now.getDay());
+
+      const matchedHoliday = (settings.holidays || []).find(h => todayStr >= h.startDate && todayStr <= h.endDate);
+      if (matchedHoliday) {
+        return {
+          isOpen: false,
+          reason: `今日店休（${matchedHoliday.note || '預約公休'}）`,
+          sub: `休假期間：${matchedHoliday.startDate} ~ ${matchedHoliday.endDate}｜目前僅供瀏覽菜單`
+        };
+      }
+
+      const wh = settings.weeklyHours || {};
+      const dayCfg = wh[dayIdx] || { open: true, start: "07:00", end: "17:00" };
+      if (!dayCfg.open) {
+        return { isOpen: false, reason: `今日固定公休（${dayNames[now.getDay()]}）`, sub: '目前僅供瀏覽菜單，歡迎於營業日再度光臨' };
+      }
+      if (timeStr < dayCfg.start || timeStr > dayCfg.end) {
+        return { isOpen: false, reason: '目前非營業時間（僅供瀏覽菜單）', sub: `今日營業時間：${dayCfg.start} - ${dayCfg.end}｜歡迎先瀏覽菜單` };
+      }
+      return { isOpen: true, reason: `營業接單中（今日至 ${dayCfg.end}）`, sub: '' };
+    }
+
+    function applyStoreStatusUI() {
+      const st = evaluateOpenStatus(latestStoreSettings);
+      isStoreCurrentlyOpen = st.isOpen;
+      storeCloseReason = st.reason;
+
+      const dot = document.getElementById('store-status-dot');
+      const label = document.getElementById('store-status-label');
+      const closedBanner = document.getElementById('closed-notice-banner');
+      const submitBtn = document.getElementById('submit-btn');
+
+      label.innerText = st.reason;
+      if (st.isOpen) {
+        dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+        closedBanner.classList.add('hidden');
+        submitBtn.disabled = false;
+        submitBtn.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-extrabold text-sm shadow-lg transition";
+        submitBtn.innerText = "🚀 確認送出外帶訂單";
+      } else {
+        dot.className = "w-2 h-2 rounded-full bg-red-400";
+        closedBanner.classList.remove('hidden');
+        document.getElementById('closed-notice-title').innerText = `🌙 ${st.reason}`;
+        document.getElementById('closed-notice-sub').innerText = st.sub;
+        submitBtn.disabled = true;
+        submitBtn.className = "w-full bg-gray-400 text-white py-3.5 rounded-xl font-extrabold text-sm cursor-not-allowed";
+        submitBtn.innerText = "🌙 非營業時間（僅供瀏覽菜單）";
+      }
+    }
+
+    onSnapshot(doc(db, "settings", "store"), (snap) => {
+      if (snap.exists()) {
+        latestStoreSettings = snap.data();
+        if (latestStoreSettings.announcementTitle) {
+          document.getElementById('ann-title').innerText = latestStoreSettings.announcementTitle;
+        }
+        if (latestStoreSettings.announcementText) {
+          document.getElementById('ann-text').innerText = latestStoreSettings.announcementText;
+        }
+      }
+      applyStoreStatusUI();
+    });
+    setInterval(applyStoreStatusUI, 30000);
+
+    window.toggleScheduleModal = function() {
+      const modal = document.getElementById('schedule-modal');
+      const body = document.getElementById('schedule-modal-body');
+      const wh = latestStoreSettings.weeklyHours || {};
+      const holidays = latestStoreSettings.holidays || [];
+      const orderDays = [1, 2, 3, 4, 5, 6, 0];
+
+      let html = `<div class="space-y-1.5"><p class="font-extrabold text-gray-700">📅 每週營業時間：</p>`;
+      orderDays.forEach(d => {
+        const cfg = wh[String(d)] || { open: true, start: "07:00", end: "17:00" };
+        html += `
+          <div class="flex justify-between py-1 border-b">
+            <span class="font-bold">${dayNames[d]}</span>
+            <span class="${cfg.open ? 'text-emerald-700 font-extrabold' : 'text-red-500 font-bold'}">${cfg.open ? `${cfg.start} - ${cfg.end}` : '公休'}</span>
+          </div>
+        `;
+      });
+      html += `</div>`;
+
+      if (holidays.length > 0) {
+        html += `<div class="pt-2 space-y-1"><p class="font-extrabold text-red-700">🏖️ 近期店休預告：</p>`;
+        holidays.forEach(h => {
+          html += `<p class="bg-red-50 text-red-700 p-2 rounded-lg font-bold">${h.startDate} ~ ${h.endDate}：${h.note || '店休'}</p>`;
+        });
+        html += `</div>`;
+      }
+      body.innerHTML = html;
+      modal.classList.toggle('hidden');
+    };
+
+    // ==================== 載入與渲染菜單 ====================
     async function loadMenu() {
       try {
         const querySnapshot = await getDocs(collection(db, "menu"));
@@ -198,7 +406,7 @@
                   <p class="font-extrabold text-xs text-[#213c64] pt-0.5">NT$${item.price}</p>
                 </div>
                 <div class="shrink-0">
-                  ${item.soldOut ? '<span class="bg-red-500 text-white px-2.5 py-1 rounded-xl text-[10px] font-bold">已售完</span>' : '<span class="bg-[#213c64]/10 text-[#213c64] px-3 py-1.5 rounded-xl text-xs font-extrabold">選購 ＋</span>'}
+                  ${item.soldOut ? '<span class="bg-red-500 text-white px-2.5 py-1 rounded-xl text-[10px] font-bold">已售完</span>' : '<span class="bg-[#213c64]/10 text-[#213c64] px-3 py-1.5 rounded-xl text-xs font-extrabold">查看 / 選購</span>'}
                 </div>
               </div>
             `).join('')}
@@ -212,11 +420,9 @@
       if (el) el.scrollIntoView({ behavior: 'smooth' });
     };
 
-    // 整理該品項所有啟用的加購項目 (同時相容新版獨立勾選與舊版字串)
     function getActiveAddonsList(item) {
       const opts = item.options || {};
       const list = [];
-
       if (opts.addonShot !== undefined) {
         if (opts.addonShot) list.push({ name: '加一份濃縮', price: Number(opts.priceAddonShot || 0) });
         if (opts.addonOat) list.push({ name: '更換燕麥奶', price: Number(opts.priceAddonOat || 0) });
@@ -228,14 +434,17 @@
             if (a.enabled && a.name) list.push({ name: a.name, price: Number(a.price || 0) });
           });
         }
-      } else if (item.customRules) {
-        item.customRules.split(',').map(r => r.trim()).filter(Boolean).forEach(ruleStr => {
-          const parts = ruleStr.split(':');
-          list.push({ name: parts[0].trim(), price: parts[1] ? Number(parts[1]) : 0 });
-        });
       }
       return list;
     }
+
+    window.toggleIceLevelBox = function() {
+      const tempEl = document.querySelector('input[name="opt-temp"]:checked');
+      const box = document.getElementById('ice-level-box');
+      if (!box) return;
+      if (tempEl && tempEl.value === '冰飲') box.classList.remove('hidden');
+      else box.classList.add('hidden');
+    };
 
     window.openModal = function(catName, itemId) {
       const cat = catalog.find(c => c.category === catName);
@@ -252,7 +461,7 @@
       const opts = activeItem.options || {};
       let html = '';
 
-      // 1. 溫度選擇
+      // 1. 溫度選擇 ＋ 冰量細項選擇
       const temps = [];
       if (opts.ice) temps.push('冰');
       if (opts.hot) temps.push('熱');
@@ -263,8 +472,25 @@
             <div class="grid grid-cols-2 gap-2">
               ${temps.map((t, idx) => `
                 <label class="cursor-pointer">
-                  <input type="radio" name="opt-temp" value="${t}飲" ${idx === 0 ? 'checked' : ''} class="peer hidden">
+                  <input type="radio" name="opt-temp" value="${t}飲" ${idx === 0 ? 'checked' : ''} class="peer hidden" onchange="toggleIceLevelBox()">
                   <div class="border rounded-xl p-2.5 text-center font-bold peer-checked:bg-[#213c64] peer-checked:text-white peer-checked:border-[#213c64] transition">${t}飲</div>
+                </label>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      if (opts.ice && opts.iceLevel !== false) {
+        const iceLevels = ['正常冰', '少冰', '微冰', '去冰'];
+        html += `
+          <div id="ice-level-box">
+            <label class="font-extrabold text-gray-700 block mb-1.5">🧊 冰量選擇：</label>
+            <div class="grid grid-cols-4 gap-1.5">
+              ${iceLevels.map((lvl, idx) => `
+                <label class="cursor-pointer">
+                  <input type="radio" name="opt-ice-level" value="${lvl}" ${idx === 0 ? 'checked' : ''} class="peer hidden">
+                  <div class="border rounded-xl py-2 text-center font-bold text-[11px] peer-checked:bg-sky-700 peer-checked:text-white peer-checked:border-sky-700 transition">${lvl}</div>
                 </label>
               `).join('')}
             </div>
@@ -318,7 +544,7 @@
         `;
       }
 
-      // 4. 加購區 (加一份濃縮、更換燕麥奶、可可粉、黑糖粉、肉桂粉等)
+      // 4. 加購區
       const addonsList = getActiveAddonsList(activeItem);
       if (addonsList.length > 0) {
         html += `
@@ -337,7 +563,22 @@
       }
 
       document.getElementById('modal-options-container').innerHTML = html;
+      toggleIceLevelBox();
       updateModalPrice();
+
+      // 非營業時間僅供瀏覽，鎖定加入購物車按鈕
+      const addBtn = document.getElementById('modal-add-btn');
+      const addBtnText = document.getElementById('modal-add-btn-text');
+      if (isStoreCurrentlyOpen) {
+        addBtn.disabled = false;
+        addBtn.className = "bg-[#213c64] hover:bg-opacity-90 text-white px-6 py-3 rounded-xl font-extrabold text-xs shadow-lg flex items-center gap-2";
+        addBtnText.innerText = "加入購物車";
+      } else {
+        addBtn.disabled = true;
+        addBtn.className = "bg-gray-400 text-white px-5 py-3 rounded-xl font-extrabold text-xs cursor-not-allowed flex items-center gap-2";
+        addBtnText.innerText = "🌙 非營業時間僅供瀏覽";
+      }
+
       document.getElementById('customize-modal').classList.remove('hidden');
     };
 
@@ -373,16 +614,26 @@
       const t = document.getElementById('toast');
       t.innerText = msg;
       t.classList.remove('hidden');
-      setTimeout(() => t.classList.add('hidden'), 1800);
+      setTimeout(() => t.classList.add('hidden'), 2000);
     }
 
     window.confirmAddToCart = function() {
+      if (!isStoreCurrentlyOpen) {
+        alert(`抱歉，${storeCloseReason}，目前僅供瀏覽菜單喔！`);
+        return;
+      }
       if (!activeItem) return;
       const modifiers = [];
       let finalUnitPrice = activeItem.price;
 
       const tempEl = document.querySelector('input[name="opt-temp"]:checked');
-      if (tempEl) modifiers.push(tempEl.value);
+      if (tempEl) {
+        modifiers.push(tempEl.value);
+        if (tempEl.value === '冰飲') {
+          const iceLvlEl = document.querySelector('input[name="opt-ice-level"]:checked');
+          if (iceLvlEl) modifiers.push(iceLvlEl.value);
+        }
+      }
 
       const beanEl = document.querySelector('input[name="opt-bean"]:checked');
       if (beanEl) {
@@ -471,29 +722,86 @@
       else bottomBar.classList.add('hidden');
     }
 
-    // 追蹤剛送出的訂單狀態
+    // 客人手機取餐完成提示音與震動
+    function playPickupReadyChime() {
+      try {
+        if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 500]);
+        if (!customerAudioCtx) customerAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (customerAudioCtx.state === 'suspended') customerAudioCtx.resume();
+        const now = customerAudioCtx.currentTime;
+        [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
+          const osc = customerAudioCtx.createOscillator();
+          const gain = customerAudioCtx.createGain();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(freq, now + idx * 0.15);
+          gain.gain.setValueAtTime(0.4, now + idx * 0.15);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.15 + 0.35);
+          osc.connect(gain);
+          gain.connect(customerAudioCtx.destination);
+          osc.start(now + idx * 0.15);
+          osc.stop(now + idx * 0.15 + 0.35);
+        });
+      } catch (e) {}
+    }
+
+    // 追蹤剛送出的訂單狀態 (未接單 -> 製作中 -> 可取餐)
     function watchOrderStatus(orderId) {
       const banner = document.getElementById('active-order-banner');
+      const numBadge = document.getElementById('order-number-badge');
       const badge = document.getElementById('order-status-badge');
       const text = document.getElementById('order-status-text');
       banner.classList.remove('hidden');
+      let notifiedCompleted = false;
 
       onSnapshot(doc(db, "orders", orderId), (snap) => {
         if (!snap.exists()) return;
         const data = snap.data();
+        numBadge.innerText = data.orderNumber || '#001';
+
         if (data.status === 'completed') {
-          badge.className = "bg-emerald-600 text-white text-xs font-extrabold px-2.5 py-0.5 rounded-full animate-bounce";
-          badge.innerText = "🎉 可取餐";
-          text.innerText = `親愛的 ${data.customerInfo}，您的咖啡已製作完成，請至吧台取餐！`;
+          badge.className = "bg-emerald-600 text-white text-xs font-extrabold px-3 py-1 rounded-full animate-bounce";
+          badge.innerText = "🎉 製作完成・請取餐";
+          text.innerText = `親愛的 ${data.customerInfo}，您的餐點好囉！請憑號碼牌【${data.orderNumber || ''}】至吧台取餐！`;
+          if (!notifiedCompleted) {
+            notifiedCompleted = true;
+            playPickupReadyChime();
+          }
+        } else if (data.status === 'accepted') {
+          badge.className = "bg-blue-600 text-white text-xs font-extrabold px-3 py-1 rounded-full";
+          badge.innerText = "🔥 吧台已接單製作中";
+          text.innerText = `吧台已接收您的 ${data.orderNumber || ''} 訂單（${data.pickupTime || '立即製作'}），正在為您現磨萃取中！`;
         } else {
-          badge.className = "bg-amber-100 text-amber-800 text-xs font-extrabold px-2.5 py-0.5 rounded-full";
-          badge.innerText = "⏳ 吧台製作中";
-          text.innerText = `已收到 ${data.customerInfo} 的外帶訂單（共 NT$${data.totalAmount}），現場製作中請稍候。`;
+          badge.className = "bg-amber-100 text-amber-800 text-xs font-extrabold px-3 py-1 rounded-full";
+          badge.innerText = "⏳ 等待吧台確認接單";
+          text.innerText = `已送出 ${data.orderNumber || ''} 訂單（共 NT$${data.totalAmount}），等待吧台人員確認中。`;
         }
       });
     }
 
+    // 產生今日流水取餐號碼 (#001, #002...)
+    async function generateTodayOrderNumber() {
+      try {
+        const snap = await getDocs(collection(db, "orders"));
+        const todayStr = new Date().toLocaleDateString('zh-TW');
+        let count = 0;
+        snap.forEach(d => {
+          const dt = d.data().createdAt?.toDate ? d.data().createdAt.toDate() : new Date();
+          if (dt.toLocaleDateString('zh-TW') === todayStr) count++;
+        });
+        return `#${String(count + 1).padStart(3, '0')}`;
+      } catch (e) {
+        return `#${String(Math.floor(100 + Math.random() * 900))}`;
+      }
+    }
+
     window.submitOrder = async function() {
+      applyStoreStatusUI();
+      if (!isStoreCurrentlyOpen) {
+        alert(`抱歉，${storeCloseReason}，目前僅供瀏覽菜單，無法送出訂單喔！`);
+        closeCart();
+        return;
+      }
+
       const customerName = document.getElementById('customer-name').value.trim();
       const customerPhone = document.getElementById('customer-phone').value.trim();
       
@@ -508,16 +816,39 @@
         return; 
       }
 
-      // 儲存顧客資訊方便下次點餐
+      let finalPickupTime = pickupMode;
+      if (pickupMode === 'custom') {
+        const customVal = document.getElementById('custom-pickup-time').value;
+        if (!customVal) {
+          alert('請選擇您的指定取餐時間！');
+          closeCart();
+          return;
+        }
+        finalPickupTime = `指定 ${customVal} 取餐`;
+      }
+
+      // 解鎖客人手機音效以便完成時響鈴
+      try {
+        if (!customerAudioCtx) customerAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (customerAudioCtx.state === 'suspended') customerAudioCtx.resume();
+      } catch (e) {}
+
       localStorage.setItem('noday_name', customerName);
       localStorage.setItem('noday_phone', customerPhone);
+      localStorage.setItem('noday_last_order', JSON.stringify(cart));
+      loadLastOrderHistory();
 
       const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
       const customerInfo = `${customerName} (${customerPhone})`;
+      const orderNumber = await generateTodayOrderNumber();
 
       try {
         const docRef = await addDoc(collection(db, "orders"), {
+          orderNumber: orderNumber,
           orderType: "外帶自取",
+          pickupTime: finalPickupTime,
+          customerName: customerName,
+          customerPhone: customerPhone,
           customerInfo: customerInfo,
           items: cart,
           totalAmount: totalAmount,
@@ -529,7 +860,7 @@
         closeCart();
         watchOrderStatus(docRef.id);
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        showToast("🎉 外帶訂單已送出！");
+        showToast(`🎉 訂單已送出！您的取餐號碼為 ${orderNumber}`);
       } catch (e) { console.error(e); alert("送出失敗，請重試"); }
     };
 
