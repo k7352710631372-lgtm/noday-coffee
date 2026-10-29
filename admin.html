@@ -28,9 +28,12 @@
           ☕ NODAY 吧台旗艦管理系統
           <span id="header-store-badge" class="text-xs bg-emerald-500 text-white px-2.5 py-0.5 rounded-full font-bold">載入中</span>
         </h1>
-        <p class="text-xs text-gray-200 mt-0.5">高分貝循環鈴聲 ＆ 營業休假控管 ＆ 雲端菜單管理</p>
+        <p class="text-xs text-gray-200 mt-0.5">高分貝循環鈴聲 ＆ LINE 會員防棄單 ＆ 雲端菜單管理</p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
+        <button onclick="toggleMembersPanel()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-xl text-xs font-bold shadow transition">
+          👥 會員與黑名單管理
+        </button>
         <button onclick="testHighVolumeAlarm()" class="bg-white/15 hover:bg-white/25 text-white px-3 py-2 rounded-xl text-xs font-bold transition">
           🔊 測試大音量鈴聲
         </button>
@@ -69,6 +72,20 @@
           <button onclick="toggleStatsPanel()" class="flex-1 bg-amber-100 hover:bg-amber-200 text-amber-900 py-1.5 rounded-lg text-xs font-extrabold transition">熱銷排行</button>
           <button onclick="exportTodayCSV()" class="flex-1 bg-[#213c64] hover:bg-[#192e4d] text-white py-1.5 rounded-lg text-xs font-extrabold transition">匯出 Excel</button>
         </div>
+      </div>
+    </section>
+
+    <!-- 會員與棄單黑名單管理面板 (可展開) -->
+    <section id="members-panel" class="hidden bg-white p-5 rounded-2xl shadow-sm border-2 border-purple-300 space-y-4">
+      <div class="flex flex-wrap justify-between items-center gap-2 border-b pb-3">
+        <div>
+          <h3 class="text-base font-extrabold text-purple-950">👥 LINE 綁定會員 ＆ 棄單黑名單管理</h3>
+          <p class="text-xs text-gray-500">可在此查看客人的累計取餐次數、協助客人更換綁定電話，或解除/加入黑名單。</p>
+        </div>
+        <button onclick="toggleMembersPanel()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg font-extrabold">收合面板 ✕</button>
+      </div>
+      <div id="members-list-container" class="space-y-2 max-h-80 overflow-y-auto text-xs">
+        <p class="text-gray-400 py-4 text-center">正在載入會員資料...</p>
       </div>
     </section>
 
@@ -378,7 +395,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, getDocs, getDoc, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, getDoc, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBMdycidtvbE7JmQtvXn-lCqUwod5RxR44",
@@ -394,11 +411,11 @@
 
     let cachedCatalog = [];
     let todayAllOrders = [];
+    let membersMap = {};
     let soundEnabled = true;
     let hasUnacceptedOrders = false;
     let audioCtx = null;
 
-    // 確保 AudioContext 解鎖並提供超大音量雙頻接單鈴聲
     function ensureAudioContext() {
       if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -414,7 +431,7 @@
       try {
         ensureAudioContext();
         const now = audioCtx.currentTime;
-        const notes = [987.77, 1318.51, 987.77, 1318.51, 1567.98]; // B5 - E6 急促雙頻響鈴
+        const notes = [987.77, 1318.51, 987.77, 1318.51, 1567.98];
         notes.forEach((freq, idx) => {
           const osc = audioCtx.createOscillator();
           const gain = audioCtx.createGain();
@@ -430,7 +447,6 @@
       } catch (e) {}
     }
 
-    // 每 1.5 秒檢查一次：只要還有「未接收 (pending)」的訂單，就持續大聲響鈴！
     setInterval(() => {
       if (hasUnacceptedOrders && soundEnabled) {
         playLoudOrderBell();
@@ -461,6 +477,76 @@
       document.getElementById('stats-panel').classList.toggle('hidden');
     };
 
+    window.toggleMembersPanel = function() {
+      document.getElementById('members-panel').classList.toggle('hidden');
+    };
+
+    // ==================== 會員與黑名單即時監聽管理 ====================
+    onSnapshot(collection(db, "members"), (snap) => {
+      const container = document.getElementById('members-list-container');
+      const list = [];
+      membersMap = {};
+      snap.forEach(d => {
+        const data = d.data();
+        membersMap[d.id] = data;
+        list.push({ id: d.id, ...data });
+      });
+
+      if (list.length === 0) {
+        container.innerHTML = `<p class="text-gray-400 py-4 text-center">目前尚無綁定之會員資料</p>`;
+        return;
+      }
+
+      list.sort((a, b) => (b.completedCount || 0) - (a.completedCount || 0));
+
+      container.innerHTML = list.map(m => `
+        <div class="flex flex-wrap justify-between items-center bg-gray-50 p-3 rounded-xl border ${m.isBlocked ? 'border-red-400 bg-red-50/50' : 'border-gray-200'} gap-2">
+          <div class="flex items-center gap-2.5">
+            <img src="${m.pictureUrl || 'https://cdn-icons-png.flaticon.com/512/847/847969.png'}" class="w-8 h-8 rounded-full border object-cover">
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="font-extrabold text-gray-900">${m.name || m.lineDisplayName || '未知'}</span>
+                <span class="text-[11px] text-gray-500 font-bold">(LINE: ${m.lineDisplayName || '無'})</span>
+                ${m.isBlocked
+                  ? `<span class="bg-red-600 text-white text-[10px] px-2 py-0.5 rounded-full font-extrabold">🚫 黑名單停權中</span>`
+                  : `<span class="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-extrabold">✅ 正常 (已取餐 ${m.completedCount || 0} 次)</span>`
+                }
+                ${(m.abandonedCount || 0) > 0 ? `<span class="bg-red-100 text-red-700 text-[10px] px-2 py-0.5 rounded-full font-extrabold">⚠️ 棄單 ${m.abandonedCount} 次</span>` : ''}
+              </div>
+              <p class="text-[11px] text-[#213c64] font-extrabold mt-0.5">🔒 綁定電話：${m.phone || '未綁定'}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button onclick="editMemberPhone('${m.id}', '${m.phone || ''}')" class="bg-white border hover:bg-gray-100 text-gray-700 px-2.5 py-1 rounded-lg font-bold">修改電話</button>
+            <button onclick="toggleBlockMember('${m.id}', '${m.phone || ''}', ${!m.isBlocked})" class="${m.isBlocked ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'} px-2.5 py-1 rounded-lg font-extrabold">
+              ${m.isBlocked ? '解除封鎖' : '🚫 封鎖帳號'}
+            </button>
+          </div>
+        </div>
+      `).join('');
+    });
+
+    window.editMemberPhone = async function(memberId, oldPhone) {
+      const newPhone = prompt("請輸入要為此會員更改的新手機號碼（10碼）：", oldPhone);
+      if (!newPhone) return;
+      const clean = newPhone.trim();
+      if (!/^09\d{8}$/.test(clean)) {
+        alert("手機格式須為 09 開頭共 10 碼數字！");
+        return;
+      }
+      await updateDoc(doc(db, "members", memberId), { phone: clean, phoneLocked: true });
+      alert("✅ 已更新該會員的綁定電話！");
+    };
+
+    window.toggleBlockMember = async function(memberId, phone, blockStatus) {
+      const actionText = blockStatus ? "封鎖此會員並列入黑名單" : "解除此會員的黑名單封鎖";
+      if (!confirm(`確定要「${actionText}」嗎？`)) return;
+      await setDoc(doc(db, "members", memberId), { isBlocked: blockStatus }, { merge: true });
+      if (phone) {
+        await setDoc(doc(db, "blocked_phones", phone), { isBlocked: blockStatus, memberId }, { merge: true });
+      }
+    };
+
     // ==================== 營業設定、營業時間與預約休假 ====================
     const dayNames = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
     const defaultStoreSettings = {
@@ -484,7 +570,7 @@
     function renderWeeklyHoursUI() {
       const container = document.getElementById('weekly-hours-container');
       const wh = currentStoreSettings.weeklyHours || defaultStoreSettings.weeklyHours;
-      const orderDays = [1, 2, 3, 4, 5, 6, 0]; // 週一到週日
+      const orderDays = [1, 2, 3, 4, 5, 6, 0];
       container.innerHTML = orderDays.map(d => {
         const cfg = wh[String(d)] || { open: true, start: "07:00", end: "17:00" };
         return `
@@ -822,7 +908,6 @@
       } catch (e) { console.error(e); }
     }
 
-    // 分類上下排序
     window.moveCategory = async function(catIdx, dir) {
       const targetIdx = catIdx + dir;
       if (targetIdx < 0 || targetIdx >= cachedCatalog.length) return;
@@ -834,7 +919,6 @@
       loadAdminMenu();
     };
 
-    // 品項上下排序
     window.moveItem = async function(categoryName, itemIdx, dir) {
       const catObj = cachedCatalog.find(c => c.category === categoryName);
       if (!catObj) return;
@@ -1041,12 +1125,12 @@
       } catch (e) { console.error(e); alert("更新失敗"); }
     };
 
-    // ==================== 即時訂單監聽、接收訂單停止鈴聲、熱銷與匯出 ====================
+    // ==================== 即時訂單監聽、會員信用標籤與防棄單操作 ====================
     const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
     onSnapshot(q, (snapshot) => {
       const container = document.getElementById("orders-container");
       const completedContainer = document.getElementById("completed-orders-container");
-      const activeOrders = []; // pending (未接收) + accepted (製作中)
+      const activeOrders = [];
       const completedOrders = [];
       todayAllOrders = [];
       let todayRevenue = 0;
@@ -1076,7 +1160,6 @@
         }
       });
 
-      // 若有未接收訂單，立即觸發持續響鈴與頂部紅條
       const hadUnacceptedBefore = hasUnacceptedOrders;
       hasUnacceptedOrders = unacceptedCount > 0;
       const alarmBar = document.getElementById('unaccepted-alarm-bar');
@@ -1091,7 +1174,6 @@
       document.getElementById('stat-completed').innerText = `${completedOrders.length} 筆`;
       document.getElementById('stat-revenue').innerText = `NT$${todayRevenue}`;
 
-      // 渲染熱銷排行
       const topListEl = document.getElementById('top-selling-list');
       const sortedSales = Object.entries(itemSalesMap).sort((a, b) => b[1] - a[1]);
       if (sortedSales.length === 0) {
@@ -1105,7 +1187,6 @@
         `).join('');
       }
 
-      // 渲染待處理訂單 (區分「未接收紅框閃爍」與「已接收製作中」)
       if (activeOrders.length === 0) {
         container.innerHTML = `<p class="text-gray-400 text-sm py-6 text-center">目前沒有待處理的新訂單...</p>`;
       } else {
@@ -1116,9 +1197,23 @@
           const orderNum = order.orderNumber || '#---';
           const pickupTime = order.pickupTime || '現場立即製作';
 
+          // 判斷客人信用標籤
+          const mDoc = (order.lineUserId && membersMap[order.lineUserId]) || {};
+          const completedCnt = Number(mDoc.completedCount ?? order.memberCompletedCount ?? 0);
+          const abandonedCnt = Number(mDoc.abandonedCount ?? order.memberAbandonedCount ?? 0);
+
+          let trustBadgeHtml = '';
+          if (abandonedCnt > 0) {
+            trustBadgeHtml = `<span class="bg-red-100 text-red-700 border border-red-300 text-xs font-extrabold px-2.5 py-0.5 rounded-full">🔴 ⚠️ 曾有棄單紀錄 (${abandonedCnt}次)</span>`;
+          } else if (completedCnt > 0) {
+            trustBadgeHtml = `<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-extrabold px-2.5 py-0.5 rounded-full">🟢 認證熟客 (已取餐 ${completedCnt} 次)</span>`;
+          } else {
+            trustBadgeHtml = `<span class="bg-amber-100 text-amber-900 border border-amber-300 text-xs font-extrabold px-2.5 py-0.5 rounded-full">🟡 🆕 首次點餐新客</span>`;
+          }
+
           return `
             <div class="border-2 ${isPending ? 'alarm-card' : 'border-blue-500 bg-blue-50/30'} p-4 rounded-2xl shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div class="space-y-1.5">
+              <div class="space-y-1.5 w-full">
                 <div class="flex flex-wrap items-center gap-2">
                   <span class="bg-[#213c64] text-white text-sm font-extrabold px-3 py-1 rounded-xl shadow">${orderNum}</span>
                   <span class="${isPending ? 'bg-red-600' : 'bg-blue-600'} text-white text-xs font-extrabold px-2.5 py-1 rounded-full">
@@ -1127,10 +1222,12 @@
                   <span class="bg-amber-100 text-amber-900 text-xs font-extrabold px-2.5 py-1 rounded-full border border-amber-300">
                     ⏰ ${pickupTime}
                   </span>
+                  ${trustBadgeHtml}
                   <span class="text-xs text-gray-500 font-bold">下單時間 ${timeStr}</span>
                 </div>
-                <div class="flex flex-wrap items-center gap-3 pt-1">
+                <div class="flex flex-wrap items-center gap-2.5 pt-1">
                   <h3 class="font-extrabold text-base text-gray-900">${order.customerInfo}</h3>
+                  ${order.lineDisplayName ? `<span class="text-xs text-gray-500 font-bold">(LINE: ${order.lineDisplayName})</span>` : ''}
                   ${phoneMatch ? `<a href="tel:${phoneMatch}" class="inline-flex items-center gap-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-2.5 py-1 rounded-lg text-xs font-extrabold transition">📞 一鍵撥號 (${phoneMatch})</a>` : ''}
                 </div>
                 <div class="mt-2 space-y-1 text-sm text-gray-800 bg-white/80 p-3 rounded-xl border">
@@ -1144,13 +1241,18 @@
                     🔔 接收訂單 (停止鈴聲)
                   </button>
                 ` : `
-                  <button onclick="completeOrder('${order.id}')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3.5 rounded-xl font-extrabold text-sm shadow-lg transition">
+                  <button onclick="completeOrder('${order.id}', '${order.lineUserId || ''}')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3.5 rounded-xl font-extrabold text-sm shadow-lg transition">
                     ✓ 完成製作 (通知取餐)
                   </button>
                 `}
-                <button onclick="cancelOrder('${order.id}')" class="bg-gray-200 hover:bg-red-100 hover:text-red-600 text-gray-600 px-4 py-2 rounded-xl font-bold text-xs transition">
-                  取消訂單
-                </button>
+                <div class="flex gap-1.5 w-full">
+                  <button onclick="cancelOrder('${order.id}')" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-xl font-bold text-xs transition">
+                    一般取消
+                  </button>
+                  <button onclick="markOrderAbandoned('${order.id}', '${order.lineUserId || ''}', '${phoneMatch}', '${order.customerInfo}')" class="flex-1 bg-red-100 hover:bg-red-600 hover:text-white text-red-700 px-3 py-2 rounded-xl font-extrabold text-xs transition">
+                    🚫 棄單封鎖
+                  </button>
+                </div>
               </div>
             </div>
           `;
@@ -1177,22 +1279,54 @@
       await updateDoc(doc(db, "orders", orderId), { status: "accepted" });
     };
 
-    window.completeOrder = async function(orderId) {
+    // 完成訂單時，自動為該會員累計 +1 次成功取餐紀錄（自動升級為認證熟客）
+    window.completeOrder = async function(orderId, lineUserId) {
       await updateDoc(doc(db, "orders", orderId), { status: "completed" });
+      if (lineUserId) {
+        try {
+          await setDoc(doc(db, "members", lineUserId), {
+            completedCount: increment(1)
+          }, { merge: true });
+        } catch (e) {}
+      }
     };
 
     window.cancelOrder = async function(orderId) {
-      if (!confirm("確定要取消並刪除這筆訂單嗎？")) return;
+      if (!confirm("確定要一般取消並刪除這筆訂單嗎？（不列入黑名單）")) return;
       await deleteDoc(doc(db, "orders", orderId));
     };
 
-    // 匯出今日 Excel (CSV) 報表
+    // 惡意棄單：一鍵標記棄單並同時封鎖 LINE 帳號與電話號碼
+    window.markOrderAbandoned = async function(orderId, lineUserId, phone, customerInfo) {
+      if (!confirm(`⚠️ 確定要將【${customerInfo}】標記為「惡意棄單」並立即封鎖他的 LINE 帳號與電話嗎？\n\n封鎖後該客人將無法再使用線上點餐！`)) return;
+      try {
+        if (lineUserId) {
+          await setDoc(doc(db, "members", lineUserId), {
+            abandonedCount: increment(1),
+            isBlocked: true
+          }, { merge: true });
+        }
+        if (phone) {
+          await setDoc(doc(db, "blocked_phones", phone), {
+            isBlocked: true,
+            customerInfo: customerInfo,
+            lineUserId: lineUserId || ""
+          }, { merge: true });
+        }
+        await deleteDoc(doc(db, "orders", orderId));
+        alert(`🚫 已將 ${customerInfo} 列入棄單黑名單並封鎖！`);
+      } catch (e) {
+        console.error(e);
+        alert("封鎖操作失敗");
+      }
+    };
+
     window.exportTodayCSV = function() {
       if (todayAllOrders.length === 0) {
         alert("今日尚無訂單可匯出！");
         return;
       }
-      const headers = ["取餐號碼", "下單時間", "顧客資訊", "預計取餐", "訂單狀態", "點購明細", "總金額(NT$)"];
+      const headers = ["取餐號碼", "下單時間", "顧客資訊", "LINE名稱", "預計取餐", "訂單狀態", "點購明細", "總金額(NT$)"];
       const rows = todayAllOrders.map(o => {
         const timeStr = o.time.toLocaleTimeString('zh-TW');
         const statusMap = { pending: "未接單", accepted: "製作中", completed: "已完成" };
@@ -1201,6 +1335,7 @@
           o.orderNumber || "",
           timeStr,
           `"${(o.customerInfo || "").replace(/"/g, '""')}"`,
+          `"${(o.lineDisplayName || "").replace(/"/g, '""')}"`,
           o.pickupTime || "立即製作",
           statusMap[o.status] || o.status,
           `"${itemsStr.replace(/"/g, '""')}"`,
