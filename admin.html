@@ -233,7 +233,7 @@
       }
     };
 
-    // ==================== 4. 菜單售完開關與價格修改管理 ====================
+    // ==================== 4. 完整的菜單品項與價格修改管理 ====================
     async function initMenuManager() {
       const snap = await getDocs(collection(db, "menu"));
       menuCache = [];
@@ -242,11 +242,11 @@
       
       const container = document.getElementById('menu-manager-container');
       container.innerHTML = menuCache.map(cat => `
-        <div class="bg-white p-4 rounded-2xl border shadow-sm space-y-2.5">
+        <div class="bg-white p-4 rounded-2xl border shadow-sm space-y-3">
           <h3 class="font-extrabold text-xs text-[#213c64] border-b pb-1.5">📂 ${cat.category}</h3>
-          <div class="space-y-2">
+          <div class="space-y-2.5">
             ${cat.items.map(item => `
-              <div class="bg-gray-50 p-2.5 rounded-xl text-xs space-y-2 border">
+              <div class="bg-gray-50 p-3 rounded-xl text-xs space-y-2 border">
                 <div class="flex justify-between items-center">
                   <span class="font-extrabold text-gray-900">${item.name}</span>
                   <div class="flex items-center gap-2">
@@ -257,8 +257,8 @@
                   </div>
                 </div>
                 <div class="flex items-center gap-2 pt-1 border-t">
-                  <input type="number" id="price-input-${item.id}" value="${item.price}" class="border rounded-lg p-1 text-xs w-20 text-center font-bold bg-white" placeholder="新價格">
-                  <button onclick="updateItemPrice('${cat.category}', '${item.id}')" class="bg-[#213c64] text-white px-3 py-1 rounded-lg text-[11px] font-extrabold">修改價格</button>
+                  <input type="number" id="price-input-${item.id}" value="${item.price}" class="border rounded-lg p-1.5 text-xs w-24 text-center font-extrabold bg-white" placeholder="新價格">
+                  <button onclick="updateItemPrice('${cat.category}', '${item.id}')" class="bg-[#213c64] text-white px-3 py-1.5 rounded-lg text-xs font-extrabold">修改價格</button>
                 </div>
               </div>
             `).join('')}
@@ -383,7 +383,7 @@
     <!-- 菜單與價格管理 -->
     <div class="space-y-3 pt-3 border-t">
       <h2 class="font-extrabold text-xs text-[#213c64]">☕ 吧台菜單即時管理 (品項價格修改與售完切換)</h2>
-      <div id="menu-manager-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div id="menu-manager-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <p class="text-center text-gray-400 py-10 text-xs">載入菜單管理中...</p>
       </div>
     </div>
