@@ -480,8 +480,8 @@
         html += `<div id="ice-level-box"><label class="font-extrabold text-gray-700 block mb-1.5">🧊 冰量選擇：</label><div class="grid grid-cols-4 gap-1.5">${iceLevels.map((lvl, idx) => `<label class="cursor-pointer"><input type="radio" name="opt-ice-level" value="${lvl}" ${idx === 0 ? 'checked' : ''} class="peer hidden"><div class="border rounded-xl py-2 text-center font-bold text-[11px] peer-checked:bg-sky-700 peer-checked:text-white peer-checked:border-sky-700 transition">${lvl}</div></label>`).join('')}</div></div>`;
       }
       const beans = [];
-      if (opts.bean5) beans.push({ name: '5號配方(經典)', price: Number(opts.priceBean5 || 0) });
-      if (opts.bean1) beans.push({ name: '1號配方(果香)', price: Number(opts.priceBean1 || 0) });
+      if (opts.bean5) beans.push({ name: '5號 中焙', price: Number(opts.priceBean5 || 0) });
+      if (opts.bean1) beans.push({ name: '1號 淺焙', price: Number(opts.priceBean1 || 0) });
       if (beans.length > 0) {
         html += `<div><label class="font-extrabold text-gray-700 block mb-1.5">🫘 選擇配方豆 (必選)：</label><div class="grid grid-cols-2 gap-2">${beans.map((b, idx) => `<label class="cursor-pointer"><input type="radio" name="opt-bean" value="${b.name}" data-price="${b.price}" ${idx === 0 ? 'checked' : ''} class="peer hidden" onchange="updateModalPrice()"><div class="border rounded-xl p-2.5 text-center font-bold text-[11px] peer-checked:bg-[#213c64] peer-checked:text-white peer-checked:border-[#213c64] transition">${b.name} ${b.price > 0 ? `(+NT$${b.price})` : ''}</div></label>`).join('')}</div></div>`;
       }
