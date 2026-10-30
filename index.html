@@ -45,6 +45,7 @@
   </header>
 
   <main class="max-w-md mx-auto p-4 space-y-4">
+
     <!-- LINE 會員身分識別卡 -->
     <div id="member-status-bar" class="bg-white border border-blue-200 p-3 rounded-2xl shadow-sm flex items-center justify-between gap-2">
       <div class="flex items-center gap-2.5">
@@ -124,6 +125,7 @@
       <p id="phone-bind-notice" class="text-[10px] text-gray-500 font-bold">
         🛡️ 為防範惡意棄單，首次點餐將綁定您的 LINE 帳號與真實電話（綁定後即鎖定，如需更改請洽門市）。
       </p>
+
       <div class="pt-1 border-t">
         <label class="text-[11px] font-extrabold text-gray-600 block mb-1.5">⏰ 預計取餐時間：</label>
         <div class="grid grid-cols-4 gap-1.5 text-[11px]">
@@ -201,7 +203,7 @@
     </div>
   </div>
 
-  <!-- 購物車抽屜 (z-50) -->
+  <!-- 購物車抽屜 -->
   <div id="cart-drawer" class="fixed inset-0 bg-black/60 hidden z-50 flex justify-end">
     <div class="bg-white w-full max-w-sm h-full p-5 flex flex-col justify-between shadow-2xl">
       <div class="flex justify-between items-center border-b pb-3">
@@ -265,9 +267,8 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // ✅ 已更新為「鄭聖遠」Provider 底下與官方帳號同源的最新 LIFF ID
     const LIFF_ID = "2012300915-xAvn0ZeX";
-    const LINE_OA_ID = "@422qrmqv";
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzwgJ2Yt0g2emcxpR7sEpgGtQBWaSoGg6C87KuuLJXp05Sz6ieqR1MOSWDkjP3I6EMJ/exec";
 
     let catalog = [];
     let cart = [];
@@ -283,7 +284,7 @@
     let currentMemberDoc = null;
     let hasPendingUnacceptedOrder = false;
 
-    // ==================== 1. LINE LIFF 初始化與會員綁定 ====================
+    // ==================== 1. LINE LIFF 初始化與強制授權登入 ====================
     async function initLiffAndMember() {
       const nameEl = document.getElementById('member-display-name');
       const badgeEl = document.getElementById('member-badge');
@@ -299,14 +300,7 @@
           openLineBtn.classList.remove('hidden');
         }
 
-        if (!liff.isInClient() && !liff.isLoggedIn()) {
-          nameEl.innerText = "尚未連結 LINE 帳號";
-          badgeEl.innerText = "外部瀏覽器";
-          badgeEl.className = "text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-extrabold";
-          subEl.innerText = "請點擊右側「LINE 開啟」以啟用自動通知功能";
-          return;
-        }
-
+        // 強制檢查 LINE 登入授權，若未登入自動導向登入以抓取真實身分
         if (!liff.isLoggedIn()) {
           liff.login({ redirectUri: window.location.href });
           return;
@@ -332,6 +326,7 @@
               abandonedCount: 0,
               isBlocked: false
             };
+            setDoc(doc(db, "members", lineProfile.userId), currentMemberDoc, { merge: true });
             applyMemberStatusToUI();
           }
         });
@@ -341,7 +336,7 @@
           let pendingOrder = null;
           snap.forEach(d => {
             const data = d.data();
-            if (data.status === "pending") {
+            if (data.status === "pending" || data.status === "accepted") {
               pendingOrder = { id: d.id, ...data };
             }
           });
@@ -417,34 +412,16 @@
       if (!/^09\d{8}$/.test(phone)) {
         return { valid: false, msg: "請輸入正確的台灣手機號碼（09 開頭共 10 碼數字）！" };
       }
-      const tail = phone.slice(2);
-      if (/^(\d)\1{7}$/.test(tail)) {
-        return { valid: false, msg: "系統偵測到此為無效的連號假電話，請填寫您本人的真實手機號碼！" };
-      }
-      const fakeList = [
-        "0912345678", "0987654321", "0911111111", "0922222222", "0933333333",
-        "0944444444", "0955555555", "0966666666", "0977777777", "0988888888",
-        "0999999999", "0900000000", "0912121212", "0912312312"
-      ];
-      if (fakeList.includes(phone)) {
-        return { valid: false, msg: "系統偵測到測試號或無效號碼，為確保餐點順利製作，請填寫真實手機號碼！" };
-      }
-      const freq = {};
-      for (const ch of tail) freq[ch] = (freq[ch] || 0) + 1;
-      if (Math.max(...Object.values(freq)) >= 7) {
-        return { valid: false, msg: "手機號碼格式異常，請輸入您本人使用的真實手機號碼！" };
-      }
       return { valid: true, cleanPhone: phone };
     }
 
-    // ==================== 3. 無感自動傳送訂單至 LINE 聊天室（不跳手動視窗） ====================
+    // ==================== 3. 自動傳送訂單至 LINE 聊天室 ====================
     function buildOrderTextMessage(o) {
       const itemLines = (o.items || []).map(i => {
         const mods = (i.modifiers && i.modifiers.length > 0) ? i.modifiers.join('/') : '標準';
         const noteStr = i.note ? ` (備註:${i.note})` : '';
         return `• ${i.name} x${i.qty} ($${i.price * i.qty})\n  [${mods}]${noteStr}`;
       }).join('\n');
-
       return `📦 【NODAY 外帶訂單 ${o.orderNumber}】\n` +
              `取餐人：${o.customerInfo}\n` +
              `預計取餐：${o.pickupTime}\n` +
@@ -461,7 +438,6 @@
       const textMsg = buildOrderTextMessage(o);
       const hintEl = document.getElementById('line-auto-sent-hint');
 
-      // 當客人在 LINE 內開啟時，背景自動傳送明細，絕不強迫跳轉手動發送畫面
       if (typeof liff !== 'undefined' && liff.isInClient()) {
         try {
           await liff.sendMessages([{ type: 'text', text: textMsg }]);
@@ -470,7 +446,7 @@
           }
           return true;
         } catch (err) {
-          console.warn("背景自動傳訊略過 (非聊天室開啟):", err);
+          console.warn("背景自動傳訊略過:", err);
         }
       }
       if (hintEl) {
@@ -494,10 +470,7 @@
     loadLastOrderHistory();
 
     window.reorderLastItems = function() {
-      if (!isStoreCurrentlyOpen) {
-        alert(`抱歉，${storeCloseReason}，目前僅供瀏覽菜單喔！`);
-        return;
-      }
+      if (!isStoreCurrentlyOpen) { alert(`抱歉，${storeCloseReason}，目前僅供瀏覽菜單喔！`); return; }
       try {
         const lastItems = JSON.parse(localStorage.getItem('noday_last_order') || '[]');
         if (lastItems.length > 0) {
@@ -512,9 +485,7 @@
       pickupMode = mode;
       const modes = { '現場立即製作': 'pk-now', '15分鐘後取餐': 'pk-15', '30分鐘後取餐': 'pk-30', 'custom': 'pk-custom' };
       Object.entries(modes).forEach(([k, id]) => {
-        document.getElementById(id).className = (k === mode)
-          ? "py-2 rounded-xl font-extrabold border bg-[#213c64] text-white"
-          : "py-2 rounded-xl font-bold border bg-gray-50 text-gray-700";
+        document.getElementById(id).className = (k === mode) ? "py-2 rounded-xl font-extrabold border bg-[#213c64] text-white" : "py-2 rounded-xl font-bold border bg-gray-50 text-gray-700";
       });
       const customBox = document.getElementById('custom-pickup-box');
       if (mode === 'custom') customBox.classList.remove('hidden');
@@ -546,12 +517,10 @@
       const st = evaluateOpenStatus(latestStoreSettings);
       isStoreCurrentlyOpen = st.isOpen;
       storeCloseReason = st.reason;
-
       const dot = document.getElementById('store-status-dot');
       const label = document.getElementById('store-status-label');
       const closedBanner = document.getElementById('closed-notice-banner');
       const submitBtn = document.getElementById('submit-btn');
-
       label.innerText = st.reason;
       if (st.isOpen) {
         dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
@@ -583,14 +552,12 @@
       const wh = latestStoreSettings.weeklyHours || {};
       const holidays = latestStoreSettings.holidays || [];
       const orderDays = [1, 2, 3, 4, 5, 6, 0];
-
       let html = `<div class="space-y-1.5"><p class="font-extrabold text-gray-700">📅 每週營業時間：</p>`;
       orderDays.forEach(d => {
         const cfg = wh[String(d)] || { open: true, start: "07:00", end: "17:00" };
         html += `<div class="flex justify-between py-1 border-b"><span class="font-bold">${dayNames[d]}</span><span class="${cfg.open ? 'text-emerald-700 font-extrabold' : 'text-red-500 font-bold'}">${cfg.open ? `${cfg.start} - ${cfg.end}` : '公休'}</span></div>`;
       });
       html += `</div>`;
-
       if (holidays.length > 0) {
         html += `<div class="pt-2 space-y-1"><p class="font-extrabold text-red-700">🏖️ 近期店休預告：</p>`;
         holidays.forEach(h => html += `<p class="bg-red-50 text-red-700 p-2 rounded-lg font-bold">${h.startDate} ~ ${h.endDate}：${h.note || '店休'}</p>`);
@@ -619,7 +586,6 @@
           ${cat.category}
         </button>
       `).join('');
-
       container.innerHTML = catalog.map(cat => `
         <div id="cat-${cat.category}" class="space-y-3 scroll-mt-28">
           <h2 class="font-extrabold text-sm text-[#213c64] border-b pb-1.5">${cat.category}</h2>
@@ -655,7 +621,9 @@
         if (opts.addonBrownSugar) list.push({ name: '黑糖粉', price: Number(opts.priceAddonBrownSugar || 0) });
         if (opts.addonCinnamon) list.push({ name: '肉桂粉', price: Number(opts.priceAddonCinnamon || 0) });
         if (Array.isArray(opts.extraAddons)) {
-          opts.extraAddons.forEach(a => { if (a.enabled && a.name) list.push({ name: a.name, price: Number(a.price || 0) }); });
+          opts.extraAddons.forEach(a => {
+            if (a.enabled && a.name) list.push({ name: a.name, price: Number(a.price || 0) });
+          });
         }
       }
       return list;
@@ -674,7 +642,6 @@
       if (!cat) return;
       activeItem = cat.items.find(i => i.id === itemId);
       if (!activeItem) return;
-
       currentQty = 1;
       document.getElementById('modal-item-name').innerText = activeItem.name;
       document.getElementById('modal-item-desc').innerText = activeItem.desc || '';
@@ -683,26 +650,22 @@
 
       const opts = activeItem.options || {};
       let html = '';
-
       const temps = [];
       if (opts.ice) temps.push('冰');
       if (opts.hot) temps.push('熱');
       if (temps.length > 0) {
         html += `<div><label class="font-extrabold text-gray-700 block mb-1.5">🌡️ 飲品溫度 (必選)：</label><div class="grid grid-cols-2 gap-2">${temps.map((t, idx) => `<label class="cursor-pointer"><input type="radio" name="opt-temp" value="${t}飲" ${idx === 0 ? 'checked' : ''} class="peer hidden" onchange="toggleIceLevelBox()"><div class="border rounded-xl p-2.5 text-center font-bold peer-checked:bg-[#213c64] peer-checked:text-white peer-checked:border-[#213c64] transition">${t}飲</div></label>`).join('')}</div></div>`;
       }
-
       if (opts.ice && opts.iceLevel !== false) {
         const iceLevels = ['正常冰', '少冰', '微冰', '去冰'];
         html += `<div id="ice-level-box"><label class="font-extrabold text-gray-700 block mb-1.5">🧊 冰量選擇：</label><div class="grid grid-cols-4 gap-1.5">${iceLevels.map((lvl, idx) => `<label class="cursor-pointer"><input type="radio" name="opt-ice-level" value="${lvl}" ${idx === 0 ? 'checked' : ''} class="peer hidden"><div class="border rounded-xl py-2 text-center font-bold text-[11px] peer-checked:bg-sky-700 peer-checked:text-white peer-checked:border-sky-700 transition">${lvl}</div></label>`).join('')}</div></div>`;
       }
-
       const beans = [];
       if (opts.bean5) beans.push({ name: '5號配方(經典)', price: Number(opts.priceBean5 || 0) });
       if (opts.bean1) beans.push({ name: '1號配方(果香)', price: Number(opts.priceBean1 || 0) });
       if (beans.length > 0) {
         html += `<div><label class="font-extrabold text-gray-700 block mb-1.5">🫘 選擇配方豆 (必選)：</label><div class="grid grid-cols-2 gap-2">${beans.map((b, idx) => `<label class="cursor-pointer"><input type="radio" name="opt-bean" value="${b.name}" data-price="${b.price}" ${idx === 0 ? 'checked' : ''} class="peer hidden" onchange="updateModalPrice()"><div class="border rounded-xl p-2.5 text-center font-bold text-[11px] peer-checked:bg-[#213c64] peer-checked:text-white peer-checked:border-[#213c64] transition">${b.name} ${b.price > 0 ? `(+NT$${b.price})` : ''}</div></label>`).join('')}</div></div>`;
       }
-
       const sugars = [];
       if (opts.sugarFree) sugars.push({ name: '無糖', price: Number(opts.priceSugarFree || 0) });
       if (opts.sugarMicro) sugars.push({ name: '微糖', price: Number(opts.priceSugarMicro || 0) });
@@ -711,12 +674,10 @@
       if (sugars.length > 0) {
         html += `<div><label class="font-extrabold text-gray-700 block mb-1.5">🍯 甜度選擇 (必選)：</label><div class="grid grid-cols-2 gap-2">${sugars.map((s, idx) => `<label class="cursor-pointer"><input type="radio" name="opt-sugar" value="${s.name}" data-price="${s.price}" ${idx === 0 ? 'checked' : ''} class="peer hidden" onchange="updateModalPrice()"><div class="border rounded-xl p-2.5 text-center font-bold text-[11px] peer-checked:bg-[#213c64] peer-checked:text-white peer-checked:border-[#213c64] transition">${s.name} ${s.price > 0 ? `(+NT$${s.price})` : ''}</div></label>`).join('')}</div></div>`;
       }
-
       const addonsList = getActiveAddonsList(activeItem);
       if (addonsList.length > 0) {
         html += `<div><label class="font-extrabold text-[#213c64] block mb-1.5">🎁 加購區 (可複選)：</label><div class="space-y-2">${addonsList.map(addon => `<label class="flex items-center justify-between border rounded-xl p-3 cursor-pointer bg-amber-50/40 hover:bg-amber-50 transition"><span class="font-bold text-gray-800">${addon.name} ${addon.price > 0 ? `<span class="text-amber-700">(+NT$${addon.price})</span>` : ''}</span><input type="checkbox" name="custom-rule-option" data-price="${addon.price}" value="${addon.name}${addon.price > 0 ? ` (+NT$${addon.price})` : ''}" class="w-4 h-4 accent-[#213c64] custom-addon-checkbox" onchange="updateModalPrice()"></label>`).join('')}</div></div>`;
       }
-
       document.getElementById('modal-options-container').innerHTML = html;
       toggleIceLevelBox();
       updateModalPrice();
@@ -732,7 +693,6 @@
         addBtn.className = "bg-gray-400 text-white px-5 py-3 rounded-xl font-extrabold text-xs cursor-not-allowed flex items-center gap-2";
         addBtnText.innerText = "🌙 非營業時間僅供瀏覽";
       }
-
       document.getElementById('customize-modal').classList.remove('hidden');
     };
 
@@ -749,7 +709,10 @@
       document.getElementById('modal-item-price').innerText = `NT$${base * currentQty}`;
     };
 
-    window.closeModal = function() { document.getElementById('customize-modal').classList.add('hidden'); };
+    window.closeModal = function() {
+      document.getElementById('customize-modal').classList.add('hidden');
+    };
+
     window.adjustQty = function(change) {
       currentQty += change;
       if (currentQty < 1) currentQty = 1;
@@ -769,7 +732,6 @@
       if (!activeItem) return;
       const modifiers = [];
       let finalUnitPrice = activeItem.price;
-
       const tempEl = document.querySelector('input[name="opt-temp"]:checked');
       if (tempEl) {
         modifiers.push(tempEl.value);
@@ -794,7 +756,6 @@
         modifiers.push(el.value);
         finalUnitPrice += Number(el.getAttribute('data-price') || 0);
       });
-
       const note = document.getElementById('modal-note').value.trim();
       cart.push({ id: activeItem.id, name: activeItem.name, price: finalUnitPrice, qty: currentQty, modifiers, note });
       updateCartBadge();
@@ -820,8 +781,15 @@
       document.getElementById('cart-drawer').classList.remove('hidden');
     };
 
-    window.closeCart = function() { document.getElementById('cart-drawer').classList.add('hidden'); };
-    window.removeFromCart = function(idx) { cart.splice(idx, 1); updateCartBadge(); openCart(); };
+    window.closeCart = function() {
+      document.getElementById('cart-drawer').classList.add('hidden');
+    };
+
+    window.removeFromCart = function(idx) {
+      cart.splice(idx, 1);
+      updateCartBadge();
+      openCart();
+    };
 
     function updateCartBadge() {
       const count = cart.reduce((sum, item) => sum + item.qty, 0);
@@ -872,7 +840,10 @@
           badge.className = "bg-emerald-600 text-white text-xs font-extrabold px-3 py-1 rounded-full animate-bounce";
           badge.innerText = "🎉 製作完成・請取餐";
           text.innerText = `親愛的 ${data.customerInfo}，您的餐點好囉！請憑號碼牌【${data.orderNumber || ''}】至吧台取餐！`;
-          if (!notifiedCompleted) { notifiedCompleted = true; playPickupReadyChime(); }
+          if (!notifiedCompleted) {
+            notifiedCompleted = true;
+            playPickupReadyChime();
+          }
         } else if (data.status === 'accepted') {
           badge.className = "bg-blue-600 text-white text-xs font-extrabold px-3 py-1 rounded-full";
           badge.innerText = "🔥 吧台已接單製作中";
@@ -895,10 +866,11 @@
           if (dt.toLocaleDateString('zh-TW') === todayStr) count++;
         });
         return `#${String(count + 1).padStart(3, '0')}`;
-      } catch (e) { return `#${String(Math.floor(100 + Math.random() * 900))}`; }
+      } catch (e) {
+        return `#${String(Math.floor(100 + Math.random() * 900))}`;
+      }
     }
 
-    // ==================== 4. 送出訂單前檢核、電話綁定確認與自動發送 ====================
     window.closePhoneConfirmModal = function() {
       document.getElementById('phone-confirm-modal').classList.add('hidden');
       document.getElementById('customer-phone').focus();
@@ -911,44 +883,17 @@
 
     window.submitOrder = async function() {
       applyStoreStatusUI();
-      if (!isStoreCurrentlyOpen) {
-        alert(`抱歉，${storeCloseReason}，目前僅供瀏覽菜單，無法送出訂單喔！`);
-        closeCart();
-        return;
-      }
-      if (currentMemberDoc?.isBlocked) {
-        document.getElementById('blocked-overlay').classList.remove('hidden');
-        closeCart();
-        return;
-      }
-      if (hasPendingUnacceptedOrder) {
-        alert("⏳ 您目前有一筆訂單正在等待吧台確認接單中！\n為避免重複下單，請待吧台按下接收後再加點喔！");
-        closeCart();
-        return;
-      }
+      if (!isStoreCurrentlyOpen) { alert(`抱歉，${storeCloseReason}，目前僅供瀏覽菜單，無法送出訂單喔！`); closeCart(); return; }
+      if (currentMemberDoc?.isBlocked) { document.getElementById('blocked-overlay').classList.remove('hidden'); closeCart(); return; }
+      if (hasPendingUnacceptedOrder) { alert("⏳ 您目前有一筆訂單正在等待吧台確認接單中！\n為避免重複下單，請待吧台按下接收後再加點喔！"); closeCart(); return; }
 
       const customerName = document.getElementById('customer-name').value.trim();
       const rawPhone = document.getElementById('customer-phone').value.trim();
-
-      if (!customerName || customerName.length < 2) {
-        alert('請填寫正確的取餐人姓名（至少 2 個字）！');
-        closeCart();
-        document.getElementById('customer-name').focus();
-        return;
-      }
+      if (!customerName || customerName.length < 2) { alert('請填寫正確的取餐人姓名（至少 2 個字）！'); closeCart(); document.getElementById('customer-name').focus(); return; }
 
       const phoneCheck = validateTaiwanMobile(rawPhone);
-      if (!phoneCheck.valid) {
-        alert(phoneCheck.msg);
-        closeCart();
-        document.getElementById('customer-phone').focus();
-        return;
-      }
-
-      if (cart.length === 0) {
-        alert('購物車是空的喔！');
-        return;
-      }
+      if (!phoneCheck.valid) { alert(phoneCheck.msg); closeCart(); document.getElementById('customer-phone').focus(); return; }
+      if (cart.length === 0) { alert('購物車是空的喔！'); return; }
 
       try {
         const phoneBlockSnap = await getDoc(doc(db, "blocked_phones", phoneCheck.cleanPhone));
@@ -962,6 +907,7 @@
       const totalCups = cart.reduce((sum, i) => sum + i.qty, 0);
       const totalAmount = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
       const completedCount = Number(currentMemberDoc?.completedCount || 0);
+
       if (completedCount === 0 && (totalCups > 5 || totalAmount > 600)) {
         alert(`🛡️ 首次點餐新客保護提醒：\n\n首次線上點餐單筆上限為「5 杯」或「NT$600」（目前選購 ${totalCups} 杯 / NT$${totalAmount}）。\n\n只要完成首次取餐升級為熟客後即自動解除限制！若為團體大額訂購，請直接電洽門市：04-7237933 確認。`);
         return;
@@ -969,11 +915,7 @@
 
       if (pickupMode === 'custom') {
         const customVal = document.getElementById('custom-pickup-time').value;
-        if (!customVal) {
-          alert('請選擇您的指定取餐時間！');
-          closeCart();
-          return;
-        }
+        if (!customVal) { alert('請選擇您的指定取餐時間！'); closeCart(); return; }
       }
 
       if (!currentMemberDoc?.phoneLocked) {
@@ -996,7 +938,6 @@
 
       const customerName = document.getElementById('customer-name').value.trim();
       const cleanPhone = validateTaiwanMobile(document.getElementById('customer-phone').value.trim()).cleanPhone;
-
       let finalPickupTime = pickupMode;
       if (pickupMode === 'custom') {
         finalPickupTime = `指定 ${document.getElementById('custom-pickup-time').value} 取餐`;
@@ -1051,7 +992,6 @@
 
         const docRef = await addDoc(collection(db, "orders"), orderPayload);
         latestSubmittedOrder = { id: docRef.id, ...orderPayload };
-
         cart = [];
         updateCartBadge();
         closeCart();
@@ -1059,9 +999,7 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
         showToast(`🎉 訂單 ${orderNumber} 已送出！`);
 
-        // 若在官方帳號聊天室開啟，背景無感傳送明細（不跳手動視窗）
         await sendOrderToLineChat();
-
       } catch (e) {
         console.error(e);
         alert("送出失敗，請檢查網路連線後重試");
