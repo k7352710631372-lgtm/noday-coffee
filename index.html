@@ -292,6 +292,11 @@
       const avatarEl = document.getElementById('member-avatar');
       const openLineBtn = document.getElementById('open-in-line-btn');
 
+      // 防止網址過長或無限迴圈，先清理多餘的 LIFF 驗證參數
+      if (window.location.search.includes('code=') && window.location.search.length > 100) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+
       try {
         if (typeof liff === 'undefined') throw new Error("LIFF SDK 未載入");
         await liff.init({ liffId: LIFF_ID });
