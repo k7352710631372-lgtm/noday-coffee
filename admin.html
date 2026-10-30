@@ -27,7 +27,6 @@
 
     let ordersCache = [];
     let menuCache = [];
-    let membersCache = [];
     let storeSettingsCache = {};
     let audioCtx = null;
     let alarmInterval = null;
@@ -82,7 +81,7 @@
       }
     }
 
-    // ==================== 2. LINE 推播核心 (已修正跨網域與錯誤提示) ====================
+    // ==================== 2. LINE 推播核心 ====================
     async function sendLinePushMessage(lineUserId, textMessage) {
       if (!lineUserId || lineUserId.startsWith("web_")) {
         alert("⚠️ 此訂單為一般網頁下單（未綁定 LINE ID），因此無法發送 LINE 通知！");
@@ -97,12 +96,9 @@
         const result = await res.json();
         if (result.status !== "success") {
           alert("❌ LINE 推播發送失敗：\n" + (result.message || JSON.stringify(result)));
-        } else {
-          console.log("LINE 推播發送成功！");
         }
       } catch (e) {
         console.warn("LINE Push 推播異常:", e);
-        alert("❌ 無法連線至推播伺服器 (GAS)：\n" + e.message);
       }
     }
 
@@ -155,28 +151,27 @@
         let actionButtons = '';
         const isPending = o.status === 'pending';
         const isAccepted = o.status === 'accepted';
-        const isCompleted = o.status === 'completed';
 
         if (isPending) {
           statusBadge = `<span class="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-xs font-extrabold animate-pulse">⏳ 等待接單</span>`;
           actionButtons = `
-            <button onclick="acceptOrder('${o.id}', '${o.lineUserId}', '${o.orderNumber}')" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-xs font-extrabold shadow transition">
-              🔥 接受訂單 (通知製作)
+            <button onclick="acceptOrder('${o.id}', '${o.lineUserId}', '${o.orderNumber}')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-extrabold shadow transition">
+              🔥 接受訂單
             </button>
-            <button onclick="completeOrder('${o.id}', '${o.lineUserId}', '${o.orderNumber}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-xs font-extrabold shadow transition">
-              ✅ 直接標記完成
+            <button onclick="completeOrder('${o.id}', '${o.lineUserId}', '${o.orderNumber}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-extrabold shadow transition">
+              ✅ 直接完成
             </button>
           `;
         } else if (isAccepted) {
           statusBadge = `<span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-extrabold">🔥 製作中</span>`;
           actionButtons = `
-            <button onclick="completeOrder('${o.id}', '${o.lineUserId}', '${o.orderNumber}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-xs font-extrabold shadow transition">
-              🎉 製作完成 (通知取餐)
+            <button onclick="completeOrder('${o.id}', '${o.lineUserId}', '${o.orderNumber}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-extrabold shadow transition">
+              🎉 製作完成
             </button>
           `;
         } else {
           statusBadge = `<span class="bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-xs font-extrabold">🎉 已完成取餐</span>`;
-          actionButtons = `<span class="text-xs text-gray-400 font-bold">訂單已結案</span>`;
+          actionButtons = `<span class="text-xs text-gray-400 font-bold">已結案</span>`;
         }
 
         const itemsHtml = (o.items || []).map(i => `
@@ -191,23 +186,23 @@
         `).join('');
 
         return `
-          <div class="bg-white rounded-2xl shadow-sm border ${isPending ? 'border-amber-400 ring-2 ring-amber-200' : 'border-gray-200'} p-5 space-y-4">
-            <div class="flex justify-between items-center border-b pb-3">
-              <div class="flex items-center gap-3">
-                <span class="bg-[#213c64] text-white text-base font-extrabold px-3.5 py-1.5 rounded-xl">${o.orderNumber || '#001'}</span>
+          <div class="bg-white rounded-2xl shadow-sm border ${isPending ? 'border-amber-400 ring-2 ring-amber-200' : 'border-gray-200'} p-4 space-y-3">
+            <div class="flex justify-between items-center border-b pb-2.5">
+              <div class="flex items-center gap-2.5">
+                <span class="bg-[#213c64] text-white text-sm font-extrabold px-3 py-1 rounded-xl">${o.orderNumber || '#001'}</span>
                 <div>
-                  <h3 class="font-extrabold text-sm text-gray-900">${o.customerInfo || '現場顧客'}</h3>
-                  <p class="text-[11px] text-gray-500 font-bold">預計取餐：<span class="text-amber-800 font-extrabold">${o.pickupTime || '立即製作'}</span></p>
+                  <h3 class="font-extrabold text-xs text-gray-900">${o.customerInfo || '現場顧客'}</h3>
+                  <p class="text-[10px] text-gray-500 font-bold">取餐時間：<span class="text-amber-800 font-extrabold">${o.pickupTime || '立即製作'}</span></p>
                 </div>
               </div>
               <div class="flex items-center gap-2">
                 ${statusBadge}
-                <button onclick="deleteOrder('${o.id}')" class="text-red-400 hover:text-red-600 font-bold text-xs p-1">刪除</button>
+                <button onclick="deleteOrder('${o.id}')" class="text-red-400 hover:text-red-600 font-bold text-xs">刪除</button>
               </div>
             </div>
             <div class="space-y-1">${itemsHtml}</div>
             <div class="flex justify-between items-center pt-2 border-t">
-              <p class="text-sm font-extrabold text-gray-900">總金額：<span class="text-amber-800 text-base">NT$${o.totalAmount}</span></p>
+              <p class="text-xs font-extrabold text-gray-900">總計：<span class="text-amber-800 text-sm">NT$${o.totalAmount}</span></p>
               <div class="flex gap-2">${actionButtons}</div>
             </div>
           </div>
@@ -219,9 +214,8 @@
       try {
         await updateDoc(doc(db, "orders", orderId), { status: "accepted" });
         await sendLinePushMessage(lineUserId, `🔥 【NODAY 咖啡】您的訂單 ${orderNumber} 吧台已開始製作，請耐心等候！`);
-        alert("✅ 已成功接單並發送製作中通知給客人！");
       } catch (e) {
-        alert("更新狀態失敗：" + e.message);
+        alert("更新失敗：" + e.message);
       }
     };
 
@@ -229,27 +223,18 @@
       try {
         await updateDoc(doc(db, "orders", orderId), { status: "completed" });
         await sendLinePushMessage(lineUserId, `🎉 【NODAY 咖啡】您的餐點 ${orderNumber} 已經製作完成囉！請憑號碼牌至吧台取餐。`);
-        
-        // 更新會員取餐次數
-        if (lineUserId && !lineUserId.startsWith("web_")) {
-          const memberRef = doc(db, "members", lineUserId);
-          const memberSnap = await getDocs(query(collection(db, "members"), where("lineUserId", "==", lineUserId)));
-          // 簡易累加
-        }
-
-        alert("✅ 已標記完成並發送取餐通知給客人！");
       } catch (e) {
-        alert("更新狀態失敗：" + e.message);
+        alert("更新失敗：" + e.message);
       }
     };
 
     window.deleteOrder = async function(orderId) {
-      if (confirm("確定要刪除這筆訂單紀錄嗎？")) {
+      if (confirm("確定要刪除這筆訂單嗎？")) {
         await deleteDoc(doc(db, "orders", orderId));
       }
     };
 
-    // ==================== 4. 菜單管理 ====================
+    // ==================== 4. 菜單售完開關管理 ====================
     async function initMenuManager() {
       const snap = await getDocs(collection(db, "menu"));
       menuCache = [];
@@ -258,17 +243,17 @@
       
       const container = document.getElementById('menu-manager-container');
       container.innerHTML = menuCache.map(cat => `
-        <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-3">
-          <h3 class="font-extrabold text-sm text-[#213c64] border-b pb-2">📂 ${cat.category}</h3>
-          <div class="space-y-2">
+        <div class="bg-white p-4 rounded-2xl border shadow-sm space-y-2.5">
+          <h3 class="font-extrabold text-xs text-[#213c64] border-b pb-1.5">📂 ${cat.category}</h3>
+          <div class="space-y-1.5">
             ${cat.items.map(item => `
-              <div class="flex justify-between items-center bg-gray-50 p-3 rounded-xl text-xs">
+              <div class="flex justify-between items-center bg-gray-50 p-2.5 rounded-xl text-xs">
                 <div>
                   <span class="font-extrabold text-gray-900">${item.name}</span>
-                  <span class="text-amber-800 font-extrabold ml-2">NT$${item.price}</span>
-                  ${item.soldOut ? '<span class="bg-red-500 text-white px-2 py-0.5 rounded text-[10px] ml-2">已售完</span>' : ''}
+                  <span class="text-amber-800 font-extrabold ml-1.5">NT$${item.price}</span>
+                  ${item.soldOut ? '<span class="bg-red-500 text-white px-1.5 py-0.5 rounded text-[10px] ml-1.5 font-bold">已售完</span>' : ''}
                 </div>
-                <button onclick="toggleItemSoldOut('${cat.category}', '${item.id}', ${!item.soldOut})" class="px-3 py-1 rounded-lg font-extrabold ${item.soldOut ? 'bg-emerald-600 text-white' : 'bg-red-500 text-white'} transition">
+                <button onclick="toggleItemSoldOut('${cat.category}', '${item.id}', ${!item.soldOut})" class="px-2.5 py-1 rounded-lg font-extrabold text-[11px] ${item.soldOut ? 'bg-emerald-600 text-white' : 'bg-red-500 text-white'} transition">
                   ${item.soldOut ? '恢復供應' : '設為售完'}
                 </button>
               </div>
@@ -284,10 +269,9 @@
       cat.items = cat.items.map(i => i.id === itemId ? { ...i, soldOut: newSoldOutStatus } : i);
       await setDoc(doc(db, "menu", cat.id), cat);
       initMenuManager();
-      alert("✅ 狀態更新成功！");
     };
 
-    // ==================== 5. 店家營業狀態控制 ====================
+    // ==================== 5. 營業模式切換 ====================
     onSnapshot(doc(db, "settings", "store"), (snap) => {
       if (snap.exists()) {
         storeSettingsCache = snap.data();
@@ -300,7 +284,7 @@
       const newMode = document.getElementById('store-mode-select').value;
       storeSettingsCache.storeMode = newMode;
       await setDoc(doc(db, "settings", "store"), storeSettingsCache, { merge: true });
-      alert("✅ 營業模式已即時切換！");
+      alert("✅ 營業接單模式已切換！");
     };
 
     initOrdersListener();
@@ -311,62 +295,59 @@
 
   <!-- 新訂單緊急音效與閃爍橫幅 -->
   <div id="new-order-alert-banner" class="hidden fixed top-0 inset-x-0 bg-red-600 text-white p-3 z-50 text-center font-extrabold text-sm shadow-2xl animate-pulse flex justify-center items-center gap-3">
-    <span>🚨 【注意】有新的外帶訂單進來尚未接單！請儘速確認！</span>
-    <button onclick="stopContinuousAlarm()" class="bg-white text-red-700 px-3 py-1 rounded-xl text-xs font-extrabold shadow">暫停警報聲</button>
+    <span>🚨 【注意】有新的外帶訂單進來尚未接單！</span>
+    <button onclick="stopContinuousAlarm()" class="bg-white text-red-700 px-3 py-1 rounded-xl text-xs font-extrabold shadow">暫停警報</button>
   </div>
 
-  <!-- 頂部導覽列 -->
   <header class="bg-[#213c64] text-white p-4 shadow-md sticky top-0 z-30">
     <div class="max-w-4xl mx-auto flex justify-between items-center">
       <div>
-        <h1 class="text-base font-extrabold">NODAY Coffee 吧台旗艦管理系統</h1>
-        <p class="text-[11px] text-amber-300">雲端訂單自動同步・LINE 即時推播</p>
+        <h1 class="text-sm font-extrabold">NODAY Coffee 吧台旗艦管理系統</h1>
+        <p class="text-[10px] text-amber-300">雲端訂單同步・LINE 自動推播</p>
       </div>
       <div class="flex items-center gap-2">
         <button onclick="testAudioAlarm()" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-xl text-xs font-extrabold shadow transition">
-          🔔 測試警報鈴聲
+          🔔 測試警報
         </button>
       </div>
     </div>
   </header>
 
-  <main class="max-w-4xl mx-auto p-4 space-y-6">
+  <main class="max-w-4xl mx-auto p-4 space-y-5">
     
-    <!-- 店家營業狀態快速切換控制台 -->
-    <div class="bg-white p-4 rounded-2xl shadow-sm border flex flex-col sm:flex-row justify-between items-center gap-3">
+    <!-- 營業狀態控制 -->
+    <div class="bg-white p-3.5 rounded-2xl shadow-sm border flex flex-col sm:flex-row justify-between items-center gap-3">
       <div>
-        <h2 class="font-extrabold text-sm text-[#213c64]">🏪 營業與接單狀態控制</h2>
-        <p class="text-[11px] text-gray-500">可手動強制營業、強制休息，或依照排班時間自動判定。</p>
+        <h2 class="font-extrabold text-xs text-[#213c64]">🏪 營業與接單狀態控制</h2>
+        <p class="text-[10px] text-gray-500">可手動控制營業、打烊，或依照排班時間自動判定。</p>
       </div>
-      <div class="flex items-center gap-2">
-        <select id="store-mode-select" onchange="updateStoreMode()" class="border rounded-xl p-2.5 text-xs font-extrabold bg-gray-50 text-[#213c64] focus:outline-none">
-          <option value="auto">🟢 自動依照營業時間判定</option>
-          <option value="open">🔥 強制營業中 (隨時可接單)</option>
-          <option value="closed">🌙 強制打烊休息中 (停止接單)</option>
-        </select>
-      </div>
+      <select id="store-mode-select" onchange="updateStoreMode()" class="border rounded-xl p-2 text-xs font-extrabold bg-gray-50 text-[#213c64]">
+        <option value="auto">🟢 自動依排班時間判定</option>
+        <option value="open">🔥 強制營業中 (隨時可接單)</option>
+        <option value="closed">🌙 強制打烊休息中</option>
+      </select>
     </div>
 
-    <!-- 訂單管理主區塊 -->
-    <div class="space-y-4">
+    <!-- 訂單區塊 -->
+    <div class="space-y-3">
       <div class="flex justify-between items-center">
-        <h2 class="font-extrabold text-base text-[#213c64]">📋 客戶即時外帶訂單</h2>
-        <select id="order-filter" onchange="renderOrders()" class="border rounded-xl p-2 text-xs font-extrabold bg-white">
-          <option value="active">顯示進行中訂單 (未完成)</option>
+        <h2 class="font-extrabold text-xs text-[#213c64]">📋 客戶即時外帶訂單</h2>
+        <select id="order-filter" onchange="renderOrders()" class="border rounded-xl p-1.5 text-xs font-extrabold bg-white">
+          <option value="active">顯示進行中訂單</option>
           <option value="pending">僅顯示「等待接單」</option>
           <option value="completed">僅顯示「已完成」</option>
-          <option value="all">顯示全部歷史訂單</option>
+          <option value="all">全部歷史訂單</option>
         </select>
       </div>
-      <div id="orders-container" class="space-y-3">
+      <div id="orders-container" class="space-y-2.5">
         <p class="text-center text-gray-400 py-10 text-xs">正在載入雲端訂單...</p>
       </div>
     </div>
 
-    <!-- 菜單商品管理 (快速售完開關) -->
-    <div class="space-y-4 pt-4 border-t">
-      <h2 class="font-extrabold text-base text-[#213c64]">☕ 吧台菜單即時管理 (售完切換)</h2>
-      <div id="menu-manager-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <!-- 菜單管理 -->
+    <div class="space-y-3 pt-3 border-t">
+      <h2 class="font-extrabold text-xs text-[#213c64]">☕ 吧台菜單即時管理 (售完切換)</h2>
+      <div id="menu-manager-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <p class="text-center text-gray-400 py-10 text-xs">載入菜單管理中...</p>
       </div>
     </div>
