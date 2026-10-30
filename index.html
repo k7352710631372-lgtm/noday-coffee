@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>NODAY Coffee Roasters | 外帶線上點餐</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- 引入 LINE LIFF SDK -->
-  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -19,8 +17,8 @@
     <div class="bg-white rounded-3xl p-6 max-w-sm w-full text-center space-y-4 shadow-2xl border-2 border-red-500">
       <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-3xl font-extrabold">🚫</div>
       <h2 class="text-lg font-extrabold text-gray-900">線上預訂功能已暫停</h2>
-      <p id="blocked-reason-text" class="text-xs text-gray-600 leading-relaxed font-bold">
-        系統偵測到您的帳號或電話曾有「未取餐 / 棄單」紀錄，目前已暫停線上點餐權限。如需購買請直接至門市現場點餐，或電洽門市人員。
+      <p class="text-xs text-gray-600 leading-relaxed font-bold">
+        系統偵測到您的電話曾有「未取餐 / 棄單」紀錄，目前已暫停線上點餐權限。如需購買請直接至門市現場點餐，或電洽門市人員。
       </p>
       <a href="tel:04-7237933" class="block w-full bg-[#213c64] text-white py-3 rounded-xl text-xs font-extrabold shadow">
         📞 撥打門市電話：04-7237933
@@ -46,30 +44,27 @@
 
   <main class="max-w-md mx-auto p-4 space-y-4">
 
-    <!-- LINE 會員身分識別卡 -->
-    <div id="member-status-bar" class="bg-white border border-blue-200 p-3 rounded-2xl shadow-sm flex items-center justify-between gap-2">
+    <!-- 會員身分識別卡 -->
+    <div class="bg-white border border-blue-200 p-3 rounded-2xl shadow-sm flex items-center justify-between gap-2">
       <div class="flex items-center gap-2.5">
-        <img id="member-avatar" src="https://cdn-icons-png.flaticon.com/512/847/847969.png" alt="avatar" class="w-9 h-9 rounded-full border border-gray-200 object-cover">
+        <div class="w-9 h-9 rounded-full bg-[#213c64] text-white flex items-center justify-center font-extrabold text-sm">☕</div>
         <div>
           <div class="flex items-center gap-1.5">
-            <span id="member-display-name" class="text-xs font-extrabold text-gray-900">驗證 LINE 會員中...</span>
-            <span id="member-badge" class="text-[10px] bg-blue-100 text-[#213c64] px-2 py-0.5 rounded-full font-extrabold">連線中</span>
+            <span id="member-display-name" class="text-xs font-extrabold text-gray-900">線上外帶點餐系統</span>
+            <span id="member-badge" class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-extrabold">營業中</span>
           </div>
-          <p id="member-sub-note" class="text-[10px] text-gray-500 font-bold mt-0.5">點餐後將自動傳送明細至官方帳號</p>
+          <p id="member-sub-note" class="text-[10px] text-gray-500 font-bold mt-0.5">現點現做・美味咖啡帶著走</p>
         </div>
       </div>
-      <a id="open-in-line-btn" href="https://liff.line.me/2012300915-xAvn0ZeX" class="hidden bg-[#06C755] text-white px-3 py-1.5 rounded-xl text-[11px] font-extrabold shadow shrink-0">
-        LINE 開啟
-      </a>
     </div>
 
     <!-- 非營業時間提示 -->
     <div id="closed-notice-banner" class="hidden bg-red-50 border-2 border-red-400 p-4 rounded-2xl shadow-sm space-y-1.5">
       <div class="flex justify-between items-center">
-        <p id="closed-notice-title" class="text-sm font-extrabold text-red-700">🌙 目前非營業時間（僅供瀏覽菜單）</p>
+        <p class="text-sm font-extrabold text-red-700">🌙 目前非營業時間（僅供瀏覽菜單）</p>
         <button onclick="toggleScheduleModal()" class="text-[11px] bg-white border border-red-300 text-red-700 px-2.5 py-1 rounded-lg font-bold">查看營業時間</button>
       </div>
-      <p id="closed-notice-sub" class="text-xs text-red-600 font-bold">您仍可瀏覽完整菜單與價格，營業時間開始後即可下單。</p>
+      <p class="text-xs text-red-600 font-bold">您仍可瀏覽完整菜單與價格，營業時間開始後即可下單。</p>
     </div>
 
     <!-- 即時訂單狀態追蹤卡 -->
@@ -82,8 +77,8 @@
         <span id="order-status-badge" class="bg-amber-100 text-amber-800 text-xs font-extrabold px-2.5 py-1 rounded-full">⏳ 等待吧台接單</span>
       </div>
       <p id="order-status-text" class="text-xs text-gray-700 font-bold">訂單已送出，等待吧台人員確認接單中！</p>
-      <p id="line-auto-sent-hint" class="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1.5 rounded-xl font-extrabold">
-        ✅ 訂單已即時連線送達吧台系統，接單與完成時將透過 LINE 自動通知您！
+      <p class="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1.5 rounded-xl font-extrabold">
+        ✅ 訂單已即時連線送達吧台系統！
       </p>
     </div>
 
@@ -107,24 +102,23 @@
       <p id="reorder-summary" class="text-[11px] text-gray-600 font-bold"></p>
     </div>
 
-    <!-- 取餐人姓名、真實電話綁定 ＆ 預計取餐時間 -->
+    <!-- 取餐人姓名、手機號碼 ＆ 預計取餐時間 -->
     <div class="bg-white p-3.5 rounded-2xl shadow-sm border space-y-3">
       <div class="grid grid-cols-2 gap-2.5">
         <div>
           <label class="text-[11px] font-extrabold text-gray-600 block mb-1">取餐人姓名 <span class="text-red-500">*</span></label>
-          <input type="text" id="customer-name" placeholder="例如：王小明" class="w-full border rounded-xl p-2.5 text-xs focus:outline-none focus:border-[#213c64] bg-gray-50 font-bold">
+          <input type="text" id="customer-name" placeholder="例如：王小明" class="w-full border rounded-xl p-2.5 text-xs focus:outline-none focus:border-[#213c64] bg-gray-50 font-bold" oninput="checkMemberByPhone()">
         </div>
         <div>
           <div class="flex justify-between items-center mb-1">
             <label class="text-[11px] font-extrabold text-gray-600">本人手機號碼 <span class="text-red-500">*</span></label>
-            <span id="phone-lock-tag" class="hidden text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-extrabold">🔒 已綁定</span>
           </div>
-          <input type="tel" id="customer-phone" maxlength="10" placeholder="09xxxxxxxx" class="w-full border rounded-xl p-2.5 text-xs focus:outline-none focus:border-[#213c64] bg-gray-50 font-bold">
+          <input type="tel" id="customer-phone" maxlength="10" placeholder="09xxxxxxxx" class="w-full border rounded-xl p-2.5 text-xs focus:outline-none focus:border-[#213c64] bg-gray-50 font-bold" oninput="checkMemberByPhone()">
         </div>
       </div>
-      <p id="phone-bind-notice" class="text-[10px] text-gray-500 font-bold">
-        🛡️ 為防範惡意棄單，首次點餐將綁定您的 LINE 帳號與真實電話（綁定後即鎖定，如需更改請洽門市）。
-      </p>
+      <div id="member-status-tag" class="text-[11px] font-extrabold text-amber-800 bg-amber-50 p-2 rounded-xl border border-amber-200">
+        👋 請輸入您的手機號碼以自動辨識會員身分。
+      </div>
 
       <div class="pt-1 border-t">
         <label class="text-[11px] font-extrabold text-gray-600 block mb-1.5">⏰ 預計取餐時間：</label>
@@ -214,9 +208,6 @@
         <p class="text-center text-gray-400 text-xs py-10">購物車目前是空的...</p>
       </div>
       <div class="border-t pt-4 space-y-3">
-        <div id="new-member-limit-hint" class="hidden bg-amber-50 border border-amber-200 p-2.5 rounded-xl text-[11px] text-amber-900 font-bold">
-          🆕 首次點餐新客保護：首單上限為 5 杯（或 NT$600），完成首次取餐升級為認證熟客後即自動解除限制！
-        </div>
         <div class="flex justify-between items-center font-extrabold text-sm">
           <span>外帶應付總計：</span>
           <span id="cart-total" class="text-amber-800 text-lg">NT$0</span>
@@ -224,29 +215,6 @@
         <button onclick="submitOrder()" id="submit-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-extrabold text-sm shadow-lg transition">
           🚀 確認送出外帶訂單
         </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 首次點餐：真實電話綁定確認視窗 -->
-  <div id="phone-confirm-modal" class="fixed inset-0 bg-black/70 hidden z-[70] flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-2xl border-2 border-[#213c64]">
-      <div class="text-center space-y-1">
-        <span class="bg-amber-100 text-amber-900 text-xs font-extrabold px-3 py-1 rounded-full">📱 首次點餐會員綁定確認</span>
-        <h3 class="font-extrabold text-base text-gray-900 pt-1">請確認您的本人手機號碼</h3>
-      </div>
-      <div class="bg-gray-50 p-3.5 rounded-xl border text-center space-y-1">
-        <p class="text-xs text-gray-500 font-bold">即將綁定之手機號碼：</p>
-        <p id="confirm-phone-display" class="text-xl font-extrabold text-[#213c64] tracking-wider">0912-345-678</p>
-      </div>
-      <div class="text-[11px] text-red-600 bg-red-50 p-3 rounded-xl font-bold space-y-1 leading-relaxed border border-red-200">
-        <p>⚠️ 請注意：</p>
-        <p>1. 確認送出後，此電話將與您的 LINE 帳號永久綁定，無法自行隨意更改。</p>
-        <p>2. 餐點皆為現點現做，若填寫空號、假電話或無故未取餐，系統將直接封鎖帳號停權。</p>
-      </div>
-      <div class="flex gap-2.5 pt-1">
-        <button type="button" onclick="closePhoneConfirmModal()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-extrabold text-xs">返回修改電話</button>
-        <button type="button" onclick="confirmPhoneAndSubmit()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-extrabold text-xs shadow-lg">確認無誤並送單</button>
       </div>
     </div>
   </div>
@@ -267,9 +235,6 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    const LIFF_ID = "2012300915-xAvn0ZeX";
-    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzwgJ2Yt0g2emcxpR7sEpgGtQBWaSoGg6C87KuuLJXp05Sz6ieqR1MOSWDkjP3I6EMJ/exec";
-
     let catalog = [];
     let cart = [];
     let activeItem = null;
@@ -280,187 +245,37 @@
     let latestStoreSettings = {};
     let latestSubmittedOrder = null;
     let isSubmittingOrder = false;
-    let lineProfile = null;
     let currentMemberDoc = null;
-    let hasPendingUnacceptedOrder = false;
-
-    // ==================== 1. LINE LIFF 初始化與安全身分檢核 ====================
-    async function initLiffAndMember() {
-      const nameEl = document.getElementById('member-display-name');
-      const badgeEl = document.getElementById('member-badge');
-      const subEl = document.getElementById('member-sub-note');
-      const avatarEl = document.getElementById('member-avatar');
-      const openLineBtn = document.getElementById('open-in-line-btn');
-
-      // 防止網址過長或無限迴圈，先清理多餘的 LIFF 驗證參數
-      if (window.location.search.includes('code=') && window.location.search.length > 100) {
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
-
-      try {
-        if (typeof liff === 'undefined') throw new Error("LIFF SDK 未載入");
-        await liff.init({ liffId: LIFF_ID });
-
-        if (!liff.isInClient()) {
-          openLineBtn.classList.remove('hidden');
-        }
-
-        if (liff.isLoggedIn()) {
-          lineProfile = await liff.getProfile();
-          if (lineProfile.pictureUrl) avatarEl.src = lineProfile.pictureUrl;
-          nameEl.innerText = lineProfile.displayName || "LINE 會員";
-
-          onSnapshot(doc(db, "members", lineProfile.userId), (snap) => {
-            if (snap.exists()) {
-              currentMemberDoc = snap.data();
-              applyMemberStatusToUI();
-            } else {
-              currentMemberDoc = {
-                lineUserId: lineProfile.userId,
-                lineDisplayName: lineProfile.displayName || "",
-                pictureUrl: lineProfile.pictureUrl || "",
-                name: "",
-                phone: "",
-                phoneLocked: false,
-                completedCount: 0,
-                abandonedCount: 0,
-                isBlocked: false
-              };
-              setDoc(doc(db, "members", lineProfile.userId), currentMemberDoc, { merge: true });
-              applyMemberStatusToUI();
-            }
-          });
-
-          const pendingQ = query(collection(db, "orders"), where("lineUserId", "==", lineProfile.userId));
-          onSnapshot(pendingQ, (snap) => {
-            let pendingOrder = null;
-            snap.forEach(d => {
-              const data = d.data();
-              if (data.status === "pending" || data.status === "accepted") {
-                pendingOrder = { id: d.id, ...data };
-              }
-            });
-            hasPendingUnacceptedOrder = !!pendingOrder;
-            if (pendingOrder && !latestSubmittedOrder) {
-              latestSubmittedOrder = pendingOrder;
-              watchOrderStatus(pendingOrder.id);
-            }
-          });
-        } else {
-          nameEl.innerText = "訪客模式";
-          badgeEl.innerText = "一般網頁";
-          openLineBtn.classList.remove('hidden');
-        }
-      } catch (e) {
-        console.warn("LIFF 初始化提醒:", e);
-        nameEl.innerText = "訪客模式";
-        badgeEl.innerText = "一般網頁";
-        openLineBtn.classList.remove('hidden');
-      }
-    }
-
-    function applyMemberStatusToUI() {
-      if (!currentMemberDoc) return;
-      const badgeEl = document.getElementById('member-badge');
-      const subEl = document.getElementById('member-sub-note');
-      const nameInput = document.getElementById('customer-name');
-      const phoneInput = document.getElementById('customer-phone');
-      const lockTag = document.getElementById('phone-lock-tag');
-      const bindNotice = document.getElementById('phone-bind-notice');
-      const newLimitHint = document.getElementById('new-member-limit-hint');
-
-      if (currentMemberDoc.isBlocked) {
-        document.getElementById('blocked-overlay').classList.remove('hidden');
-        return;
-      } else {
-        document.getElementById('blocked-overlay').classList.add('hidden');
-      }
-
-      const completed = Number(currentMemberDoc.completedCount || 0);
-      if (completed > 0) {
-        badgeEl.innerText = `🟢 認證熟客 (已取餐 ${completed} 次)`;
-        badgeEl.className = "text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-extrabold";
-        subEl.innerText = "感謝支持！吧台接單與完成時將自動發送 LINE 通知";
-        newLimitHint.classList.add('hidden');
-      } else {
-        badgeEl.innerText = "🆕 首次點餐新會員";
-        badgeEl.className = "text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-extrabold";
-        subEl.innerText = "首次下單將綁定您的真實手機號碼（首單上限 5 杯）";
-        newLimitHint.classList.remove('hidden');
-      }
-
-      if (currentMemberDoc.name && !nameInput.value) {
-        nameInput.value = currentMemberDoc.name;
-      } else if (!nameInput.value && lineProfile?.displayName) {
-        nameInput.value = lineProfile.displayName;
-      }
-
-      if (currentMemberDoc.phone && currentMemberDoc.phoneLocked) {
-        phoneInput.value = currentMemberDoc.phone;
-        phoneInput.readOnly = true;
-        phoneInput.className = "w-full border border-emerald-300 rounded-xl p-2.5 text-xs bg-emerald-50/50 text-gray-700 font-extrabold cursor-not-allowed";
-        lockTag.classList.remove('hidden');
-        bindNotice.innerText = "✅ 您的真實電話已與此 LINE 帳號安全綁定（如需變更號碼請洽吧台人員）。";
-        bindNotice.className = "text-[10px] text-emerald-700 font-bold";
-      } else {
-        phoneInput.readOnly = false;
-        lockTag.classList.add('hidden');
-      }
-    }
-
-    initLiffAndMember();
-
-    // ==================== 2. 嚴格台灣手機號碼真實性檢核 ====================
-    function validateTaiwanMobile(rawPhone) {
-      const phone = rawPhone.replace(/[\s-]/g, '');
-      if (!/^09\d{8}$/.test(phone)) {
-        return { valid: false, msg: "請輸入正確的台灣手機號碼（09 開頭共 10 碼數字）！" };
-      }
-      return { valid: true, cleanPhone: phone };
-    }
-
-    // ==================== 3. 自動傳送訂單至 LINE 聊天室 ====================
-    function buildOrderTextMessage(o) {
-      const itemLines = (o.items || []).map(i => {
-        const mods = (i.modifiers && i.modifiers.length > 0) ? i.modifiers.join('/') : '標準';
-        const noteStr = i.note ? ` (備註:${i.note})` : '';
-        return `• ${i.name} x${i.qty} ($${i.price * i.qty})\n  [${mods}]${noteStr}`;
-      }).join('\n');
-      return `📦 【NODAY 外帶訂單 ${o.orderNumber}】\n` +
-             `取餐人：${o.customerInfo}\n` +
-             `預計取餐：${o.pickupTime}\n` +
-             `--------------------\n` +
-             `${itemLines}\n` +
-             `--------------------\n` +
-             `應付總額：NT$${o.totalAmount}\n` +
-             `狀態：⏳ 已送出，等待吧台製作`;
-    }
-
-    window.sendOrderToLineChat = async function() {
-      if (!latestSubmittedOrder) return false;
-      const o = latestSubmittedOrder;
-      const textMsg = buildOrderTextMessage(o);
-      const hintEl = document.getElementById('line-auto-sent-hint');
-
-      if (typeof liff !== 'undefined' && liff.isInClient()) {
-        try {
-          await liff.sendMessages([{ type: 'text', text: textMsg }]);
-          if (hintEl) {
-            hintEl.innerText = `✅ 已自動將訂單 ${o.orderNumber} 回傳至官方帳號聊天室，吧台接單與完成時將自動通知您！`;
-          }
-          return true;
-        } catch (err) {
-          console.warn("背景自動傳訊略過:", err);
-        }
-      }
-      if (hintEl) {
-        hintEl.innerText = `✅ 訂單 ${o.orderNumber} 已送達吧台！接單與製作完成時，官方帳號將自動發送 LINE 通知給您！`;
-      }
-      return false;
-    };
 
     document.getElementById('customer-name').value = localStorage.getItem('noday_name') || '';
     document.getElementById('customer-phone').value = localStorage.getItem('noday_phone') || '';
+
+    window.checkMemberByPhone = async function() {
+      const phone = document.getElementById('customer-phone').value.trim();
+      const tagEl = document.getElementById('member-status-tag');
+      if (phone.length === 10 && /^09\d{8}$/.test(phone)) {
+        try {
+          const snap = await getDoc(doc(db, "blocked_phones", phone));
+          if (snap.exists() && snap.data().isBlocked) {
+            document.getElementById('blocked-overlay').classList.remove('hidden');
+            return;
+          }
+          const memberSnap = await getDoc(doc(db, `web_${phone}`));
+          if (memberSnap.exists()) {
+            currentMemberDoc = memberSnap.data();
+            const comp = currentMemberDoc.completedCount || 0;
+            tagEl.innerHTML = `🟢 歡迎回來！已認證熟客（累計取餐 ${comp} 次）`;
+            tagEl.className = "text-[11px] font-extrabold text-emerald-800 bg-emerald-50 p-2 rounded-xl border border-emerald-200";
+          } else {
+            tagEl.innerHTML = `🟡 首次點餐新會員（歡迎加入！）`;
+            tagEl.className = "text-[11px] font-extrabold text-blue-800 bg-blue-50 p-2 rounded-xl border border-blue-200";
+          }
+        } catch (e) {}
+      }
+    };
+    if (document.getElementById('customer-phone').value) {
+      checkMemberByPhone();
+    }
 
     window.loadLastOrderHistory = function() {
       try {
@@ -665,8 +480,8 @@
         html += `<div id="ice-level-box"><label class="font-extrabold text-gray-700 block mb-1.5">🧊 冰量選擇：</label><div class="grid grid-cols-4 gap-1.5">${iceLevels.map((lvl, idx) => `<label class="cursor-pointer"><input type="radio" name="opt-ice-level" value="${lvl}" ${idx === 0 ? 'checked' : ''} class="peer hidden"><div class="border rounded-xl py-2 text-center font-bold text-[11px] peer-checked:bg-sky-700 peer-checked:text-white peer-checked:border-sky-700 transition">${lvl}</div></label>`).join('')}</div></div>`;
       }
       const beans = [];
-      if (opts.bean5) beans.push({ name: '5號配方(經典)', price: Number(opts.priceBean5 || 0) });
-      if (opts.bean1) beans.push({ name: '1號配方(果香)', price: Number(opts.priceBean1 || 0) });
+      if (opts.bean5) beans.push({ name: '5號 中焙', price: Number(opts.priceBean5 || 0) });
+      if (opts.bean1) beans.push({ name: '1號 淺焙', price: Number(opts.priceBean1 || 0) });
       if (beans.length > 0) {
         html += `<div><label class="font-extrabold text-gray-700 block mb-1.5">🫘 選擇配方豆 (必選)：</label><div class="grid grid-cols-2 gap-2">${beans.map((b, idx) => `<label class="cursor-pointer"><input type="radio" name="opt-bean" value="${b.name}" data-price="${b.price}" ${idx === 0 ? 'checked' : ''} class="peer hidden" onchange="updateModalPrice()"><div class="border rounded-xl p-2.5 text-center font-bold text-[11px] peer-checked:bg-[#213c64] peer-checked:text-white peer-checked:border-[#213c64] transition">${b.name} ${b.price > 0 ? `(+NT$${b.price})` : ''}</div></label>`).join('')}</div></div>`;
       }
@@ -875,32 +690,20 @@
       }
     }
 
-    window.closePhoneConfirmModal = function() {
-      document.getElementById('phone-confirm-modal').classList.add('hidden');
-      document.getElementById('customer-phone').focus();
-    };
-
-    window.confirmPhoneAndSubmit = async function() {
-      document.getElementById('phone-confirm-modal').classList.add('hidden');
-      await executeFinalOrderSubmit();
-    };
-
     window.submitOrder = async function() {
       applyStoreStatusUI();
       if (!isStoreCurrentlyOpen) { alert(`抱歉，${storeCloseReason}，目前僅供瀏覽菜單，無法送出訂單喔！`); closeCart(); return; }
-      if (currentMemberDoc?.isBlocked) { document.getElementById('blocked-overlay').classList.remove('hidden'); closeCart(); return; }
-      if (hasPendingUnacceptedOrder) { alert("⏳ 您目前有一筆訂單正在等待吧台確認接單中！\n為避免重複下單，請待吧台按下接收後再加點喔！"); closeCart(); return; }
 
       const customerName = document.getElementById('customer-name').value.trim();
       const rawPhone = document.getElementById('customer-phone').value.trim();
       if (!customerName || customerName.length < 2) { alert('請填寫正確的取餐人姓名（至少 2 個字）！'); closeCart(); document.getElementById('customer-name').focus(); return; }
 
-      const phoneCheck = validateTaiwanMobile(rawPhone);
-      if (!phoneCheck.valid) { alert(phoneCheck.msg); closeCart(); document.getElementById('customer-phone').focus(); return; }
+      const cleanPhone = rawPhone.replace(/[\s-]/g, '');
+      if (!/^09\d{8}$/.test(cleanPhone)) { alert('請輸入正確的台灣手機號碼（09 開頭共 10 碼數字）！'); closeCart(); document.getElementById('customer-phone').focus(); return; }
       if (cart.length === 0) { alert('購物車是空的喔！'); return; }
 
       try {
-        const phoneBlockSnap = await getDoc(doc(db, "blocked_phones", phoneCheck.cleanPhone));
+        const phoneBlockSnap = await getDoc(doc(db, "blocked_phones", cleanPhone));
         if (phoneBlockSnap.exists() && phoneBlockSnap.data().isBlocked) {
           document.getElementById('blocked-overlay').classList.remove('hidden');
           closeCart();
@@ -908,26 +711,9 @@
         }
       } catch (e) {}
 
-      const totalCups = cart.reduce((sum, i) => sum + i.qty, 0);
-      const totalAmount = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
-      const completedCount = Number(currentMemberDoc?.completedCount || 0);
-
-      if (completedCount === 0 && (totalCups > 5 || totalAmount > 600)) {
-        alert(`🛡️ 首次點餐新客保護提醒：\n\n首次線上點餐單筆上限為「5 杯」或「NT$600」（目前選購 ${totalCups} 杯 / NT$${totalAmount}）。\n\n只要完成首次取餐升級為熟客後即自動解除限制！若為團體大額訂購，請直接電洽門市：04-7237933 確認。`);
-        return;
-      }
-
       if (pickupMode === 'custom') {
         const customVal = document.getElementById('custom-pickup-time').value;
         if (!customVal) { alert('請選擇您的指定取餐時間！'); closeCart(); return; }
-      }
-
-      if (!currentMemberDoc?.phoneLocked) {
-        closeCart();
-        const formatted = `${phoneCheck.cleanPhone.slice(0,4)}-${phoneCheck.cleanPhone.slice(4,7)}-${phoneCheck.cleanPhone.slice(7)}`;
-        document.getElementById('confirm-phone-display').innerText = formatted;
-        document.getElementById('phone-confirm-modal').classList.remove('hidden');
-        return;
       }
 
       await executeFinalOrderSubmit();
@@ -941,7 +727,7 @@
       submitBtn.innerText = "⏳ 正在送出訂單...";
 
       const customerName = document.getElementById('customer-name').value.trim();
-      const cleanPhone = validateTaiwanMobile(document.getElementById('customer-phone').value.trim()).cleanPhone;
+      const cleanPhone = document.getElementById('customer-phone').value.trim().replace(/[\s-]/g, '');
       let finalPickupTime = pickupMode;
       if (pickupMode === 'custom') {
         finalPickupTime = `指定 ${document.getElementById('custom-pickup-time').value} 取餐`;
@@ -959,15 +745,22 @@
       const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
       const customerInfo = `${customerName} (${cleanPhone})`;
       const orderNumber = await generateTodayOrderNumber();
-      const memberCompleted = Number(currentMemberDoc?.completedCount || 0);
-      const memberAbandoned = Number(currentMemberDoc?.abandonedCount || 0);
-      const userId = lineProfile?.userId || `web_${cleanPhone}`;
+      const userId = `web_${cleanPhone}`;
 
       try {
-        await setDoc(doc(db, "members", userId), {
+        let memberCompleted = 0;
+        let memberAbandoned = 0;
+        const memberRef = doc(db, "members", userId);
+        const memberSnap = await getDoc(memberRef);
+        if (memberSnap.exists()) {
+          memberCompleted = Number(memberSnap.data().completedCount || 0);
+          memberAbandoned = Number(memberSnap.data().abandonedCount || 0);
+        }
+
+        await setDoc(memberRef, {
           lineUserId: userId,
-          lineDisplayName: lineProfile?.displayName || customerName,
-          pictureUrl: lineProfile?.pictureUrl || "",
+          lineDisplayName: customerName,
+          pictureUrl: "",
           name: customerName,
           phone: cleanPhone,
           phoneLocked: true,
@@ -985,7 +778,7 @@
           customerPhone: cleanPhone,
           customerInfo: customerInfo,
           lineUserId: userId,
-          lineDisplayName: lineProfile?.displayName || "",
+          lineDisplayName: customerName,
           memberCompletedCount: memberCompleted,
           memberAbandonedCount: memberAbandoned,
           items: cart,
@@ -1002,8 +795,6 @@
         watchOrderStatus(docRef.id);
         window.scrollTo({ top: 0, behavior: 'smooth' });
         showToast(`🎉 訂單 ${orderNumber} 已送出！`);
-
-        await sendOrderToLineChat();
       } catch (e) {
         console.error(e);
         alert("送出失敗，請檢查網路連線後重試");
