@@ -233,7 +233,7 @@
       }
     };
 
-    // ==================== 4. 菜單售完開關與價格/品項編輯管理 ====================
+    // ==================== 4. 完整的菜單品項與價格編輯管理 ====================
     async function initMenuManager() {
       const snap = await getDocs(collection(db, "menu"));
       menuCache = [];
@@ -242,25 +242,32 @@
       
       const container = document.getElementById('menu-manager-container');
       container.innerHTML = menuCache.map(cat => `
-        <div class="bg-white p-4 rounded-2xl border shadow-sm space-y-2.5">
-          <h3 class="font-extrabold text-xs text-[#213c64] border-b pb-1.5 flex justify-between items-center">
-            <span>📂 ${cat.category}</span>
-          </h3>
-          <div class="space-y-2">
+        <div class="bg-white p-4 rounded-2xl border shadow-sm space-y-3">
+          <div class="flex justify-between items-center border-b pb-2">
+            <h3 class="font-extrabold text-xs text-[#213c64]">📂 ${cat.category}</h3>
+            <button onclick="addNewItemPrompt('${cat.id}')" class="bg-[#213c64] text-white px-2.5 py-1 rounded-lg text-[10px] font-extrabold">+ 新增品項</button>
+          </div>
+          <div class="space-y-2.5">
             ${cat.items.map(item => `
               <div class="bg-gray-50 p-3 rounded-xl text-xs space-y-2 border">
                 <div class="flex justify-between items-center">
-                  <span class="font-extrabold text-gray-900 text-sm">${item.name}</span>
-                  <div class="flex items-center gap-2">
-                    <span class="text-amber-800 font-extrabold">NT$${item.price}</span>
-                    <button onclick="toggleItemSoldOut('${cat.category}', '${item.id}', ${!item.soldOut})" class="px-2.5 py-1 rounded-lg font-extrabold text-[11px] ${item.soldOut ? 'bg-emerald-600 text-white' : 'bg-red-500 text-white'} transition">
-                      ${item.soldOut ? '恢復供應' : '設為售完'}
-                    </button>
+                  <input type="text" id="name-input-${item.id}" value="${item.name}" class="border rounded-lg p-1 text-xs font-extrabold bg-white w-36">
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-gray-500 font-bold">NT$</span>
+                    <input type="number" id="price-input-${item.id}" value="${item.price}" class="border rounded-lg p-1 text-xs w-16 text-center font-extrabold bg-white">
                   </div>
                 </div>
-                <div class="flex items-center gap-2 pt-1 border-t">
-                  <input type="number" id="price-input-${item.id}" value="${item.price}" class="border rounded-lg p-1 text-xs w-20 text-center font-bold bg-white" placeholder="新價格">
-                  <button onclick="updateItemPrice('${cat.category}', '${item.id}')" class="bg-[#213c64] text-white px-3 py-1 rounded-lg text-[11px] font-extrabold">修改價格</button>
+                <div class="flex items-center gap-1.5">
+                  <input type="text" id="desc-input-${item.id}" value="${item.desc || ''}" placeholder="品項說明文案..." class="border rounded-lg p-1 text-[11px] bg-white flex-1 font-bold text-gray-600">
+                </div>
+                <div class="flex justify-between items-center pt-1 border-t">
+                  <button onclick="saveItemChanges('${cat.id}', '${item.id}')" class="bg-blue-600 text-white px-3 py-1 rounded-lg text-[10px] font-extrabold">💾 儲存修改</button>
+                  <div class="flex items-center gap-2">
+                    <button onclick="toggleItemSoldOut('${cat.id}', '${item.id}', ${!item.soldOut})" class="px-2.5 py-1 rounded-lg font-extrabold text-[10px] ${item.soldOut ? 'bg-emerald-600 text-white' : 'bg-red-500 text-white'}">
+                      ${item.soldOut ? '已售完(點此恢復)' : '正常供應'}
+                    </button>
+                    <button onclick="deleteMenuItem('${cat.id}', '${item.id}')" class="text-red-500 font-bold text-[10px]">刪除</button>
+                  </div>
                 </div>
               </div>
             `).join('')}
@@ -269,38 +276,77 @@
       `).join('');
     }
 
-    window.toggleItemSoldOut = async function(categoryName, itemId, newSoldOutStatus) {
-      const cat = menuCache.find(c => c.category === categoryName);
-      if (!cat) return;
-      cat.items = cat.items.map(i => i.id === itemId ? { ...i, soldOut: newSoldOutStatus } : i);
-      await setDoc(doc(db, "menu", cat.id), cat);
-      initMenuManager();
-    };
+    window.saveItemChanges = async function(catId, itemId) {
+      const name = document.getElementById(`name-input-${itemId}`).value.trim();
+      const price = Number(document.getElementById(`price-input-${itemId}`).value);
+      const desc = document.getElementById(`desc-input-${itemId}`).value.trim();
 
-    window.updateItemPrice = async function(categoryName, itemId) {
-      const input = document.getElementById(`price-input-${itemId}`);
-      const newPrice = Number(input.value);
-      if (isNaN(newPrice) || newPrice < 0) {
-        alert("請輸入有效的價格數字！");
+      if (!name || isNaN(price)) {
+        alert("請輸入有效的品項名稱與價格！");
         return;
       }
-      const cat = menuCache.find(c => c.category === categoryName);
+
+      const cat = menuCache.find(c => c.id === catId);
       if (!cat) return;
-      cat.items = cat.items.map(i => i.id === itemId ? { ...i, price: newPrice } : i);
-      await setDoc(doc(db, "menu", cat.id), cat);
+
+      cat.items = cat.items.map(i => i.id === itemId ? { ...i, name, price, desc } : i);
+      await setDoc(doc(db, "menu", catId), cat);
       initMenuManager();
-      alert("✅ 品項價格修改成功！");
+      alert(`✅ 「${name}」修改成功！`);
     };
 
-    // ==================== 5. 營業模式切換與公告管理 ====================
+    window.toggleItemSoldOut = async function(catId, itemId, newSoldOutStatus) {
+      const cat = menuCache.find(c => c.id === catId);
+      if (!cat) return;
+      cat.items = cat.items.map(i => i.id === itemId ? { ...i, soldOut: newSoldOutStatus } : i);
+      await setDoc(doc(db, "menu", catId), cat);
+      initMenuManager();
+    };
+
+    window.deleteMenuItem = async function(catId, itemId) {
+      if (!confirm("確定要刪除這個品項嗎？")) return;
+      const cat = menuCache.find(c => c.id === catId);
+      if (!cat) return;
+      cat.items = cat.items.filter(i => i.id !== itemId);
+      await setDoc(doc(db, "menu", catId), cat);
+      initMenuManager();
+      alert("✅ 已刪除該品項！");
+    };
+
+    window.addNewItemPrompt = async function(catId) {
+      const name = prompt("請輸入新咖啡/品項名稱：");
+      if (!name) return;
+      const priceStr = prompt("請輸入價格 (NT$)：", "100");
+      const price = Number(priceStr);
+      if (isNaN(price)) {
+        alert("價格必須是數字！");
+        return;
+      }
+
+      const cat = menuCache.find(c => c.id === catId);
+      if (!cat) return;
+
+      const newItem = {
+        id: "item_" + Date.now(),
+        name: name,
+        price: price,
+        desc: "",
+        soldOut: false,
+        options: { ice: true, hot: true, iceLevel: true, bean5: true, bean1: true, sugarFree: true, sugarMicro: true, sugarHalf: true, sugarNormal: true, addonShot: true, addonOat: true }
+      };
+
+      cat.items.push(newItem);
+      await setDoc(doc(db, "menu", catId), cat);
+      initMenuManager();
+      alert(`✅ 成功新增品項「${name}」！`);
+    };
+
+    // ==================== 5. 營業模式切換 ====================
     onSnapshot(doc(db, "settings", "store"), (snap) => {
       if (snap.exists()) {
         storeSettingsCache = snap.data();
         const mode = storeSettingsCache.storeMode || 'auto';
         document.getElementById('store-mode-select').value = mode;
-        if (storeSettingsCache.announcementText) {
-          document.getElementById('store-announcement-input').value = storeSettingsCache.announcementText;
-        }
       }
     });
 
@@ -309,13 +355,6 @@
       storeSettingsCache.storeMode = newMode;
       await setDoc(doc(db, "settings", "store"), storeSettingsCache, { merge: true });
       alert("✅ 營業接單模式已切換！");
-    };
-
-    window.updateStoreAnnouncement = async function() {
-      const newText = document.getElementById('store-announcement-input').value.trim();
-      storeSettingsCache.announcementText = newText;
-      await setDoc(doc(db, "settings", "store"), storeSettingsCache, { merge: true });
-      alert("✅ 店家公告已更新至前台！");
     };
 
     initOrdersListener();
@@ -334,7 +373,7 @@
     <div class="max-w-4xl mx-auto flex justify-between items-center">
       <div>
         <h1 class="text-sm font-extrabold">NODAY Coffee 吧台旗艦管理系統</h1>
-        <p class="text-[10px] text-amber-300">雲端訂單同步・LINE 自動推播・品項價格與公告編輯</p>
+        <p class="text-[10px] text-amber-300">雲端訂單同步・品項名稱與價格自由編輯・售完開關</p>
       </div>
       <div class="flex items-center gap-2">
         <button onclick="testAudioAlarm()" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-xl text-xs font-extrabold shadow transition">
@@ -346,24 +385,17 @@
 
   <main class="max-w-4xl mx-auto p-4 space-y-5">
     
-    <!-- 營業狀態控制與公告編輯 -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <div class="bg-white p-4 rounded-2xl shadow-sm border space-y-2">
+    <!-- 營業狀態控制 -->
+    <div class="bg-white p-4 rounded-2xl shadow-sm border flex flex-col sm:flex-row justify-between items-center gap-3">
+      <div>
         <h2 class="font-extrabold text-xs text-[#213c64]">🏪 營業與接單狀態控制</h2>
-        <select id="store-mode-select" onchange="updateStoreMode()" class="w-full border rounded-xl p-2.5 text-xs font-extrabold bg-gray-50 text-[#213c64]">
-          <option value="auto">🟢 自動依排班時間判定</option>
-          <option value="open">🔥 強制營業中 (隨時可接單)</option>
-          <option value="closed">🌙 強制打烊休息中</option>
-        </select>
+        <p class="text-[10px] text-gray-500">可手動控制營業、打烊，或依照排班時間自動判定。</p>
       </div>
-
-      <div class="bg-white p-4 rounded-2xl shadow-sm border space-y-2">
-        <h2 class="font-extrabold text-xs text-[#213c64]">📢 前台即時公告修改</h2>
-        <div class="flex gap-2">
-          <input type="text" id="store-announcement-input" placeholder="輸入公告內容..." class="flex-1 border rounded-xl p-2 text-xs font-bold bg-gray-50">
-          <button onclick="updateStoreAnnouncement()" class="bg-[#213c64] text-white px-3 py-2 rounded-xl text-xs font-extrabold">更新</button>
-        </div>
-      </div>
+      <select id="store-mode-select" onchange="updateStoreMode()" class="border rounded-xl p-2.5 text-xs font-extrabold bg-gray-50 text-[#213c64]">
+        <option value="auto">🟢 自動依排班時間判定</option>
+        <option value="open">🔥 強制營業中 (隨時可接單)</option>
+        <option value="closed">🌙 強制打烊休息中</option>
+      </select>
     </div>
 
     <!-- 訂單區塊 -->
@@ -382,10 +414,10 @@
       </div>
     </div>
 
-    <!-- 菜單與價格管理 -->
+    <!-- 完整的品項與價格編輯管理 -->
     <div class="space-y-3 pt-3 border-t">
-      <h2 class="font-extrabold text-xs text-[#213c64]">☕ 吧台菜單即時管理 (品項價格修改與售完切換)</h2>
-      <div id="menu-manager-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <h2 class="font-extrabold text-xs text-[#213c64]">☕ 完整菜單品項管理 (修改品名、價格、說明、售完切換與新增)</h2>
+      <div id="menu-manager-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <p class="text-center text-gray-400 py-10 text-xs">載入菜單管理中...</p>
       </div>
     </div>
