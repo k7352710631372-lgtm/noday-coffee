@@ -300,7 +300,6 @@
           openLineBtn.classList.remove('hidden');
         }
 
-        // 使用安全的標準取得個資方式，若未登入則顯示訪客，避免 400 錯誤
         if (liff.isLoggedIn()) {
           lineProfile = await liff.getProfile();
           if (lineProfile.pictureUrl) avatarEl.src = lineProfile.pictureUrl;
