@@ -300,60 +300,60 @@
           openLineBtn.classList.remove('hidden');
         }
 
-        // 強制檢查 LINE 登入授權，若未登入自動導向登入以抓取真實身分
-        if (!liff.isLoggedIn()) {
-          liff.login({ redirectUri: window.location.href });
-          return;
-        }
+        // 改用安全的標準取得個資方式，若未登入則顯示訪客，避免 400 Bad Request
+        if (liff.isLoggedIn()) {
+          lineProfile = await liff.getProfile();
+          if (lineProfile.pictureUrl) avatarEl.src = lineProfile.pictureUrl;
+          nameEl.innerText = lineProfile.displayName || "LINE 會員";
 
-        lineProfile = await liff.getProfile();
-        if (lineProfile.pictureUrl) avatarEl.src = lineProfile.pictureUrl;
-        nameEl.innerText = lineProfile.displayName || "LINE 會員";
-
-        onSnapshot(doc(db, "members", lineProfile.userId), (snap) => {
-          if (snap.exists()) {
-            currentMemberDoc = snap.data();
-            applyMemberStatusToUI();
-          } else {
-            currentMemberDoc = {
-              lineUserId: lineProfile.userId,
-              lineDisplayName: lineProfile.displayName || "",
-              pictureUrl: lineProfile.pictureUrl || "",
-              name: "",
-              phone: "",
-              phoneLocked: false,
-              completedCount: 0,
-              abandonedCount: 0,
-              isBlocked: false
-            };
-            setDoc(doc(db, "members", lineProfile.userId), currentMemberDoc, { merge: true });
-            applyMemberStatusToUI();
-          }
-        });
-
-        const pendingQ = query(collection(db, "orders"), where("lineUserId", "==", lineProfile.userId));
-        onSnapshot(pendingQ, (snap) => {
-          let pendingOrder = null;
-          snap.forEach(d => {
-            const data = d.data();
-            if (data.status === "pending" || data.status === "accepted") {
-              pendingOrder = { id: d.id, ...data };
+          onSnapshot(doc(db, "members", lineProfile.userId), (snap) => {
+            if (snap.exists()) {
+              currentMemberDoc = snap.data();
+              applyMemberStatusToUI();
+            } else {
+              currentMemberDoc = {
+                lineUserId: lineProfile.userId,
+                lineDisplayName: lineProfile.displayName || "",
+                pictureUrl: lineProfile.pictureUrl || "",
+                name: "",
+                phone: "",
+                phoneLocked: false,
+                completedCount: 0,
+                abandonedCount: 0,
+                isBlocked: false
+              };
+              setDoc(doc(db, "members", lineProfile.userId), currentMemberDoc, { merge: true });
+              applyMemberStatusToUI();
             }
           });
-          hasPendingUnacceptedOrder = !!pendingOrder;
-          if (pendingOrder && !latestSubmittedOrder) {
-            latestSubmittedOrder = pendingOrder;
-            watchOrderStatus(pendingOrder.id);
-          }
-        });
 
+          const pendingQ = query(collection(db, "orders"), where("lineUserId", "==", lineProfile.userId));
+          onSnapshot(pendingQ, (snap) => {
+            let pendingOrder = null;
+            snap.forEach(d => {
+              const data = d.data();
+              if (data.status === "pending" || data.status === "accepted") {
+                pendingOrder = { id: d.id, ...data };
+              }
+            });
+            hasPendingUnacceptedOrder = !!pendingOrder;
+            if (pendingOrder && !latestSubmittedOrder) {
+              latestSubmittedOrder = pendingOrder;
+              watchOrderStatus(pendingOrder.id);
+            }
+          });
+        } else {
+          nameEl.innerText = "訪客模式";
+          badgeEl.innerText = "一般網頁";
+          openLineBtn.classList.remove('hidden');
+        }
       } catch (e) {
         console.warn("LIFF 初始化提醒:", e);
         nameEl.innerText = "訪客模式";
         badgeEl.innerText = "一般網頁";
         openLineBtn.classList.remove('hidden');
       }
-    }
+    } }
 
     function applyMemberStatusToUI() {
       if (!currentMemberDoc) return;
