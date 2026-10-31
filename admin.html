@@ -2,400 +2,263 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NODAY Coffee Roasters | 吧台接單與旗艦後台管理</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>NODAY Coffee Roasters | 外帶線上點餐</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入 LINE LIFF SDK -->
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
-    @keyframes alarmPulse {
-      0%, 100% { background-color: #fef2f2; border-color: #ef4444; box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
-      50% { background-color: #fee2e2; border-color: #b91c1c; box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
-    }
-    .alarm-card { animation: alarmPulse 1s infinite; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    body.modal-open { overflow: hidden; touch-action: none; }
   </style>
 </head>
-<body class="bg-gray-100 min-h-screen text-gray-800 pb-20">
+<body class="bg-gray-50 min-h-screen text-gray-800 pb-28">
 
-  <!-- 新單未接收頂部閃爍警報列 -->
-  <div id="unaccepted-alarm-bar" class="hidden bg-red-600 text-white p-3 text-center font-extrabold text-sm sticky top-0 z-50 shadow-lg flex items-center justify-center gap-3 animate-pulse">
-    <span>🚨 有新外帶訂單尚未接收！請點擊下方訂單的「🔔 接收訂單」以停止鈴聲！</span>
+  <!-- 黑名單停權全螢幕遮罩 -->
+  <div id="blocked-overlay" class="fixed inset-0 bg-gray-900/95 z-[80] hidden flex items-center justify-center p-6">
+    <div class="bg-white rounded-3xl p-6 max-w-sm w-full text-center space-y-4 shadow-2xl border-2 border-red-500">
+      <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-3xl font-extrabold">🚫</div>
+      <h2 class="text-lg font-extrabold text-gray-900">線上預訂功能已暫停</h2>
+      <p id="blocked-reason-text" class="text-xs text-gray-600 leading-relaxed font-bold">
+        系統偵測到您的帳號或電話曾有「未取餐 / 棄單」紀錄，目前已暫停線上點餐權限。如需購買請直接至門市現場點餐，或電洽門市人員。
+      </p>
+      <a href="tel:04-7237933" class="block w-full bg-[#213c64] text-white py-3 rounded-xl text-xs font-extrabold shadow">
+        📞 撥打門市電話：04-7237933
+      </a>
+    </div>
   </div>
 
-  <!-- 頂部導覽列 -->
-  <header class="bg-[#213c64] text-white p-4 shadow-md sticky top-0 z-40">
-    <div class="max-w-5xl mx-auto flex flex-wrap justify-between items-center gap-3">
+  <!-- 頂部品牌列 -->
+  <header class="bg-[#213c64] text-white p-4 shadow-md sticky top-0 z-30">
+    <div class="max-w-md mx-auto flex justify-between items-center">
       <div>
-        <h1 class="text-xl font-extrabold flex items-center gap-2">
-          ☕ NODAY 吧台旗艦管理系統
-          <span id="header-store-badge" class="text-xs bg-emerald-500 text-white px-2.5 py-0.5 rounded-full font-bold">載入中</span>
-        </h1>
-        <p class="text-xs text-gray-200 mt-0.5">高分貝循環鈴聲 ＆ LINE 自動推播 ＆ 雲端菜單管理</p>
+        <h1 class="text-lg font-extrabold tracking-wide">NODAY Coffee Roasters</h1>
+        <p id="store-status-header" class="text-[11px] text-amber-300 mt-0.5 flex items-center gap-1.5">
+          <span id="store-status-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="store-status-label">載入營業狀態中...</span>
+        </p>
       </div>
-      <div class="flex flex-wrap items-center gap-2">
-        <button onclick="toggleMembersPanel()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-xl text-xs font-bold shadow transition">
-          👥 會員與黑名單管理
-        </button>
-        <button onclick="testHighVolumeAlarm()" class="bg-white/15 hover:bg-white/25 text-white px-3 py-2 rounded-xl text-xs font-bold transition">
-          🔊 測試大音量鈴聲
-        </button>
-        <button onclick="toggleSound()" id="sound-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-xl text-xs font-bold shadow transition">
-          🔔 鈴聲：已開啟
-        </button>
-        <button onclick="openItemModal('add')" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow transition">
-          ＋ 新增品項
-        </button>
-        <button onclick="initMenuToFirebase()" class="bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow transition">
-          ⚡ 還原預設菜單
-        </button>
-      </div>
+      <button onclick="openCart()" class="bg-amber-500 hover:bg-amber-600 text-white px-3.5 py-2 rounded-xl text-xs font-extrabold shadow flex items-center gap-1.5 transition">
+        🛒 購物車 <span id="cart-badge" class="bg-white text-amber-700 px-1.5 py-0.5 rounded-full text-[10px]">0</span>
+      </button>
     </div>
   </header>
 
-  <main class="max-w-5xl mx-auto p-4 space-y-6 mt-2">
+  <main class="max-w-md mx-auto p-4 space-y-4">
 
-    <!-- 營運數據與報表匯出看板 -->
-    <section class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      <div class="bg-white p-4 rounded-2xl shadow-sm border border-red-200">
-        <p class="text-xs text-gray-500 font-bold">🔔 待接單 / 製作中</p>
-        <p id="stat-pending" class="text-2xl font-extrabold text-red-600 mt-1">0 筆</p>
-      </div>
-      <div class="bg-white p-4 rounded-2xl shadow-sm border border-emerald-200">
-        <p class="text-xs text-gray-500 font-bold">✅ 今日已完成</p>
-        <p id="stat-completed" class="text-2xl font-extrabold text-emerald-600 mt-1">0 筆</p>
-      </div>
-      <div class="bg-white p-4 rounded-2xl shadow-sm border border-blue-200">
-        <p class="text-xs text-gray-500 font-bold">💰 今日累計營收</p>
-        <p id="stat-revenue" class="text-2xl font-extrabold text-[#213c64] mt-1">NT$0</p>
-      </div>
-      <div class="bg-white p-4 rounded-2xl shadow-sm border border-amber-200 flex flex-col justify-between">
-        <p class="text-xs text-gray-500 font-bold">📊 營業報表與排行</p>
-        <div class="flex gap-1.5 mt-1">
-          <button onclick="toggleStatsPanel()" class="flex-1 bg-amber-100 hover:bg-amber-200 text-amber-900 py-1.5 rounded-lg text-xs font-extrabold transition">熱銷排行</button>
-          <button onclick="exportTodayCSV()" class="flex-1 bg-[#213c64] hover:bg-[#192e4d] text-white py-1.5 rounded-lg text-xs font-extrabold transition">匯出 Excel</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- 會員與棄單黑名單管理面板 (可展開) -->
-    <section id="members-panel" class="hidden bg-white p-5 rounded-2xl shadow-sm border-2 border-purple-300 space-y-4">
-      <div class="flex flex-wrap justify-between items-center gap-2 border-b pb-3">
+    <!-- LINE 會員身分識別卡 -->
+    <div id="member-status-bar" class="bg-white border border-blue-200 p-3 rounded-2xl shadow-sm flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5">
+        <img id="member-avatar" src="https://cdn-icons-png.flaticon.com/512/847/847969.png" alt="avatar" class="w-9 h-9 rounded-full border border-gray-200 object-cover">
         <div>
-          <h3 class="text-base font-extrabold text-purple-950">👥 LINE 綁定會員 ＆ 棄單黑名單管理</h3>
-          <p class="text-xs text-gray-500">可在此查看客人的累計取餐次數、協助客人更換綁定電話，或解除/加入黑名單。</p>
+          <div class="flex items-center gap-1.5">
+            <span id="member-display-name" class="text-xs font-extrabold text-gray-900">驗證 LINE 會員中...</span>
+            <span id="member-badge" class="text-[10px] bg-blue-100 text-[#213c64] px-2 py-0.5 rounded-full font-extrabold">連線中</span>
+          </div>
+          <p id="member-sub-note" class="text-[10px] text-gray-500 font-bold mt-0.5">點餐後將自動傳送明細至官方帳號</p>
         </div>
-        <button onclick="toggleMembersPanel()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg font-extrabold">收合面板 ✕</button>
       </div>
-      <div id="members-list-container" class="space-y-2 max-h-80 overflow-y-auto text-xs">
-        <p class="text-gray-400 py-4 text-center">正在載入會員資料...</p>
-      </div>
-    </section>
+      <a id="open-in-line-btn" href="https://liff.line.me/2012300915-xAvn0ZeX" class="hidden bg-[#06C755] text-white px-3 py-1.5 rounded-xl text-[11px] font-extrabold shadow shrink-0">
+        LINE 開啟
+      </a>
+    </div>
 
-    <!-- 今日熱銷排行榜 (可展開) -->
-    <section id="stats-panel" class="hidden bg-white p-5 rounded-2xl shadow-sm border border-amber-200">
-      <div class="flex justify-between items-center mb-3">
-        <h3 class="text-sm font-extrabold text-gray-900">🏆 今日熱銷飲品統計</h3>
-        <button onclick="toggleStatsPanel()" class="text-xs text-gray-400 font-bold">收合 ✕</button>
+    <!-- 非營業時間提示 -->
+    <div id="closed-notice-banner" class="hidden bg-red-50 border-2 border-red-400 p-4 rounded-2xl shadow-sm space-y-1.5">
+      <div class="flex justify-between items-center">
+        <p id="closed-notice-title" class="text-sm font-extrabold text-red-700">🌙 目前非營業時間（僅供瀏覽菜單）</p>
+        <button onclick="toggleScheduleModal()" class="text-[11px] bg-white border border-red-300 text-red-700 px-2.5 py-1 rounded-lg font-bold">查看營業時間</button>
       </div>
-      <div id="top-selling-list" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs"></div>
-    </section>
+      <p id="closed-notice-sub" class="text-xs text-red-600 font-bold">您仍可瀏覽完整菜單與價格，營業時間開始後即可下單。</p>
+    </div>
 
-    <!-- 1. 即時外帶訂單看板 -->
-    <section class="bg-white p-5 rounded-2xl shadow-sm border">
-      <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <h2 class="text-base font-extrabold text-gray-900 flex items-center gap-2">
-          <span>🔔 即時外帶訂單看板</span>
-          <span class="text-xs bg-red-100 text-red-600 px-2.5 py-0.5 rounded-full font-bold animate-pulse">即時連線中</span>
-        </h2>
-        <button onclick="toggleHistory()" class="text-xs text-[#213c64] font-bold hover:underline">
-          查看今日已完成訂單紀錄 ▾
+    <!-- 即時訂單狀態追蹤卡 -->
+    <div id="active-order-banner" class="hidden bg-white border-2 border-[#213c64] p-4 rounded-2xl shadow-md space-y-2">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-2">
+          <span id="order-number-badge" class="bg-[#213c64] text-white text-sm font-extrabold px-3 py-1 rounded-xl">#001</span>
+          <span class="text-xs font-extrabold text-[#213c64]">外帶取餐進度</span>
+        </div>
+        <span id="order-status-badge" class="bg-amber-100 text-amber-800 text-xs font-extrabold px-2.5 py-1 rounded-full">⏳ 等待吧台接單</span>
+      </div>
+      <p id="order-status-text" class="text-xs text-gray-700 font-bold">訂單已送出，等待吧台人員確認接單中！</p>
+      <p id="line-auto-sent-hint" class="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1.5 rounded-xl font-extrabold">
+        ✅ 訂單已即時連線送達吧台系統，接單與完成時將透過 LINE 自動通知您！
+      </p>
+    </div>
+
+    <!-- 店家公告 -->
+    <div class="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl text-xs text-amber-900 shadow-sm space-y-1">
+      <div class="flex justify-between items-center">
+        <p id="ann-title" class="font-extrabold flex items-center gap-1">📢 外帶取餐提醒</p>
+        <button onclick="toggleScheduleModal()" class="text-[11px] text-[#213c64] underline font-bold">營業與休假時間</button>
+      </div>
+      <p id="ann-text" class="text-[11px] text-amber-800 whitespace-pre-line leading-relaxed">本店為外帶專門店（無內用），現點現做請耐心等候。</p>
+    </div>
+
+    <!-- 熟客快速點餐 (一鍵再買一次) -->
+    <div id="reorder-section" class="hidden bg-white p-3.5 rounded-2xl shadow-sm border border-blue-100 space-y-2">
+      <div class="flex justify-between items-center">
+        <span class="text-xs font-extrabold text-[#213c64]">🔄 熟客快速點餐（您上次點的咖啡）</span>
+        <button onclick="reorderLastItems()" class="bg-[#213c64] hover:bg-[#192e4d] text-white px-3 py-1 rounded-lg text-[11px] font-extrabold shadow-sm transition">
+          ＋ 一鍵再買一次
         </button>
       </div>
+      <p id="reorder-summary" class="text-[11px] text-gray-600 font-bold"></p>
+    </div>
 
-      <div id="orders-container" class="space-y-3">
-        <p class="text-gray-400 text-sm py-6 text-center">目前沒有待處理的新訂單...</p>
-      </div>
-
-      <!-- 已完成歷史訂單區 -->
-      <div id="completed-orders-section" class="hidden mt-6 pt-4 border-t">
-        <h3 class="text-xs font-extrabold text-gray-500 mb-3">📋 今日已完成訂單紀錄</h3>
-        <div id="completed-orders-container" class="space-y-2 max-h-64 overflow-y-auto"></div>
-      </div>
-    </section>
-
-    <!-- 2. 營業狀態、每日營業時間、預約休假 ＆ 店家公告管理 -->
-    <section class="bg-white p-5 rounded-2xl shadow-sm border space-y-5">
-      <div class="flex flex-wrap justify-between items-center gap-2 border-b pb-3">
+    <!-- 取餐人姓名、真實電話綁定 ＆ 預計取餐時間 -->
+    <div class="bg-white p-3.5 rounded-2xl shadow-sm border space-y-3">
+      <div class="grid grid-cols-2 gap-2.5">
         <div>
-          <h2 class="text-base font-extrabold text-gray-900">🏪 營業狀態、每週營業時間、預約休假 ＆ 店家公告管理</h2>
-          <p class="text-xs text-gray-500 mt-0.5">非營業時間或休假期間，客人端將自動切換為「僅供瀏覽菜單、無法點餐」。</p>
+          <label class="text-[11px] font-extrabold text-gray-600 block mb-1">取餐人姓名 <span class="text-red-500">*</span></label>
+          <input type="text" id="customer-name" placeholder="例如：王小明" class="w-full border rounded-xl p-2.5 text-xs focus:outline-none focus:border-[#213c64] bg-gray-50 font-bold">
         </div>
-        <button onclick="saveStoreSettings()" class="bg-[#213c64] hover:bg-[#192e4d] text-white px-5 py-2.5 rounded-xl text-xs font-extrabold shadow transition">
-          💾 儲存公告與營業設定
-        </button>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- 左側：營業總開關 ＆ 店家公告編輯器 -->
-        <div class="space-y-4">
-          <div class="bg-gray-50 p-4 rounded-xl border space-y-2.5">
-            <label class="text-xs font-extrabold text-[#213c64] block">🚦 營業接單模式總開關：</label>
-            <div class="grid grid-cols-3 gap-2 text-xs">
-              <label class="cursor-pointer">
-                <input type="radio" name="store-mode" value="auto" checked class="peer hidden">
-                <div class="border rounded-xl p-2.5 text-center font-extrabold bg-white peer-checked:bg-[#213c64] peer-checked:text-white peer-checked:border-[#213c64] transition">🕒 依營業時間自動</div>
-              </label>
-              <label class="cursor-pointer">
-                <input type="radio" name="store-mode" value="open" class="peer hidden">
-                <div class="border rounded-xl p-2.5 text-center font-extrabold bg-white peer-checked:bg-emerald-600 peer-checked:text-white peer-checked:border-emerald-600 transition">🟢 強制營業接單</div>
-              </label>
-              <label class="cursor-pointer">
-                <input type="radio" name="store-mode" value="closed" class="peer hidden">
-                <div class="border rounded-xl p-2.5 text-center font-extrabold bg-white peer-checked:bg-red-600 peer-checked:text-white peer-checked:border-red-600 transition">🔴 強制暫停接單</div>
-              </label>
-            </div>
-            <p class="text-[11px] text-gray-500">提示：平常建議選「依營業時間自動」，臨時爆單或提早打烊可點「強制暫停接單」。</p>
-          </div>
-
-          <!-- 店家公告編輯 -->
-          <div class="bg-amber-50/60 p-4 rounded-xl border border-amber-200 space-y-3">
-            <label class="text-xs font-extrabold text-amber-900 block">📢 店家公告即時編輯（客人端置頂顯示）：</label>
-            <div>
-              <label class="text-[11px] font-bold text-gray-600">公告標題</label>
-              <input type="text" id="setting-ann-title" placeholder="📢 外帶取餐提醒" class="w-full border rounded-lg p-2 text-xs font-bold mt-1 bg-white">
-            </div>
-            <div>
-              <label class="text-[11px] font-bold text-gray-600">公告內容（支援換行）</label>
-              <textarea id="setting-ann-text" rows="3" placeholder="輸入店休公告、新品推薦或取餐提醒..." class="w-full border rounded-lg p-2 text-xs mt-1 bg-white"></textarea>
-            </div>
-          </div>
-        </div>
-
-        <!-- 右側：每週營業時間 ＆ 預約休假設定 -->
-        <div class="space-y-4">
-          <div class="bg-gray-50 p-4 rounded-xl border space-y-2">
-            <label class="text-xs font-extrabold text-[#213c64] block mb-2">📅 每週固定營業時間設定：</label>
-            <div id="weekly-hours-container" class="space-y-1.5 text-xs"></div>
-          </div>
-
-          <div class="bg-red-50/40 p-4 rounded-xl border border-red-200 space-y-3">
-            <label class="text-xs font-extrabold text-red-900 block">🏖️ 預約休假 / 特殊公休日設定：</label>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-              <div>
-                <span class="text-[10px] text-gray-500 font-bold">開始日期</span>
-                <input type="date" id="holiday-start" class="w-full border rounded-lg p-1.5 text-xs bg-white">
-              </div>
-              <div>
-                <span class="text-[10px] text-gray-500 font-bold">結束日期</span>
-                <input type="date" id="holiday-end" class="w-full border rounded-lg p-1.5 text-xs bg-white">
-              </div>
-              <div>
-                <span class="text-[10px] text-gray-500 font-bold">休假原因說明</span>
-                <input type="text" id="holiday-note" placeholder="例：內部進修店休" class="w-full border rounded-lg p-1.5 text-xs bg-white">
-              </div>
-            </div>
-            <button type="button" onclick="addHoliday()" class="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg text-xs font-extrabold shadow-sm transition">
-              ＋ 新增預約休假區間
-            </button>
-            <div id="holidays-list" class="space-y-1.5 pt-1 max-h-40 overflow-y-auto text-xs"></div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 3. 雲端菜單、排序與細項加價管理 -->
-    <section class="bg-white p-5 rounded-2xl shadow-sm border">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
         <div>
-          <h2 class="text-base font-extrabold text-gray-900">🛠️ 雲端菜單、上下排序 ＆ 細項加價設定</h2>
-          <p class="text-xs text-gray-500 mt-0.5">可使用「▲ ▼」自由調整分類與飲品順序，或點擊「修改 / 加購」單獨勾選項目與調整價錢。</p>
+          <div class="flex justify-between items-center mb-1">
+            <label class="text-[11px] font-extrabold text-gray-600">本人手機號碼 <span class="text-red-500">*</span></label>
+            <span id="phone-lock-tag" class="hidden text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-extrabold">🔒 已綁定</span>
+          </div>
+          <input type="tel" id="customer-phone" maxlength="10" placeholder="09xxxxxxxx" class="w-full border rounded-xl p-2.5 text-xs focus:outline-none focus:border-[#213c64] bg-gray-50 font-bold">
         </div>
       </div>
-      <div id="admin-menu-list" class="space-y-5">
-        <p class="text-gray-400 text-sm">正在載入雲端菜單...</p>
+      <p id="phone-bind-notice" class="text-[10px] text-gray-500 font-bold">
+        🛡️ 為防範惡意棄單，首次點餐將綁定您的 LINE 帳號與真實電話（綁定後即鎖定，如需更改請洽門市）。
+      </p>
+
+      <div class="pt-1 border-t">
+        <label class="text-[11px] font-extrabold text-gray-600 block mb-1.5">⏰ 預計取餐時間：</label>
+        <div class="grid grid-cols-4 gap-1.5 text-[11px]">
+          <button type="button" onclick="selectPickupMode('現場立即製作')" id="pk-now" class="py-2 rounded-xl font-extrabold border bg-[#213c64] text-white">立即製作</button>
+          <button type="button" onclick="selectPickupMode('15分鐘後取餐')" id="pk-15" class="py-2 rounded-xl font-bold border bg-gray-50 text-gray-700">15分後</button>
+          <button type="button" onclick="selectPickupMode('30分鐘後取餐')" id="pk-30" class="py-2 rounded-xl font-bold border bg-gray-50 text-gray-700">30分後</button>
+          <button type="button" onclick="selectPickupMode('custom')" id="pk-custom" class="py-2 rounded-xl font-bold border bg-gray-50 text-gray-700">指定時間</button>
+        </div>
+        <div id="custom-pickup-box" class="hidden mt-2 flex items-center gap-2">
+          <span class="text-xs font-bold text-gray-600">選擇時間：</span>
+          <input type="time" id="custom-pickup-time" class="border rounded-xl p-2 text-xs font-extrabold bg-gray-50 flex-1">
+        </div>
       </div>
-    </section>
+    </div>
+
+    <div id="category-tabs" class="flex gap-2 overflow-x-auto py-1 sticky top-[68px] bg-gray-50/95 backdrop-blur z-20 no-scrollbar"></div>
+    <div id="menu-container" class="space-y-6">
+      <p class="text-center text-gray-400 py-10 text-xs">正在載入雲端菜單...</p>
+    </div>
   </main>
 
-  <!-- 新增/修改品項 共用 Modal -->
-  <div id="item-modal" class="fixed inset-0 bg-black/60 hidden z-50 flex items-center justify-center p-3 sm:p-4">
-    <div class="bg-white w-full max-w-lg rounded-2xl p-5 sm:p-6 space-y-4 max-h-[92vh] overflow-y-auto shadow-2xl">
+  <div id="bottom-cart-bar" class="fixed bottom-0 inset-x-0 p-3 bg-white/95 backdrop-blur border-t shadow-2xl z-30 hidden">
+    <div class="max-w-md mx-auto flex items-center justify-between gap-3">
+      <div onclick="openCart()" class="cursor-pointer">
+        <p class="text-[11px] text-gray-500 font-bold">已選購 <span id="bottom-cart-count" class="text-[#213c64] font-extrabold">0</span> 杯</p>
+        <p id="bottom-cart-total" class="text-base font-extrabold text-amber-800">NT$0</p>
+      </div>
+      <button onclick="openCart()" class="bg-[#213c64] hover:bg-[#192e4d] text-white px-6 py-3 rounded-xl font-extrabold text-xs shadow-lg transition">
+        前往結帳送單 ➔
+      </button>
+    </div>
+  </div>
+
+  <div id="toast" class="fixed top-20 left-1/2 -translate-x-1/2 bg-gray-900/90 text-white px-4 py-2 rounded-full text-xs font-bold shadow-lg hidden z-[90]">
+    ✅ 已加入購物車
+  </div>
+
+  <!-- 營業時間說明視窗 -->
+  <div id="schedule-modal" class="fixed inset-0 bg-black/60 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-extrabold text-base text-[#213c64]">🕒 營業時間 ＆ 休假公告</h3>
+        <button onclick="toggleScheduleModal()" class="text-gray-400 font-bold text-lg">✕</button>
+      </div>
+      <div id="schedule-modal-body" class="space-y-2 text-xs"></div>
+    </div>
+  </div>
+
+  <!-- 飲品客製與加購彈跳視窗 -->
+  <div id="customize-modal" class="fixed inset-0 bg-black/60 hidden z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 space-y-4 max-h-[88vh] overflow-y-auto shadow-2xl">
+      <div class="flex justify-between items-start border-b pb-3">
+        <div>
+          <h3 id="modal-item-name" class="font-extrabold text-base text-gray-950">品項名稱</h3>
+          <p id="modal-item-desc" class="text-[11px] text-gray-500 mt-0.5"></p>
+        </div>
+        <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 font-bold text-lg px-2">✕</button>
+      </div>
+      <div id="modal-options-container" class="space-y-4 text-xs"></div>
+      <div>
+        <label class="text-[11px] font-bold text-gray-600 block mb-1">特別備註 (選填)</label>
+        <input type="text" id="modal-note" placeholder="例如：杯蓋貼紙註記" class="w-full border rounded-xl p-2.5 text-xs bg-gray-50 focus:outline-none focus:border-[#213c64]">
+      </div>
+      <div class="flex items-center justify-between pt-2 border-t">
+        <div class="flex items-center gap-3">
+          <button onclick="adjustQty(-1)" class="w-9 h-9 rounded-xl border bg-gray-100 font-extrabold text-base flex items-center justify-center">-</button>
+          <span id="modal-qty" class="font-extrabold text-sm w-5 text-center">1</span>
+          <button onclick="adjustQty(1)" class="w-9 h-9 rounded-xl border bg-gray-100 font-extrabold text-base flex items-center justify-center">+</button>
+        </div>
+        <button id="modal-add-btn" onclick="confirmAddToCart()" class="bg-[#213c64] hover:bg-opacity-90 text-white px-6 py-3 rounded-xl font-extrabold text-xs shadow-lg flex items-center gap-2">
+          <span id="modal-add-btn-text">加入購物車</span>
+          <span id="modal-item-price" class="bg-white/20 px-2 py-0.5 rounded-lg">NT$0</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 購物車抽屜 -->
+  <div id="cart-drawer" class="fixed inset-0 bg-black/60 hidden z-50 flex justify-end">
+    <div class="bg-white w-full max-w-sm h-full p-5 flex flex-col justify-between shadow-2xl">
       <div class="flex justify-between items-center border-b pb-3">
-        <h3 id="modal-title" class="text-lg font-extrabold text-gray-900">修改品項與加購設定</h3>
-        <button onclick="closeItemModal()" class="text-gray-400 hover:text-gray-600 font-bold text-lg px-2">✕</button>
+        <h2 class="font-extrabold text-base">🛒 外帶購物車明細</h2>
+        <button onclick="closeCart()" class="text-gray-400 font-bold text-lg px-2">✕</button>
       </div>
-
-      <input type="hidden" id="modal-mode" value="edit">
-      <input type="hidden" id="edit-item-id">
-
-      <div>
-        <label class="text-xs font-bold text-gray-600">所屬分類</label>
-        <select id="edit-cat-name" class="w-full border rounded-xl p-2.5 text-sm mt-1 bg-white focus:outline-none focus:border-[#213c64]">
-          <option value="美式系列 Americano">美式系列 Americano</option>
-          <option value="單品手沖 PourOver">單品手沖 PourOver</option>
-          <option value="拿鐵系列 Cafe Latte">拿鐵系列 Cafe Latte</option>
-          <option value="風味飲品 Beverage">風味飲品 Beverage</option>
-          <option value="NODAY 周邊">NODAY 周邊</option>
-          <option value="微氣泡 Fizzy">微氣泡 Fizzy</option>
-          <option value="季節限定 ＮＥＷ">季節限定 ＮＥＷ</option>
-        </select>
+      <div id="cart-items-list" class="flex-1 overflow-y-auto py-4 space-y-3">
+        <p class="text-center text-gray-400 text-xs py-10">購物車目前是空的...</p>
       </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label class="text-xs font-bold text-gray-600">品項名稱</label>
-          <input type="text" id="edit-name" placeholder="例如：美式咖啡" class="w-full border rounded-xl p-2.5 text-sm mt-1 focus:outline-none focus:border-[#213c64]">
+      <div class="border-t pt-4 space-y-3">
+        <div id="new-member-limit-hint" class="hidden bg-amber-50 border border-amber-200 p-2.5 rounded-xl text-[11px] text-amber-900 font-bold">
+          🆕 首次點餐新客保護：首單上限為 5 杯（或 NT$600），完成首次取餐升級為認證熟客後即自動解除限制！
         </div>
-        <div>
-          <label class="text-xs font-bold text-gray-600">基本價格 (NT$)</label>
-          <input type="number" id="edit-price" placeholder="80" class="w-full border rounded-xl p-2.5 text-sm mt-1 focus:outline-none focus:border-[#213c64]">
+        <div class="flex justify-between items-center font-extrabold text-sm">
+          <span>外帶應付總計：</span>
+          <span id="cart-total" class="text-amber-800 text-lg">NT$0</span>
         </div>
+        <button onclick="submitOrder()" id="submit-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-extrabold text-sm shadow-lg transition">
+          🚀 確認送出外帶訂單
+        </button>
       </div>
+    </div>
+  </div>
 
-      <div>
-        <label class="text-xs font-bold text-gray-600">品項描述 (容量/風味說明)</label>
-        <input type="text" id="edit-desc" placeholder="16oz｜風味說明" class="w-full border rounded-xl p-2.5 text-sm mt-1 focus:outline-none focus:border-[#213c64]">
+  <!-- 首次點餐：真實電話綁定確認視窗 -->
+  <div id="phone-confirm-modal" class="fixed inset-0 bg-black/75 hidden z-[95] flex items-center justify-center p-4 touch-none">
+    <div class="bg-white w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-2xl border-2 border-[#213c64] relative z-[100] pointer-events-auto">
+      <div class="text-center space-y-1">
+        <span class="bg-amber-100 text-amber-900 text-xs font-extrabold px-3 py-1 rounded-full">📱 首次點餐會員綁定確認</span>
+        <h3 class="font-extrabold text-base text-gray-900 pt-1">請確認您的本人手機號碼</h3>
       </div>
-
-      <!-- 1. 飲品溫度與冰量設定 -->
-      <div class="border rounded-xl p-3.5 bg-gray-50 space-y-2">
-        <label class="text-xs font-extrabold text-[#213c64] block">🌡️ 飲品溫度 ＆ 冰量設定：</label>
-        <div class="grid grid-cols-2 gap-2 text-xs">
-          <label class="flex items-center gap-2 bg-white p-2.5 rounded-lg border cursor-pointer shadow-sm">
-            <input type="checkbox" id="opt-ice" class="w-4 h-4 accent-[#213c64]">
-            <span class="font-bold">提供「冰」選項</span>
-          </label>
-          <label class="flex items-center gap-2 bg-white p-2.5 rounded-lg border cursor-pointer shadow-sm">
-            <input type="checkbox" id="opt-hot" class="w-4 h-4 accent-[#213c64]">
-            <span class="font-bold">提供「熱」選項</span>
-          </label>
-        </div>
-        <label class="flex items-center gap-2 bg-white p-2.5 rounded-lg border cursor-pointer shadow-sm text-xs">
-          <input type="checkbox" id="opt-ice-level" class="w-4 h-4 accent-[#213c64]">
-          <span class="font-bold text-blue-800">🧊 點冰飲時提供「冰量選擇 (正常冰 / 少冰 / 微冰 / 去冰)」</span>
-        </label>
+      <div class="bg-gray-50 p-3.5 rounded-xl border text-center space-y-1">
+        <p class="text-xs text-gray-500 font-bold">即將綁定之手機號碼：</p>
+        <p id="confirm-phone-display" class="text-xl font-extrabold text-[#213c64] tracking-wider">0912-345-678</p>
       </div>
-
-      <!-- 2. 配方豆設定 -->
-      <div class="border rounded-xl p-3.5 bg-gray-50 space-y-2">
-        <label class="text-xs font-extrabold text-[#213c64] block">🫘 配方豆設定（可單獨打勾與調整價錢）：</label>
-        <div class="space-y-2 text-xs">
-          <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border shadow-sm">
-            <label class="flex items-center gap-2 cursor-pointer font-bold">
-              <input type="checkbox" id="opt-bean5" class="w-4 h-4 accent-[#213c64]"> 5號中焙
-            </label>
-            <div class="flex items-center gap-1">
-              <span class="text-[11px] text-gray-500">加價 NT$</span>
-              <input type="number" id="price-bean5" class="w-16 border rounded-lg p-1 text-xs text-center font-bold" value="0">
-            </div>
-          </div>
-          <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border shadow-sm">
-            <label class="flex items-center gap-2 cursor-pointer font-bold">
-              <input type="checkbox" id="opt-bean1" class="w-4 h-4 accent-[#213c64]"> 1號淺焙
-            </label>
-            <div class="flex items-center gap-1">
-              <span class="text-[11px] text-gray-500">加價 NT$</span>
-              <input type="number" id="price-bean1" class="w-16 border rounded-lg p-1 text-xs text-center font-bold" value="0">
-            </div>
-          </div>
-        </div>
+      <div class="text-[11px] text-red-600 bg-red-50 p-3 rounded-xl font-bold space-y-1 leading-relaxed border border-red-200">
+        <p>⚠️ 請注意：</p>
+        <p>1. 確認送出後，此電話將與您的 LINE 帳號永久綁定，無法自行隨意更改。</p>
+        <p>2. 餐點皆為現點現做，若填寫空號、假電話或無故未取餐，系統將直接封鎖帳號停權。</p>
       </div>
-
-      <!-- 3. 甜度選項與加價設定 -->
-      <div class="border rounded-xl p-3.5 bg-gray-50 space-y-2">
-        <label class="text-xs font-extrabold text-[#213c64] block">🍯 甜度選項設定（可單獨打勾與調整價錢）：</label>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-          <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border shadow-sm">
-            <label class="flex items-center gap-2 cursor-pointer font-bold"><input type="checkbox" id="opt-sugar-free" class="w-4 h-4 accent-[#213c64]"> 無糖</label>
-            <div class="flex items-center gap-1"><span class="text-[11px] text-gray-500">+$</span><input type="number" id="price-sugar-free" class="w-14 border rounded-lg p-1 text-xs text-center font-bold" value="0"></div>
-          </div>
-          <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border shadow-sm">
-            <label class="flex items-center gap-2 cursor-pointer font-bold"><input type="checkbox" id="opt-sugar-micro" class="w-4 h-4 accent-[#213c64]"> 微糖</label>
-            <div class="flex items-center gap-1"><span class="text-[11px] text-gray-500">+$</span><input type="number" id="price-sugar-micro" class="w-14 border rounded-lg p-1 text-xs text-center font-bold" value="0"></div>
-          </div>
-          <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border shadow-sm">
-            <label class="flex items-center gap-2 cursor-pointer font-bold"><input type="checkbox" id="opt-sugar-half" class="w-4 h-4 accent-[#213c64]"> 半糖</label>
-            <div class="flex items-center gap-1"><span class="text-[11px] text-gray-500">+$</span><input type="number" id="price-sugar-half" class="w-14 border rounded-lg p-1 text-xs text-center font-bold" value="0"></div>
-          </div>
-          <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border shadow-sm">
-            <label class="flex items-center gap-2 cursor-pointer font-bold"><input type="checkbox" id="opt-sugar-normal" class="w-4 h-4 accent-[#213c64]"> 正常甜</label>
-            <div class="flex items-center gap-1"><span class="text-[11px] text-gray-500">+$</span><input type="number" id="price-sugar-normal" class="w-14 border rounded-lg p-1 text-xs text-center font-bold" value="0"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 4. 獨立加購區 -->
-      <div class="border-2 border-amber-300 rounded-xl p-3.5 bg-amber-50/40 space-y-2.5">
-        <div class="flex justify-between items-center">
-          <label class="text-xs font-extrabold text-amber-900 block">🎁 加購區設定（可單獨打勾與調整價錢）：</label>
-          <button type="button" onclick="addCustomAddonRow('', 0, true)" class="text-[11px] bg-amber-600 hover:bg-amber-700 text-white px-2.5 py-1 rounded-lg font-bold shadow-sm">
-            ＋ 新增其他加購項
-          </button>
-        </div>
-
-        <div class="space-y-2 text-xs">
-          <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border border-amber-200 shadow-sm">
-            <label class="flex items-center gap-2 cursor-pointer font-bold text-gray-800">
-              <input type="checkbox" id="opt-addon-shot" class="w-4 h-4 accent-[#213c64]"> 加一份濃縮
-            </label>
-            <div class="flex items-center gap-1">
-              <span class="text-[11px] text-gray-500">加價 NT$</span>
-              <input type="number" id="price-addon-shot" class="w-16 border rounded-lg p-1 text-xs text-center font-bold" value="20">
-            </div>
-          </div>
-
-          <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border border-amber-200 shadow-sm">
-            <label class="flex items-center gap-2 cursor-pointer font-bold text-gray-800">
-              <input type="checkbox" id="opt-addon-oat" class="w-4 h-4 accent-[#213c64]"> 更換燕麥奶
-            </label>
-            <div class="flex items-center gap-1">
-              <span class="text-[11px] text-gray-500">加價 NT$</span>
-              <input type="number" id="price-addon-oat" class="w-16 border rounded-lg p-1 text-xs text-center font-bold" value="25">
-            </div>
-          </div>
-
-          <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border border-amber-200 shadow-sm">
-            <label class="flex items-center gap-2 cursor-pointer font-bold text-gray-800">
-              <input type="checkbox" id="opt-addon-cocoa" class="w-4 h-4 accent-[#213c64]"> 可可粉
-            </label>
-            <div class="flex items-center gap-1">
-              <span class="text-[11px] text-gray-500">加價 NT$</span>
-              <input type="number" id="price-addon-cocoa" class="w-16 border rounded-lg p-1 text-xs text-center font-bold" value="10">
-            </div>
-          </div>
-
-          <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border border-amber-200 shadow-sm">
-            <label class="flex items-center gap-2 cursor-pointer font-bold text-gray-800">
-              <input type="checkbox" id="opt-addon-brownsugar" class="w-4 h-4 accent-[#213c64]"> 黑糖粉
-            </label>
-            <div class="flex items-center gap-1">
-              <span class="text-[11px] text-gray-500">加價 NT$</span>
-              <input type="number" id="price-addon-brownsugar" class="w-16 border rounded-lg p-1 text-xs text-center font-bold" value="10">
-            </div>
-          </div>
-
-          <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border border-amber-200 shadow-sm">
-            <label class="flex items-center gap-2 cursor-pointer font-bold text-gray-800">
-              <input type="checkbox" id="opt-addon-cinnamon" class="w-4 h-4 accent-[#213c64]"> 肉桂粉
-            </label>
-            <div class="flex items-center gap-1">
-              <span class="text-[11px] text-gray-500">加價 NT$</span>
-              <input type="number" id="price-addon-cinnamon" class="w-16 border rounded-lg p-1 text-xs text-center font-bold" value="10">
-            </div>
-          </div>
-
-          <div id="extra-addons-container" class="space-y-2"></div>
-        </div>
-      </div>
-
-      <div class="flex gap-3 pt-2">
-        <button onclick="closeItemModal()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-xl font-bold text-sm transition">取消</button>
-        <button onclick="saveItemModal()" class="flex-1 bg-[#213c64] hover:bg-[#192e4d] text-white py-3 rounded-xl font-bold text-sm shadow-md transition">💾 儲存設定</button>
+      <div class="flex gap-2.5 pt-1">
+        <button type="button" id="cancel-confirm-phone-btn" onclick="closePhoneConfirmModal()" class="flex-1 bg-gray-200 active:bg-gray-300 text-gray-700 py-3.5 rounded-xl font-extrabold text-xs cursor-pointer select-none">
+          返回修改電話
+        </button>
+        <button type="button" id="final-confirm-submit-btn" onclick="confirmPhoneAndSubmit()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white py-3.5 rounded-xl font-extrabold text-xs shadow-lg cursor-pointer select-none">
+          確認無誤並送單
+        </button>
       </div>
     </div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, getDocs, getDoc, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, getDoc, setDoc, addDoc, doc, onSnapshot, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBMdycidtvbE7JmQtvXn-lCqUwod5RxR44",
@@ -409,970 +272,764 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
+    const LIFF_ID = "2012300915-xAvn0ZeX";
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzwgJ2Yt0g2emcxpR7sEpgGtQBWaSoGg6C87KuuLJXp05Sz6ieqR1MOSWDkjP3I6EMJ/exec";
 
-    let cachedCatalog = [];
-    let todayAllOrders = [];
-    let membersMap = {};
-    let soundEnabled = true;
-    let hasUnacceptedOrders = false;
-    let audioCtx = null;
+    let catalog = [];
+    let cart = [];
+    let activeItem = null;
+    let currentQty = 1;
+    let pickupMode = "現場立即製作";
+    let isStoreCurrentlyOpen = true;
+    let storeCloseReason = "";
+    let latestStoreSettings = {};
+    let latestSubmittedOrder = null;
+    let isSubmittingOrder = false;
+    let lineProfile = null;
+    let currentMemberDoc = null;
+    let hasPendingUnacceptedOrder = false;
 
-    function ensureAudioContext() {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
-    }
-    document.addEventListener('click', ensureAudioContext, { once: false });
+    // ==================== 1. LINE LIFF 初始化與安全身分檢核 ====================
+    async function initLiffAndMember() {
+      const nameEl = document.getElementById('member-display-name');
+      const badgeEl = document.getElementById('member-badge');
+      const subEl = document.getElementById('member-sub-note');
+      const avatarEl = document.getElementById('member-avatar');
+      const openLineBtn = document.getElementById('open-in-line-btn');
 
-    function playLoudOrderBell() {
-      if (!soundEnabled) return;
       try {
-        ensureAudioContext();
-        const now = audioCtx.currentTime;
-        const notes = [987.77, 1318.51, 987.77, 1318.51, 1567.98];
-        notes.forEach((freq, idx) => {
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
-          osc.type = "square";
-          osc.frequency.setValueAtTime(freq, now + idx * 0.14);
-          gain.gain.setValueAtTime(0.65, now + idx * 0.14);
-          gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.14 + 0.12);
-          osc.connect(gain);
-          gain.connect(audioCtx.destination);
-          osc.start(now + idx * 0.14);
-          osc.stop(now + idx * 0.14 + 0.13);
-        });
-      } catch (e) {}
-    }
+        if (typeof liff === 'undefined') throw new Error("LIFF SDK 未載入");
+        await liff.init({ liffId: LIFF_ID });
 
-    setInterval(() => {
-      if (hasUnacceptedOrders && soundEnabled) {
-        playLoudOrderBell();
-      }
-    }, 1500);
+        if (!liff.isInClient()) {
+          openLineBtn.classList.remove('hidden');
+        }
 
-    window.testHighVolumeAlarm = function() {
-      soundEnabled = true;
-      document.getElementById('sound-btn').innerText = '🔔 鈴聲：已開啟';
-      playLoudOrderBell();
-    };
+        if (liff.isLoggedIn()) {
+          lineProfile = await liff.getProfile();
+          if (lineProfile.pictureUrl) avatarEl.src = lineProfile.pictureUrl;
+          nameEl.innerText = lineProfile.displayName || "LINE 會員";
 
-    window.toggleSound = function() {
-      soundEnabled = !soundEnabled;
-      const btn = document.getElementById('sound-btn');
-      btn.innerText = soundEnabled ? '🔔 鈴聲：已開啟' : '🔕 鈴聲：已靜音';
-      btn.className = soundEnabled
-        ? 'bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-xl text-xs font-bold shadow transition'
-        : 'bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded-xl text-xs font-bold shadow transition';
-      if (soundEnabled) playLoudOrderBell();
-    };
+          onSnapshot(doc(db, "members", lineProfile.userId), (snap) => {
+            if (snap.exists()) {
+              currentMemberDoc = snap.data();
+              applyMemberStatusToUI();
+            } else {
+              currentMemberDoc = {
+                lineUserId: lineProfile.userId,
+                lineDisplayName: lineProfile.displayName || "",
+                pictureUrl: lineProfile.pictureUrl || "",
+                name: "",
+                phone: "",
+                phoneLocked: false,
+                completedCount: 0,
+                abandonedCount: 0,
+                isBlocked: false
+              };
+              setDoc(doc(db, "members", lineProfile.userId), currentMemberDoc, { merge: true });
+              applyMemberStatusToUI();
+            }
+          });
 
-    window.toggleHistory = function() {
-      document.getElementById('completed-orders-section').classList.toggle('hidden');
-    };
-
-    window.toggleStatsPanel = function() {
-      document.getElementById('stats-panel').classList.toggle('hidden');
-    };
-
-    window.toggleMembersPanel = function() {
-      document.getElementById('members-panel').classList.toggle('hidden');
-    };
-
-    async function sendLinePushMessage(lineUserId, textMessage) {
-      if (!lineUserId || !GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes("example")) return;
-      try {
-        await fetch(GAS_WEB_APP_URL, {
-          method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lineUserId: lineUserId, message: textMessage })
-        });
+          const pendingQ = query(collection(db, "orders"), where("lineUserId", "==", lineProfile.userId));
+          onSnapshot(pendingQ, (snap) => {
+            let pendingOrder = null;
+            snap.forEach(d => {
+              const data = d.data();
+              if (data.status === "pending" || data.status === "accepted") {
+                pendingOrder = { id: d.id, ...data };
+              }
+            });
+            hasPendingUnacceptedOrder = (pendingOrder && pendingOrder.status === "pending");
+            if (pendingOrder && !latestSubmittedOrder) {
+              latestSubmittedOrder = pendingOrder;
+              watchOrderStatus(pendingOrder.id);
+            }
+          });
+        } else {
+          nameEl.innerText = "訪客模式";
+          badgeEl.innerText = "一般網頁";
+          openLineBtn.classList.remove('hidden');
+        }
       } catch (e) {
-        console.warn("LINE Push 推播失敗:", e);
+        console.warn("LIFF 初始化提醒:", e);
+        nameEl.innerText = "訪客模式";
+        badgeEl.innerText = "一般網頁";
+        openLineBtn.classList.remove('hidden');
       }
     }
 
-    onSnapshot(collection(db, "members"), (snap) => {
-      const container = document.getElementById('members-list-container');
-      const list = [];
-      membersMap = {};
-      snap.forEach(d => {
-        const data = d.data();
-        membersMap[d.id] = data;
-        list.push({ id: d.id, ...data });
+    function applyMemberStatusToUI() {
+      if (!currentMemberDoc) return;
+      const badgeEl = document.getElementById('member-badge');
+      const subEl = document.getElementById('member-sub-note');
+      const nameInput = document.getElementById('customer-name');
+      const phoneInput = document.getElementById('customer-phone');
+      const lockTag = document.getElementById('phone-lock-tag');
+      const bindNotice = document.getElementById('phone-bind-notice');
+      const newLimitHint = document.getElementById('new-member-limit-hint');
+
+      if (currentMemberDoc.isBlocked) {
+        document.getElementById('blocked-overlay').classList.remove('hidden');
+        return;
+      } else {
+        document.getElementById('blocked-overlay').classList.add('hidden');
+      }
+
+      const completed = Number(currentMemberDoc.completedCount || 0);
+      if (completed > 0) {
+        badgeEl.innerText = `🟢 認證熟客 (已取餐 ${completed} 次)`;
+        badgeEl.className = "text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-extrabold";
+        subEl.innerText = "感謝支持！吧台接單與完成時將自動發送 LINE 通知";
+        newLimitHint.classList.add('hidden');
+      } else {
+        badgeEl.innerText = "🆕 首次點餐新會員";
+        badgeEl.className = "text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-extrabold";
+        subEl.innerText = "首次下單將綁定您的真實手機號碼（首單上限 5 杯）";
+        newLimitHint.classList.remove('hidden');
+      }
+
+      if (currentMemberDoc.name && !nameInput.value) {
+        nameInput.value = currentMemberDoc.name;
+      } else if (!nameInput.value && lineProfile?.displayName) {
+        nameInput.value = lineProfile.displayName;
+      }
+
+      if (currentMemberDoc.phone && currentMemberDoc.phoneLocked) {
+        phoneInput.value = currentMemberDoc.phone;
+        phoneInput.readOnly = true;
+        phoneInput.className = "w-full border border-emerald-300 rounded-xl p-2.5 text-xs bg-emerald-50/50 text-gray-700 font-extrabold cursor-not-allowed";
+        lockTag.classList.remove('hidden');
+        bindNotice.innerText = "✅ 您的真實電話已與此 LINE 帳號安全綁定（如需變更號碼請洽吧台人員）。";
+        bindNotice.className = "text-[10px] text-emerald-700 font-bold";
+      } else {
+        phoneInput.readOnly = false;
+        lockTag.classList.add('hidden');
+      }
+    }
+
+    initLiffAndMember();
+
+    // ==================== 2. 嚴格台灣手機號碼真實性檢核 ====================
+    function validateTaiwanMobile(rawPhone) {
+      const phone = rawPhone.replace(/[\s-]/g, '');
+      if (!/^09\d{8}$/.test(phone)) {
+        return { valid: false, msg: "請輸入正確的台灣手機號碼（09 開頭共 10 碼數字）！" };
+      }
+      return { valid: true, cleanPhone: phone };
+    }
+
+    // ==================== 3. 自動傳送訂單至 LINE 聊天室 ====================
+    function buildOrderTextMessage(o) {
+      const itemLines = (o.items || []).map(i => {
+        const mods = (i.modifiers && i.modifiers.length > 0) ? i.modifiers.join('/') : '標準';
+        const noteStr = i.note ? ` (備註:${i.note})` : '';
+        return `• ${i.name} x${i.qty} ($${i.price * i.qty})\n  [${mods}]${noteStr}`;
+      }).join('\n');
+      return `📦 【NODAY 外帶訂單 ${o.orderNumber}】\n` +
+             `取餐人：${o.customerInfo}\n` +
+             `預計取餐：${o.pickupTime}\n` +
+             `--------------------\n` +
+             `${itemLines}\n` +
+             `--------------------\n` +
+             `應付總額：NT$${o.totalAmount}\n` +
+             `狀態：⏳ 已送出，等待吧台製作`;
+    }
+
+    window.sendOrderToLineChat = async function() {
+      if (!latestSubmittedOrder) return false;
+      const o = latestSubmittedOrder;
+      const textMsg = buildOrderTextMessage(o);
+      const hintEl = document.getElementById('line-auto-sent-hint');
+
+      if (typeof liff !== 'undefined' && liff.isInClient()) {
+        try {
+          await liff.sendMessages([{ type: 'text', text: textMsg }]);
+          if (hintEl) {
+            hintEl.innerText = `✅ 已自動將訂單 ${o.orderNumber} 回傳至官方帳號聊天室，吧台接單與完成時將自動通知您！`;
+          }
+          return true;
+        } catch (err) {
+          console.warn("背景自動傳訊略過:", err);
+        }
+      }
+      if (hintEl) {
+        hintEl.innerText = `✅ 訂單 ${o.orderNumber} 已送達吧台！接單與製作完成時，官方帳號將自動發送 LINE 通知給您！`;
+      }
+      return false;
+    };
+
+    document.getElementById('customer-name').value = localStorage.getItem('noday_name') || '';
+    document.getElementById('customer-phone').value = localStorage.getItem('noday_phone') || '';
+
+    window.loadLastOrderHistory = function() {
+      try {
+        const lastItems = JSON.parse(localStorage.getItem('noday_last_order') || '[]');
+        if (Array.isArray(lastItems) && lastItems.length > 0) {
+          document.getElementById('reorder-section').classList.remove('hidden');
+          document.getElementById('reorder-summary').innerText = lastItems.map(i => `${i.name} x${i.qty} (${(i.modifiers || []).join('/')})`).join('、');
+        }
+      } catch (e) {}
+    };
+    loadLastOrderHistory();
+
+    window.reorderLastItems = function() {
+      if (!isStoreCurrentlyOpen) { alert(`抱歉，${storeCloseReason}，目前僅供瀏覽菜單喔！`); return; }
+      try {
+        const lastItems = JSON.parse(localStorage.getItem('noday_last_order') || '[]');
+        if (lastItems.length > 0) {
+          lastItems.forEach(i => cart.push({ ...i }));
+          updateCartBadge();
+          showToast("✅ 已將上次點的咖啡加入購物車！");
+        }
+      } catch (e) {}
+    };
+
+    window.selectPickupMode = function(mode) {
+      pickupMode = mode;
+      const modes = { '現場立即製作': 'pk-now', '15分鐘後取餐': 'pk-15', '30分鐘後取餐': 'pk-30', 'custom': 'pk-custom' };
+      Object.entries(modes).forEach(([k, id]) => {
+        document.getElementById(id).className = (k === mode) ? "py-2 rounded-xl font-extrabold border bg-[#213c64] text-white" : "py-2 rounded-xl font-bold border bg-gray-50 text-gray-700";
       });
-
-      if (list.length === 0) {
-        container.innerHTML = `<p class="text-gray-400 py-4 text-center">目前尚無綁定之會員資料</p>`;
-        return;
-      }
-
-      list.sort((a, b) => (b.completedCount || 0) - (a.completedCount || 0));
-
-      container.innerHTML = list.map(m => `
-        <div class="flex flex-wrap justify-between items-center bg-gray-50 p-3 rounded-xl border ${m.isBlocked ? 'border-red-400 bg-red-50/50' : 'border-gray-200'} gap-2">
-          <div class="flex items-center gap-2.5">
-            <img src="${m.pictureUrl || 'https://cdn-icons-png.flaticon.com/512/847/847969.png'}" class="w-8 h-8 rounded-full border object-cover">
-            <div>
-              <div class="flex items-center gap-1.5">
-                <span class="font-extrabold text-gray-900">${m.name || m.lineDisplayName || '未知'}</span>
-                <span class="text-[11px] text-gray-500 font-bold">(LINE: ${m.lineDisplayName || '無'})</span>
-                ${m.isBlocked
-                  ? `<span class="bg-red-600 text-white text-[10px] px-2 py-0.5 rounded-full font-extrabold">🚫 黑名單停權中</span>`
-                  : `<span class="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-extrabold">✅ 正常 (已取餐 ${m.completedCount || 0} 次)</span>`
-                }
-                ${(m.abandonedCount || 0) > 0 ? `<span class="bg-red-100 text-red-700 text-[10px] px-2 py-0.5 rounded-full font-extrabold">⚠️ 棄單 ${m.abandonedCount} 次</span>` : ''}
-              </div>
-              <p class="text-[11px] text-[#213c64] font-extrabold mt-0.5">🔒 綁定電話：${m.phone || '未綁定'}</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <button onclick="editMemberPhone('${m.id}', '${m.phone || ''}')" class="bg-white border hover:bg-gray-100 text-gray-700 px-2.5 py-1 rounded-lg font-bold">修改電話</button>
-            <button onclick="toggleBlockMember('${m.id}', '${m.phone || ''}', ${!m.isBlocked})" class="${m.isBlocked ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'} px-2.5 py-1 rounded-lg font-extrabold">
-              ${m.isBlocked ? '解除封鎖' : '🚫 封鎖帳號'}
-            </button>
-          </div>
-        </div>
-      `).join('');
-    });
-
-    window.editMemberPhone = async function(memberId, oldPhone) {
-      const newPhone = prompt("請輸入要為此會員更改的新手機號碼（10碼）：", oldPhone);
-      if (!newPhone) return;
-      const clean = newPhone.trim();
-      if (!/^09\d{8}$/.test(clean)) {
-        alert("手機格式須為 09 開頭共 10 碼數字！");
-        return;
-      }
-      await updateDoc(doc(db, "members", memberId), { phone: clean, phoneLocked: true });
-      alert("✅ 已更新該會員的綁定電話！");
+      const customBox = document.getElementById('custom-pickup-box');
+      if (mode === 'custom') customBox.classList.remove('hidden');
+      else customBox.classList.add('hidden');
     };
 
-    window.toggleBlockMember = async function(memberId, phone, blockStatus) {
-      const actionText = blockStatus ? "封鎖此會員並列入黑名單" : "解除此會員的黑名單封鎖";
-      if (!confirm(`確定要「${actionText}」嗎？`)) return;
-      await setDoc(doc(db, "members", memberId), { isBlocked: blockStatus }, { merge: true });
-      if (phone) {
-        await setDoc(doc(db, "blocked_phones", phone), { isBlocked: blockStatus, memberId }, { merge: true });
-      }
-    };
-
-    // ==================== 營業設定、營業時間與預約休假 ====================
     const dayNames = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
-    const defaultStoreSettings = {
-      storeMode: "auto",
-      announcementTitle: "📢 外帶取餐提醒",
-      announcementText: "彰化最早開的咖啡店，本店為外帶專門店（無內用），現點現做請耐心等候。訂餐問題請電洽：04-7237933",
-      weeklyHours: {
-        "0": { open: true, start: "07:00", end: "17:00" },
-        "1": { open: true, start: "07:00", end: "17:00" },
-        "2": { open: true, start: "07:00", end: "17:00" },
-        "3": { open: true, start: "07:00", end: "17:00" },
-        "4": { open: true, start: "07:00", end: "17:00" },
-        "5": { open: true, start: "07:00", end: "17:00" },
-        "6": { open: true, start: "07:00", end: "17:00" }
-      },
-      holidays: []
-    };
-
-    let currentStoreSettings = { ...defaultStoreSettings };
-
-    function renderWeeklyHoursUI() {
-      const container = document.getElementById('weekly-hours-container');
-      const wh = currentStoreSettings.weeklyHours || defaultStoreSettings.weeklyHours;
-      const orderDays = [1, 2, 3, 4, 5, 6, 0];
-      container.innerHTML = orderDays.map(d => {
-        const cfg = wh[String(d)] || { open: true, start: "07:00", end: "17:00" };
-        return `
-          <div class="flex items-center justify-between bg-white px-3 py-1.5 rounded-lg border">
-            <label class="flex items-center gap-2 font-bold cursor-pointer">
-              <input type="checkbox" id="wh-open-${d}" ${cfg.open ? 'checked' : ''} class="w-4 h-4 accent-[#213c64]">
-              <span>${dayNames[d]}</span>
-            </label>
-            <div class="flex items-center gap-1.5">
-              <input type="time" id="wh-start-${d}" value="${cfg.start}" class="border rounded px-1.5 py-0.5 text-xs font-bold">
-              <span>至</span>
-              <input type="time" id="wh-end-${d}" value="${cfg.end}" class="border rounded px-1.5 py-0.5 text-xs font-bold">
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function renderHolidaysUI() {
-      const listEl = document.getElementById('holidays-list');
-      const holidays = currentStoreSettings.holidays || [];
-      if (holidays.length === 0) {
-        listEl.innerHTML = `<p class="text-gray-400 text-[11px] py-1">目前無預約休假紀錄</p>`;
-        return;
-      }
-      listEl.innerHTML = holidays.map((h, idx) => `
-        <div class="flex items-center justify-between bg-white p-2 rounded-lg border border-red-200">
-          <div>
-            <span class="font-extrabold text-red-700">${h.startDate} ~ ${h.endDate}</span>
-            <span class="text-gray-600 ml-2 font-bold">${h.note || '店休'}</span>
-          </div>
-          <button type="button" onclick="removeHoliday(${idx})" class="text-red-500 hover:bg-red-50 px-2 py-0.5 rounded font-bold">刪除</button>
-        </div>
-      `).join('');
-    }
-
-    function checkStoreOpenStatus(settings) {
+    function evaluateOpenStatus(settings) {
       const mode = settings.storeMode || 'auto';
-      if (mode === 'open') return { isOpen: true, label: '🟢 強制營業中' };
-      if (mode === 'closed') return { isOpen: false, label: '🔴 強制暫停接單' };
+      if (mode === 'open') return { isOpen: true, reason: '外帶自取・營業接單中' };
+      if (mode === 'closed') return { isOpen: false, reason: '目前店家暫停接單 / 休息中' };
 
       const now = new Date();
-      const yyyy = now.getFullYear();
-      const mm = String(now.getMonth() + 1).padStart(2, '0');
-      const dd = String(now.getDate()).padStart(2, '0');
-      const todayStr = `${yyyy}-${mm}-${dd}`;
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
       const dayIdx = String(now.getDay());
 
       const matchedHoliday = (settings.holidays || []).find(h => todayStr >= h.startDate && todayStr <= h.endDate);
-      if (matchedHoliday) {
-        return { isOpen: false, label: `🏖️ 預約休假中 (${matchedHoliday.note || '公休'})` };
-      }
+      if (matchedHoliday) return { isOpen: false, reason: `今日店休（${matchedHoliday.note || '公休'}）` };
 
-      const dayCfg = (settings.weeklyHours || defaultStoreSettings.weeklyHours)[dayIdx];
-      if (!dayCfg || !dayCfg.open) {
-        return { isOpen: false, label: '🌙 今日固定公休' };
+      const wh = settings.weeklyHours || {};
+      const dayCfg = wh[dayIdx] || { open: true, start: "07:00", end: "17:00" };
+      if (!dayCfg.open) return { isOpen: false, reason: `今日固定公休（${dayNames[now.getDay()]}）` };
+      if (timeStr < dayCfg.start || timeStr > dayCfg.end) return { isOpen: false, reason: '目前非營業時間' };
+      return { isOpen: true, reason: `營業接單中（至 ${dayCfg.end}）` };
+    }
+
+    function applyStoreStatusUI() {
+      const st = evaluateOpenStatus(latestStoreSettings);
+      isStoreCurrentlyOpen = st.isOpen;
+      storeCloseReason = st.reason;
+      const dot = document.getElementById('store-status-dot');
+      const label = document.getElementById('store-status-label');
+      const closedBanner = document.getElementById('closed-notice-banner');
+      const submitBtn = document.getElementById('submit-btn');
+      label.innerText = st.reason;
+      if (st.isOpen) {
+        dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+        closedBanner.classList.add('hidden');
+        submitBtn.disabled = false;
+        submitBtn.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-extrabold text-sm shadow-lg transition";
+        submitBtn.innerText = "🚀 確認送出外帶訂單";
+      } else {
+        dot.className = "w-2 h-2 rounded-full bg-red-400";
+        closedBanner.classList.remove('hidden');
+        submitBtn.disabled = true;
+        submitBtn.className = "w-full bg-gray-400 text-white py-3.5 rounded-xl font-extrabold text-sm cursor-not-allowed";
+        submitBtn.innerText = "🌙 非營業時間僅供瀏覽";
       }
-      if (timeStr < dayCfg.start || timeStr > dayCfg.end) {
-        return { isOpen: false, label: `🌙 非營業時間 (${dayCfg.start}-${dayCfg.end})` };
-      }
-      return { isOpen: true, label: `🟢 營業中 (${dayCfg.start}-${dayCfg.end})` };
     }
 
     onSnapshot(doc(db, "settings", "store"), (snap) => {
       if (snap.exists()) {
-        currentStoreSettings = { ...defaultStoreSettings, ...snap.data() };
-      } else {
-        setDoc(doc(db, "settings", "store"), defaultStoreSettings);
+        latestStoreSettings = snap.data();
+        if (latestStoreSettings.announcementTitle) document.getElementById('ann-title').innerText = latestStoreSettings.announcementTitle;
+        if (latestStoreSettings.announcementText) document.getElementById('ann-text').innerText = latestStoreSettings.announcementText;
       }
-
-      const modeRadio = document.querySelector(`input[name="store-mode"][value="${currentStoreSettings.storeMode || 'auto'}"]`);
-      if (modeRadio) modeRadio.checked = true;
-
-      document.getElementById('setting-ann-title').value = currentStoreSettings.announcementTitle || '';
-      document.getElementById('setting-ann-text').value = currentStoreSettings.announcementText || '';
-
-      renderWeeklyHoursUI();
-      renderHolidaysUI();
-
-      const status = checkStoreOpenStatus(currentStoreSettings);
-      const badge = document.getElementById('header-store-badge');
-      badge.innerText = status.label;
-      badge.className = status.isOpen
-        ? "text-xs bg-emerald-500 text-white px-2.5 py-0.5 rounded-full font-bold"
-        : "text-xs bg-red-500 text-white px-2.5 py-0.5 rounded-full font-bold";
+      applyStoreStatusUI();
     });
 
-    window.addHoliday = async function() {
-      const start = document.getElementById('holiday-start').value;
-      const end = document.getElementById('holiday-end').value || start;
-      const note = document.getElementById('holiday-note').value.trim() || '店休';
-      if (!start) { alert('請選擇休假開始日期！'); return; }
-      if (end < start) { alert('結束日期不能早於開始日期！'); return; }
-
-      currentStoreSettings.holidays = currentStoreSettings.holidays || [];
-      currentStoreSettings.holidays.push({ startDate: start, endDate: end, note });
-      await setDoc(doc(db, "settings", "store"), currentStoreSettings);
-      document.getElementById('holiday-start').value = '';
-      document.getElementById('holiday-end').value = '';
-      document.getElementById('holiday-note').value = '';
-    };
-
-    window.removeHoliday = async function(idx) {
-      currentStoreSettings.holidays.splice(idx, 1);
-      await setDoc(doc(db, "settings", "store"), currentStoreSettings);
-    };
-
-    window.saveStoreSettings = async function() {
-      const modeEl = document.querySelector('input[name="store-mode"]:checked');
-      const weeklyHours = {};
-      for (let d = 0; d <= 6; d++) {
-        weeklyHours[String(d)] = {
-          open: document.getElementById(`wh-open-${d}`).checked,
-          start: document.getElementById(`wh-start-${d}`).value || "07:00",
-          end: document.getElementById(`wh-end-${d}`).value || "17:00"
-        };
+    window.toggleScheduleModal = function() {
+      const modal = document.getElementById('schedule-modal');
+      const body = document.getElementById('schedule-modal-body');
+      const wh = latestStoreSettings.weeklyHours || {};
+      const holidays = latestStoreSettings.holidays || [];
+      const orderDays = [1, 2, 3, 4, 5, 6, 0];
+      let html = `<div class="space-y-1.5"><p class="font-extrabold text-gray-700">📅 每週營業時間：</p>`;
+      orderDays.forEach(d => {
+        const cfg = wh[String(d)] || { open: true, start: "07:00", end: "17:00" };
+        html += `<div class="flex justify-between py-1 border-b"><span class="font-bold">${dayNames[d]}</span><span class="${cfg.open ? 'text-emerald-700 font-extrabold' : 'text-red-500 font-bold'}">${cfg.open ? `${cfg.start} - ${cfg.end}` : '公休'}</span></div>`;
+      });
+      html += `</div>`;
+      if (holidays.length > 0) {
+        html += `<div class="pt-2 space-y-1"><p class="font-extrabold text-red-700">🏖️ 近期店休預告：</p>`;
+        holidays.forEach(h => html += `<p class="bg-red-50 text-red-700 p-2 rounded-lg font-bold">${h.startDate} ~ ${h.endDate}：${h.note || '店休'}</p>`);
+        html += `</div>`;
       }
-      currentStoreSettings.storeMode = modeEl ? modeEl.value : 'auto';
-      currentStoreSettings.announcementTitle = document.getElementById('setting-ann-title').value.trim();
-      currentStoreSettings.announcementText = document.getElementById('setting-ann-text').value.trim();
-      currentStoreSettings.weeklyHours = weeklyHours;
-
-      await setDoc(doc(db, "settings", "store"), currentStoreSettings);
-      alert("✅ 店家公告、營業時間與休假設定已儲存並同步至前台！");
+      body.innerHTML = html;
+      modal.classList.toggle('hidden');
     };
 
-    // ==================== 菜單管理與上下排序 ====================
-    function buildOpts({
-      ice = true, hot = true, iceLevel = true,
-      bean5 = false, priceBean5 = 0, bean1 = false, priceBean1 = 0,
-      sugar = false,
-      shot = false, priceShot = 20,
-      oat = false, priceOat = 25,
-      cocoa = false, priceCocoa = 10,
-      brownSugar = false, priceBrownSugar = 10,
-      cinnamon = false, priceCinnamon = 10
-    } = {}) {
-      return {
-        ice, hot, iceLevel,
-        bean5, priceBean5, bean1, priceBean1,
-        sugarFree: sugar, priceSugarFree: 0,
-        sugarMicro: sugar, priceSugarMicro: 0,
-        sugarHalf: sugar, priceSugarHalf: 0,
-        sugarNormal: sugar, priceSugarNormal: 0,
-        addonShot: shot, priceAddonShot: priceShot,
-        addonOat: oat, priceAddonOat: priceOat,
-        addonCocoa: cocoa, priceAddonCocoa: priceCocoa,
-        addonBrownSugar: brownSugar, priceAddonBrownSugar: priceBrownSugar,
-        addonCinnamon: cinnamon, priceAddonCinnamon: priceCinnamon,
-        extraAddons: []
-      };
-    }
-
-    const defaultMenuCatalog = [
-      {
-        order: 1, category: "美式系列 Americano",
-        items: [
-          { id: "a1", name: "美式咖啡", price: 80, desc: "16oz｜經典純粹配方", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, shot: true }), soldOut: false },
-          { id: "a2", name: "香橙美式", price: 90, desc: "16oz｜清爽果香融合濃縮咖啡", options: buildOpts({ ice: true, hot: false, bean5: true, bean1: true, shot: true }), soldOut: false },
-          { id: "a3", name: "荔枝美式", price: 90, desc: "16oz", options: buildOpts({ ice: true, hot: false, bean5: true, bean1: true, shot: true }), soldOut: false },
-          { id: "a4", name: "黑嘉麗美式", price: 90, desc: "16oz", options: buildOpts({ ice: true, hot: false, bean5: true, bean1: true, shot: true }), soldOut: false },
-          { id: "a5", name: "西西里氣泡美式", price: 110, desc: "16oz｜微氣泡清爽檸檬香", options: buildOpts({ ice: true, hot: false, sugar: true, shot: true }), soldOut: false },
-          { id: "a6", name: "西西里百香美式", price: 100, desc: "16oz", options: buildOpts({ ice: true, hot: false, sugar: true, shot: true }), soldOut: false }
-        ]
-      },
-      {
-        order: 2, category: "單品手沖 PourOver",
-        items: [
-          { id: "p1", name: "衣索比亞西達馬桃子甜心水洗", price: 130, desc: "中淺培┃水果軟糖、白桃、烏龍茶", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false },
-          { id: "p2", name: "中國雲南雲頂莊園荊棘玫瑰日曬", price: 130, desc: "中淺培┃熱帶水果、葡萄、花香尾韻", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false },
-          { id: "p3", name: "蘇門答臘華漢納黑珍珠批次濕撥法", price: 130, desc: "中培｜雪松、焦糖、榛果巧可力", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false },
-          { id: "p4", name: "衣索比亞耶加雪菲日曬(非洲式烘培)", price: 130, desc: "中深培｜熱帶水果、黑巧克力、甜奶油", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false },
-          { id: "p5", name: "衣索比亞西達摩南希寶森林日曬", price: 150, desc: "中淺培┃鳳梨、芒果乾、甜桃、藍莓果醬", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false },
-          { id: "p6", name: "肯亞吉利尼亞加卡穆旺吉水洗", price: 150, desc: "中淺培┃柑橘、覆盆子、蜂蜜、榛果", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false },
-          { id: "p7", name: "哥斯大黎加莫扎特葡萄乾蜜處理", price: 150, desc: "中淺培┃葡萄乾、蜜餞、草莓果醬、紫羅蘭", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false },
-          { id: "p8", name: "衣索比亞古吉歐克羅有機日曬", price: 150, desc: "中淺培┃萊姆、佛手柑、檸檬紅茶", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false },
-          { id: "p9", name: "哥倫比亞薇拉卡斯提歐厭氧日曬", price: 170, desc: "中淺培｜熱帶水果、香蕉、奇異果、紅糖", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false },
-          { id: "p10", name: "哥倫比亞凡爾賽葡萄香檳水洗", price: 170, desc: "中淺培┃香檳汽水、葡萄軟糖、雞尾酒", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false },
-          { id: "p11", name: "哥倫比亞凡爾賽蜜桃果茶水洗", price: 170, desc: "中淺培┃蜜桃、無花果、花果茶", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false },
-          { id: "p12", name: "秘魯薇拉瑞卡花仙子藝妓水洗", price: 170, desc: "中淺培｜密蘋果、杏桃、雞蛋花", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false },
-          { id: "p13", name: "巴拿馬巴魯火山拓荒者藝妓熱發酵處理", price: 200, desc: "中淺培｜鳳梨、甜漬櫻桃、茉莉花", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false },
-          { id: "p14", name: "巴拿馬聖塔克拉拉午夜紫蝶水洗", price: 170, desc: "中淺培｜紫葡萄、紅花香、甜橙", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false },
-          { id: "p15", name: "哥倫比亞聖徒阿里歐愛情靈藥水洗", price: 130, desc: "", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false }
-        ]
-      },
-      {
-        order: 3, category: "拿鐵系列 Cafe Latte",
-        items: [
-          { id: "l1", name: "卡布奇諾", price: 120, desc: "16oz", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, shot: true, oat: true, cocoa: true, brownSugar: true, cinnamon: true }), soldOut: false },
-          { id: "l2", name: "拿鐵", price: 120, desc: "16oz", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, shot: true, oat: true, cocoa: true, brownSugar: true, cinnamon: true }), soldOut: false },
-          { id: "l3", name: "蜂蜜拿鐵", price: 125, desc: "16oz", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false },
-          { id: "l4", name: "香草拿鐵", price: 125, desc: "16oz", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false },
-          { id: "l5", name: "榛果拿鐵", price: 125, desc: "16oz", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false },
-          { id: "l6", name: "焦糖海鹽拿鐵", price: 125, desc: "16oz", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false },
-          { id: "l7", name: "玫瑰拿鐵", price: 125, desc: "16oz", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false },
-          { id: "l8", name: "半半拿鐵", price: 130, desc: "16oz", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, shot: true, oat: true }), soldOut: false },
-          { id: "l9", name: "焦糖瑪其朵", price: 130, desc: "16oz", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false },
-          { id: "l10", name: "宇治抹茶拿鐵", price: 135, desc: "16oz", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false },
-          { id: "l11", name: "威士忌拿鐵", price: 135, desc: "16oz｜大人系微醺風味", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false },
-          { id: "l12", name: "貝里斯奶酒拿鐵", price: 135, desc: "16oz｜大人系微醺風味", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false },
-          { id: "l13", name: "君度橙酒拿鐵", price: 135, desc: "16oz｜大人系微醺風味", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false }
-        ]
-      },
-      {
-        order: 4, category: "風味飲品 Beverage",
-        items: [
-          { id: "b1", name: "歐式花果茶", price: 90, desc: "無咖啡因", options: buildOpts({ ice: true, hot: true }), soldOut: false },
-          { id: "b2", name: "紅茶歐蕾", price: 100, desc: "16oz", options: buildOpts({ ice: true, hot: true, sugar: true, oat: true }), soldOut: false },
-          { id: "b3", name: "風味紅茶歐蕾", price: 110, desc: "16oz", options: buildOpts({ ice: true, hot: true, sugar: true, oat: true }), soldOut: false },
-          { id: "b4", name: "黑糖歐蕾", price: 120, desc: "16oz", options: buildOpts({ ice: true, hot: true, oat: true, brownSugar: true }), soldOut: false },
-          { id: "b5", name: "榛果歐蕾", price: 120, desc: "16oz", options: buildOpts({ ice: true, hot: true, oat: true }), soldOut: false },
-          { id: "b6", name: "香草歐蕾", price: 120, desc: "16oz", options: buildOpts({ ice: true, hot: true, oat: true }), soldOut: false },
-          { id: "b7", name: "法芙娜可可歐蕾", price: 120, desc: "16oz", options: buildOpts({ ice: true, hot: true, oat: true, cocoa: true }), soldOut: false },
-          { id: "b8", name: "焦糖海鹽歐蕾", price: 120, desc: "16oz", options: buildOpts({ ice: true, hot: true, oat: true }), soldOut: false },
-          { id: "b9", name: "玫瑰歐蕾", price: 120, desc: "16oz", options: buildOpts({ ice: true, hot: true, oat: true }), soldOut: false },
-          { id: "b10", name: "宇治抹茶歐蕾", price: 120, desc: "16oz", options: buildOpts({ ice: true, hot: true, oat: true }), soldOut: false },
-          { id: "b11", name: "濃情可可歐蕾", price: 135, desc: "16oz", options: buildOpts({ ice: true, hot: true, oat: true, cocoa: true }), soldOut: false }
-        ]
-      },
-      {
-        order: 5, category: "NODAY 周邊",
-        items: [
-          { id: "m1", name: "脆皮可麗露", price: 70, desc: "", options: buildOpts({ ice: false, hot: false, iceLevel: false }), soldOut: false },
-          { id: "m2", name: "OAT燕麥奶", price: 165, desc: "", options: buildOpts({ ice: false, hot: false, iceLevel: false }), soldOut: false },
-          { id: "m3", name: "酵素漂白濾紙", price: 100, desc: "", options: buildOpts({ ice: false, hot: false, iceLevel: false }), soldOut: false }
-        ]
-      },
-      {
-        order: 6, category: "微氣泡 Fizzy",
-        items: [
-          { id: "f1", name: "蜂蜜檸檬氣泡", price: 110, desc: "", options: buildOpts({ ice: true, hot: false }), soldOut: false },
-          { id: "f2", name: "黑嘉麗氣泡", price: 110, desc: "", options: buildOpts({ ice: true, hot: false }), soldOut: false },
-          { id: "f3", name: "荔枝氣泡", price: 110, desc: "", options: buildOpts({ ice: true, hot: false }), soldOut: false },
-          { id: "f4", name: "香橙氣泡", price: 110, desc: "", options: buildOpts({ ice: true, hot: false }), soldOut: false }
-        ]
-      },
-      {
-        order: 7, category: "季節限定 ＮＥＷ",
-        items: [
-          { id: "s1", name: "桂花釀美式", price: 100, desc: "俐落的黑咖啡遇見自帶仙氣的清甜桂花，清爽回甘不苦澀！", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, shot: true }), soldOut: false },
-          { id: "s2", name: "桂花釀美式-大人味", price: 115, desc: "黑咖啡遇上大吟釀，靈魂瞬間釋放的微醺小可愛", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, shot: true }), soldOut: false },
-          { id: "s3", name: "桂花釀拿鐵", price: 130, desc: "奶香與花香的雙重爆擊！溫柔又濃郁的續命快樂水～", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, shot: true, oat: true }), soldOut: false },
-          { id: "s4", name: "桂花釀拿鐵-大人味", price: 145, desc: "溫柔的陷阱｜添加純米大吟釀風味，專屬大人味的浪漫～", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, shot: true, oat: true }), soldOut: false }
-        ]
-      }
-    ];
-
-    window.initMenuToFirebase = async function() {
-      if (!confirm("確定要將完整預設菜單重置並寫入雲端嗎？")) return;
-      try {
-        for (const cat of defaultMenuCatalog) {
-          await setDoc(doc(db, "menu", cat.category), cat);
-        }
-        alert("🎉 預設菜單已成功寫入雲端！");
-        loadAdminMenu();
-      } catch (e) { console.error(e); alert("操作失敗"); }
-    };
-
-    function getAddonBadges(item) {
-      const opts = item.options || {};
-      const badges = [];
-      if (opts.addonShot) badges.push(`加濃縮(+$${opts.priceAddonShot ?? 20})`);
-      if (opts.addonOat) badges.push(`換燕麥奶(+$${opts.priceAddonOat ?? 25})`);
-      if (opts.addonCocoa) badges.push(`可可粉(+$${opts.priceAddonCocoa ?? 10})`);
-      if (opts.addonBrownSugar) badges.push(`黑糖粉(+$${opts.priceAddonBrownSugar ?? 10})`);
-      if (opts.addonCinnamon) badges.push(`肉桂粉(+$${opts.priceAddonCinnamon ?? 10})`);
-      if (Array.isArray(opts.extraAddons)) {
-        opts.extraAddons.forEach(a => {
-          if (a.enabled && a.name) badges.push(`${a.name}(+$${a.price || 0})`);
-        });
-      }
-      return badges;
-    }
-
-    async function loadAdminMenu() {
-      const container = document.getElementById("admin-menu-list");
+    async function loadMenu() {
       try {
         const querySnapshot = await getDocs(collection(db, "menu"));
-        if (querySnapshot.empty) {
-          container.innerHTML = `<p class="text-amber-600 text-sm">尚無菜單，請點擊右上角「⚡ 還原預設菜單」初始化。</p>`;
-          return;
-        }
-        cachedCatalog = [];
-        querySnapshot.forEach(d => cachedCatalog.push(d.data()));
-        cachedCatalog.sort((a, b) => a.order - b.order);
-
-        container.innerHTML = cachedCatalog.map((cat, catIdx) => `
-          <div class="border rounded-2xl p-4 bg-gray-50">
-            <div class="flex justify-between items-center mb-3">
-              <h3 class="font-extrabold text-gray-900 text-sm">${cat.category}</h3>
-              <div class="flex items-center gap-1">
-                <button onclick="moveCategory(${catIdx}, -1)" class="text-xs bg-white border hover:bg-gray-100 px-2 py-1 rounded font-bold">▲ 分類上移</button>
-                <button onclick="moveCategory(${catIdx}, 1)" class="text-xs bg-white border hover:bg-gray-100 px-2 py-1 rounded font-bold">▼ 分類下移</button>
-              </div>
-            </div>
-            <div class="space-y-2">
-              ${cat.items.map((item, itemIdx) => {
-                const opts = item.options || {};
-                const addonBadges = getAddonBadges(item);
-                const hasSugar = opts.sugarFree || opts.sugarMicro || opts.sugarHalf || opts.sugarNormal;
-                return `
-                  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-3.5 rounded-xl border gap-2 shadow-sm">
-                    <div class="space-y-1">
-                      <p class="font-extrabold text-sm text-gray-900">
-                        ${item.name}
-                        <span class="text-xs text-[#213c64] ml-1.5">NT$${item.price}</span>
-                      </p>
-                      ${item.desc ? `<p class="text-xs text-gray-500">${item.desc}</p>` : ''}
-                      <div class="flex flex-wrap gap-1 pt-0.5">
-                        <span class="text-[10px] ${opts.ice ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-400'} px-1.5 py-0.5 rounded font-bold">${opts.ice ? '冰✓' : '冰✕'}</span>
-                        <span class="text-[10px] ${opts.hot ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-400'} px-1.5 py-0.5 rounded font-bold">${opts.hot ? '熱✓' : '熱✕'}</span>
-                        ${opts.ice && opts.iceLevel !== false ? `<span class="text-[10px] bg-sky-50 text-sky-700 px-1.5 py-0.5 rounded font-bold">冰量可調✓</span>` : ''}
-                        ${opts.bean5 ? `<span class="text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded font-bold">5號豆(+$${opts.priceBean5 || 0})</span>` : ''}
-                        ${opts.bean1 ? `<span class="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded font-bold">1號豆(+$${opts.priceBean1 || 0})</span>` : ''}
-                        ${hasSugar ? `<span class="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded font-bold">甜度可調✓</span>` : ''}
-                        ${addonBadges.map(b => `<span class="text-[10px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded font-bold">🎁 ${b}</span>`).join('')}
-                      </div>
-                    </div>
-                    <div class="flex flex-wrap items-center gap-1.5 self-end sm:self-auto shrink-0">
-                      <button onclick="moveItem('${cat.category}', ${itemIdx}, -1)" title="上移" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1.5 rounded-lg text-xs font-bold">▲</button>
-                      <button onclick="moveItem('${cat.category}', ${itemIdx}, 1)" title="下移" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1.5 rounded-lg text-xs font-bold">▼</button>
-                      <button onclick="openItemModal('edit', '${cat.category}', '${item.id}')" class="bg-blue-50 hover:bg-blue-100 text-[#213c64] px-3 py-1.5 rounded-lg text-xs font-extrabold">修改 / 加購</button>
-                      <button onclick="deleteItem('${cat.category}', '${item.id}')" class="bg-red-50 hover:bg-red-100 text-red-600 px-2.5 py-1.5 rounded-lg text-xs font-bold">刪除</button>
-                      <button onclick="toggleSoldOut('${cat.category}', '${item.id}', ${!item.soldOut})" class="px-3 py-1.5 rounded-lg text-xs font-bold ${item.soldOut ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-700'}">
-                        ${item.soldOut ? '已售完' : '販售中'}
-                      </button>
-                    </div>
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          </div>
-        `).join('');
+        if (querySnapshot.empty) return;
+        catalog = [];
+        querySnapshot.forEach(d => catalog.push(d.data()));
+        catalog.sort((a, b) => a.order - b.order);
+        renderMenu();
       } catch (e) { console.error(e); }
     }
 
-    window.moveCategory = async function(catIdx, dir) {
-      const targetIdx = catIdx + dir;
-      if (targetIdx < 0 || targetIdx >= cachedCatalog.length) return;
-      const tempOrder = cachedCatalog[catIdx].order;
-      cachedCatalog[catIdx].order = cachedCatalog[targetIdx].order;
-      cachedCatalog[targetIdx].order = tempOrder;
-      await setDoc(doc(db, "menu", cachedCatalog[catIdx].category), cachedCatalog[catIdx]);
-      await setDoc(doc(db, "menu", cachedCatalog[targetIdx].category), cachedCatalog[targetIdx]);
-      loadAdminMenu();
-    };
-
-    window.moveItem = async function(categoryName, itemIdx, dir) {
-      const catObj = cachedCatalog.find(c => c.category === categoryName);
-      if (!catObj) return;
-      const targetIdx = itemIdx + dir;
-      if (targetIdx < 0 || targetIdx >= catObj.items.length) return;
-      const temp = catObj.items[itemIdx];
-      catObj.items[itemIdx] = catObj.items[targetIdx];
-      catObj.items[targetIdx] = temp;
-      await setDoc(doc(db, "menu", categoryName), catObj);
-      loadAdminMenu();
-    };
-
-    window.addCustomAddonRow = function(name = '', price = 0, enabled = true) {
-      const container = document.getElementById('extra-addons-container');
-      const row = document.createElement('div');
-      row.className = "flex items-center justify-between bg-white p-2 rounded-lg border border-amber-200 shadow-sm gap-2 extra-addon-row";
-      row.innerHTML = `
-        <div class="flex items-center gap-2 flex-1">
-          <input type="checkbox" class="w-4 h-4 accent-[#213c64] extra-addon-check" ${enabled ? 'checked' : ''}>
-          <input type="text" class="border rounded-lg px-2 py-1 text-xs w-full font-bold extra-addon-name" placeholder="輸入加購名稱 (例：加珍珠)" value="${name}">
+    function renderMenu() {
+      const tabs = document.getElementById('category-tabs');
+      const container = document.getElementById('menu-container');
+      tabs.innerHTML = catalog.map((cat, idx) => `
+        <button onclick="scrollToCat('${cat.category}')" class="whitespace-nowrap px-3.5 py-1.5 rounded-xl text-xs font-bold ${idx === 0 ? 'bg-[#213c64] text-white' : 'bg-white text-gray-700 border'} shadow-sm">
+          ${cat.category}
+        </button>
+      `).join('');
+      container.innerHTML = catalog.map(cat => `
+        <div id="cat-${cat.category}" class="space-y-3 scroll-mt-28">
+          <h2 class="font-extrabold text-sm text-[#213c64] border-b pb-1.5">${cat.category}</h2>
+          <div class="grid grid-cols-1 gap-2.5">
+            ${cat.items.map(item => `
+              <div onclick="${item.soldOut ? '' : `openModal('${cat.category}', '${item.id}')`}" class="bg-white p-3.5 rounded-2xl border shadow-sm flex justify-between items-center ${item.soldOut ? 'opacity-50 bg-gray-100 cursor-not-allowed' : 'cursor-pointer hover:border-[#213c64] active:scale-[0.99] transition'}">
+                <div class="space-y-1 pr-3">
+                  <h3 class="font-extrabold text-xs text-gray-900">${item.name}</h3>
+                  ${item.desc ? `<p class="text-[11px] text-gray-500 leading-relaxed">${item.desc}</p>` : ''}
+                  <p class="font-extrabold text-xs text-[#213c64] pt-0.5">NT$${item.price}</p>
+                </div>
+                <div class="shrink-0">
+                  ${item.soldOut ? '<span class="bg-red-500 text-white px-2.5 py-1 rounded-xl text-[10px] font-bold">已售完</span>' : '<span class="bg-[#213c64]/10 text-[#213c64] px-3 py-1.5 rounded-xl text-xs font-extrabold">查看 / 選購</span>'}
+                </div>
+              </div>
+            `).join('')}
+          </div>
         </div>
-        <div class="flex items-center gap-1 shrink-0">
-          <span class="text-[11px] text-gray-500">+$</span>
-          <input type="number" class="w-14 border rounded-lg p-1 text-xs text-center font-bold extra-addon-price" value="${price}">
-          <button type="button" onclick="this.closest('.extra-addon-row').remove()" class="text-red-500 hover:bg-red-50 px-1.5 py-0.5 rounded font-bold text-xs">✕</button>
-        </div>
-      `;
-      container.appendChild(row);
+      `).join('');
+    }
+
+    window.scrollToCat = function(catName) {
+      document.getElementById(`cat-${catName}`).scrollIntoView({ behavior: 'smooth' });
     };
 
-    window.openItemModal = function(mode, categoryName = '美式系列 Americano', itemId = '') {
-      document.getElementById('modal-mode').value = mode;
-      document.getElementById('extra-addons-container').innerHTML = '';
-
-      if (mode === 'add') {
-        document.getElementById('modal-title').innerText = '＋ 新增品項與加購設定';
-        document.getElementById('edit-cat-name').disabled = false;
-        document.getElementById('edit-cat-name').value = categoryName;
-        document.getElementById('edit-item-id').value = 'item_' + Date.now();
-        document.getElementById('edit-name').value = '';
-        document.getElementById('edit-price').value = '';
-        document.getElementById('edit-desc').value = '';
-
-        document.getElementById('opt-ice').checked = true;
-        document.getElementById('opt-hot').checked = true;
-        document.getElementById('opt-ice-level').checked = true;
-        document.getElementById('opt-bean5').checked = true;
-        document.getElementById('price-bean5').value = 0;
-        document.getElementById('opt-bean1').checked = true;
-        document.getElementById('price-bean1').value = 0;
-
-        document.getElementById('opt-sugar-free').checked = false;
-        document.getElementById('price-sugar-free').value = 0;
-        document.getElementById('opt-sugar-micro').checked = false;
-        document.getElementById('price-sugar-micro').value = 0;
-        document.getElementById('opt-sugar-half').checked = false;
-        document.getElementById('price-sugar-half').value = 0;
-        document.getElementById('opt-sugar-normal').checked = false;
-        document.getElementById('price-sugar-normal').value = 0;
-
-        document.getElementById('opt-addon-shot').checked = true;
-        document.getElementById('price-addon-shot').value = 20;
-        document.getElementById('opt-addon-oat').checked = true;
-        document.getElementById('price-addon-oat').value = 25;
-        document.getElementById('opt-addon-cocoa').checked = false;
-        document.getElementById('price-addon-cocoa').value = 10;
-        document.getElementById('opt-addon-brownsugar').checked = false;
-        document.getElementById('price-addon-brownsugar').value = 10;
-        document.getElementById('opt-addon-cinnamon').checked = false;
-        document.getElementById('price-addon-cinnamon').value = 10;
-      } else {
-        document.getElementById('modal-title').innerText = '修改品項與加購設定';
-        const cat = cachedCatalog.find(c => c.category === categoryName);
-        const targetItem = cat ? cat.items.find(i => i.id === itemId) : null;
-        if (!targetItem) return;
-
-        document.getElementById('edit-cat-name').value = categoryName;
-        document.getElementById('edit-cat-name').disabled = true;
-        document.getElementById('edit-item-id').value = itemId;
-        document.getElementById('edit-name').value = targetItem.name;
-        document.getElementById('edit-price').value = targetItem.price;
-        document.getElementById('edit-desc').value = targetItem.desc || '';
-
-        const opts = targetItem.options || {};
-        document.getElementById('opt-ice').checked = !!opts.ice;
-        document.getElementById('opt-hot').checked = !!opts.hot;
-        document.getElementById('opt-ice-level').checked = opts.iceLevel !== false;
-        document.getElementById('opt-bean5').checked = !!opts.bean5;
-        document.getElementById('price-bean5').value = opts.priceBean5 ?? 0;
-        document.getElementById('opt-bean1').checked = !!opts.bean1;
-        document.getElementById('price-bean1').value = opts.priceBean1 ?? 0;
-
-        document.getElementById('opt-sugar-free').checked = !!opts.sugarFree;
-        document.getElementById('price-sugar-free').value = opts.priceSugarFree ?? 0;
-        document.getElementById('opt-sugar-micro').checked = !!opts.sugarMicro;
-        document.getElementById('price-sugar-micro').value = opts.priceSugarMicro ?? 0;
-        document.getElementById('opt-sugar-half').checked = !!opts.sugarHalf;
-        document.getElementById('price-sugar-half').value = opts.priceSugarHalf ?? 0;
-        document.getElementById('opt-sugar-normal').checked = !!opts.sugarNormal;
-        document.getElementById('price-sugar-normal').value = opts.priceSugarNormal ?? 0;
-
-        document.getElementById('opt-addon-shot').checked = !!opts.addonShot;
-        document.getElementById('price-addon-shot').value = opts.priceAddonShot ?? 20;
-        document.getElementById('opt-addon-oat').checked = !!opts.addonOat;
-        document.getElementById('price-addon-oat').value = opts.priceAddonOat ?? 25;
-        document.getElementById('opt-addon-cocoa').checked = !!opts.addonCocoa;
-        document.getElementById('price-addon-cocoa').value = opts.priceAddonCocoa ?? 10;
-        document.getElementById('opt-addon-brownsugar').checked = !!opts.addonBrownSugar;
-        document.getElementById('price-addon-brownsugar').value = opts.priceAddonBrownSugar ?? 10;
-        document.getElementById('opt-addon-cinnamon').checked = !!opts.addonCinnamon;
-        document.getElementById('price-addon-cinnamon').value = opts.priceAddonCinnamon ?? 10;
-
+    function getActiveAddonsList(item) {
+      const opts = item.options || {};
+      const list = [];
+      if (opts.addonShot !== undefined) {
+        if (opts.addonShot) list.push({ name: '加一份濃縮', price: Number(opts.priceAddonShot || 0) });
+        if (opts.addonOat) list.push({ name: '更換燕麥奶', price: Number(opts.priceAddonOat || 0) });
+        if (opts.addonCocoa) list.push({ name: '可可粉', price: Number(opts.priceAddonCocoa || 0) });
+        if (opts.addonBrownSugar) list.push({ name: '黑糖粉', price: Number(opts.priceAddonBrownSugar || 0) });
+        if (opts.addonCinnamon) list.push({ name: '肉桂粉', price: Number(opts.priceAddonCinnamon || 0) });
         if (Array.isArray(opts.extraAddons)) {
-          opts.extraAddons.forEach(a => addCustomAddonRow(a.name, a.price, a.enabled));
-        }
-      }
-
-      document.getElementById('item-modal').classList.remove('hidden');
-    };
-
-    window.closeItemModal = function() {
-      document.getElementById('item-modal').classList.add('hidden');
-    };
-
-    window.saveItemModal = async function() {
-      const mode = document.getElementById('modal-mode').value;
-      const catName = document.getElementById('edit-cat-name').value;
-      const itemId = document.getElementById('edit-item-id').value;
-      const newName = document.getElementById('edit-name').value.trim();
-      const newPrice = Number(document.getElementById('edit-price').value);
-      const newDesc = document.getElementById('edit-desc').value.trim();
-
-      if (!newName || !newPrice) { alert('請填寫品項名稱與基本價格！'); return; }
-
-      const extraAddons = [];
-      document.querySelectorAll('.extra-addon-row').forEach(row => {
-        const enabled = row.querySelector('.extra-addon-check').checked;
-        const name = row.querySelector('.extra-addon-name').value.trim();
-        const price = Number(row.querySelector('.extra-addon-price').value) || 0;
-        if (name) extraAddons.push({ name, price, enabled });
-      });
-
-      const newOptions = {
-        ice: document.getElementById('opt-ice').checked,
-        hot: document.getElementById('opt-hot').checked,
-        iceLevel: document.getElementById('opt-ice-level').checked,
-        bean5: document.getElementById('opt-bean5').checked,
-        priceBean5: Number(document.getElementById('price-bean5').value) || 0,
-        bean1: document.getElementById('opt-bean1').checked,
-        priceBean1: Number(document.getElementById('price-bean1').value) || 0,
-        sugarFree: document.getElementById('opt-sugar-free').checked,
-        priceSugarFree: Number(document.getElementById('price-sugar-free').value) || 0,
-        sugarMicro: document.getElementById('opt-sugar-micro').checked,
-        priceSugarMicro: Number(document.getElementById('price-sugar-micro').value) || 0,
-        sugarHalf: document.getElementById('opt-sugar-half').checked,
-        priceSugarHalf: Number(document.getElementById('price-sugar-half').value) || 0,
-        sugarNormal: document.getElementById('opt-sugar-normal').checked,
-        priceSugarNormal: Number(document.getElementById('price-sugar-normal').value) || 0,
-        addonShot: document.getElementById('opt-addon-shot').checked,
-        priceAddonShot: Number(document.getElementById('price-addon-shot').value) || 0,
-        addonOat: document.getElementById('opt-addon-oat').checked,
-        priceAddonOat: Number(document.getElementById('price-addon-oat').value) || 0,
-        addonCocoa: document.getElementById('opt-addon-cocoa').checked,
-        priceAddonCocoa: Number(document.getElementById('price-addon-cocoa').value) || 0,
-        addonBrownSugar: document.getElementById('opt-addon-brownsugar').checked,
-        priceAddonBrownSugar: Number(document.getElementById('price-addon-brownsugar').value) || 0,
-        addonCinnamon: document.getElementById('opt-addon-cinnamon').checked,
-        priceAddonCinnamon: Number(document.getElementById('price-addon-cinnamon').value) || 0,
-        extraAddons: extraAddons
-      };
-
-      try {
-        let catObj = cachedCatalog.find(c => c.category === catName);
-        if (!catObj) {
-          catObj = { order: cachedCatalog.length + 1, category: catName, items: [] };
-        }
-        if (mode === 'add') {
-          catObj.items.push({ id: itemId, name: newName, price: newPrice, desc: newDesc, options: newOptions, soldOut: false });
-        } else {
-          catObj.items = catObj.items.map(i => i.id === itemId ? { ...i, name: newName, price: newPrice, desc: newDesc, options: newOptions } : i);
-        }
-        await setDoc(doc(db, "menu", catName), catObj);
-        closeItemModal();
-        loadAdminMenu();
-      } catch (e) { console.error(e); alert("儲存失敗"); }
-    };
-
-    window.deleteItem = async function(categoryName, itemId) {
-      if (!confirm("確定要刪除這個品項嗎？")) return;
-      try {
-        const catObj = cachedCatalog.find(c => c.category === categoryName);
-        catObj.items = catObj.items.filter(i => i.id !== itemId);
-        await setDoc(doc(db, "menu", categoryName), catObj);
-        loadAdminMenu();
-      } catch (e) { console.error(e); alert("刪除失敗"); }
-    };
-
-    window.toggleSoldOut = async function(categoryName, itemId, newStatus) {
-      try {
-        const catObj = cachedCatalog.find(c => c.category === categoryName);
-        catObj.items = catObj.items.map(i => i.id === itemId ? { ...i, soldOut: newStatus } : i);
-        await setDoc(doc(db, "menu", categoryName), catObj);
-        loadAdminMenu();
-      } catch (e) { console.error(e); alert("更新失敗"); }
-    };
-
-    // ==================== 即時訂單監聽、會員信用標籤與防棄單操作 ====================
-    const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
-    onSnapshot(q, (snapshot) => {
-      const container = document.getElementById("orders-container");
-      const completedContainer = document.getElementById("completed-orders-container");
-      const activeOrders = [];
-      const completedOrders = [];
-      todayAllOrders = [];
-      let todayRevenue = 0;
-      let unacceptedCount = 0;
-      const itemSalesMap = {};
-
-      const todayStr = new Date().toLocaleDateString('zh-TW');
-
-      snapshot.forEach(d => {
-        const data = d.data();
-        const orderDate = data.createdAt?.toDate ? data.createdAt.toDate() : new Date();
-        const isToday = orderDate.toLocaleDateString('zh-TW') === todayStr;
-
-        if (isToday) {
-          todayAllOrders.push({ id: d.id, time: orderDate, ...data });
-        }
-
-        if (data.status === "pending" || data.status === "accepted") {
-          activeOrders.push({ id: d.id, time: orderDate, ...data });
-          if (data.status === "pending") unacceptedCount++;
-        } else if (data.status === "completed" && isToday) {
-          completedOrders.push({ id: d.id, time: orderDate, ...data });
-          todayRevenue += Number(data.totalAmount || 0);
-          (data.items || []).forEach(i => {
-            itemSalesMap[i.name] = (itemSalesMap[i.name] || 0) + Number(i.qty || 1);
+          opts.extraAddons.forEach(a => {
+            if (a.enabled && a.name) list.push({ name: a.name, price: Number(a.price || 0) });
           });
         }
+      }
+      return list;
+    }
+
+    window.toggleIceLevelBox = function() {
+      const tempEl = document.querySelector('input[name="opt-temp"]:checked');
+      const box = document.getElementById('ice-level-box');
+      if (!box) return;
+      if (tempEl && tempEl.value === '冰飲') box.classList.remove('hidden');
+      else box.classList.add('hidden');
+    };
+
+    window.openModal = function(catName, itemId) {
+      const cat = catalog.find(c => c.category === catName);
+      if (!cat) return;
+      activeItem = cat.items.find(i => i.id === itemId);
+      if (!activeItem) return;
+      currentQty = 1;
+      document.getElementById('modal-item-name').innerText = activeItem.name;
+      document.getElementById('modal-item-desc').innerText = activeItem.desc || '';
+      document.getElementById('modal-qty').innerText = currentQty;
+      document.getElementById('modal-note').value = '';
+
+      const opts = activeItem.options || {};
+      let html = '';
+      const temps = [];
+      if (opts.ice) temps.push('冰');
+      if (opts.hot) temps.push('熱');
+      if (temps.length > 0) {
+        html += `<div><label class="font-extrabold text-gray-700 block mb-1.5">🌡️ 飲品溫度 (必選)：</label><div class="grid grid-cols-2 gap-2">${temps.map((t, idx) => `<label class="cursor-pointer"><input type="radio" name="opt-temp" value="${t}飲" ${idx === 0 ? 'checked' : ''} class="peer hidden" onchange="toggleIceLevelBox()"><div class="border rounded-xl p-2.5 text-center font-bold peer-checked:bg-[#213c64] peer-checked:text-white peer-checked:border-[#213c64] transition">${t}飲</div></label>`).join('')}</div></div>`;
+      }
+      if (opts.ice && opts.iceLevel !== false) {
+        const iceLevels = ['正常冰', '少冰', '微冰', '去冰'];
+        html += `<div id="ice-level-box"><label class="font-extrabold text-gray-700 block mb-1.5">🧊 冰量選擇：</label><div class="grid grid-cols-4 gap-1.5">${iceLevels.map((lvl, idx) => `<label class="cursor-pointer"><input type="radio" name="opt-ice-level" value="${lvl}" ${idx === 0 ? 'checked' : ''} class="peer hidden"><div class="border rounded-xl py-2 text-center font-bold text-[11px] peer-checked:bg-sky-700 peer-checked:text-white peer-checked:border-sky-700 transition">${lvl}</div></label>`).join('')}</div></div>`;
+      }
+      const beans = [];
+      if (opts.bean5) beans.push({ name: '5號 中焙', price: Number(opts.priceBean5 || 0) });
+      if (opts.bean1) beans.push({ name: '1號 淺焙', price: Number(opts.priceBean1 || 0) });
+      if (beans.length > 0) {
+        html += `<div><label class="font-extrabold text-gray-700 block mb-1.5">🫘 選擇配方豆 (必選)：</label><div class="grid grid-cols-2 gap-2">${beans.map((b, idx) => `<label class="cursor-pointer"><input type="radio" name="opt-bean" value="${b.name}" data-price="${b.price}" ${idx === 0 ? 'checked' : ''} class="peer hidden" onchange="updateModalPrice()"><div class="border rounded-xl p-2.5 text-center font-bold text-[11px] peer-checked:bg-[#213c64] peer-checked:text-white peer-checked:border-[#213c64] transition">${b.name} ${b.price > 0 ? `(+NT$${b.price})` : ''}</div></label>`).join('')}</div></div>`;
+      }
+      const sugars = [];
+      if (opts.sugarFree) sugars.push({ name: '無糖', price: Number(opts.priceSugarFree || 0) });
+      if (opts.sugarMicro) sugars.push({ name: '微糖', price: Number(opts.priceSugarMicro || 0) });
+      if (opts.sugarHalf) sugars.push({ name: '半糖', price: Number(opts.priceSugarHalf || 0) });
+      if (opts.sugarNormal) sugars.push({ name: '正常甜', price: Number(opts.priceSugarNormal || 0) });
+      if (sugars.length > 0) {
+        html += `<div><label class="font-extrabold text-gray-700 block mb-1.5">🍯 甜度選擇 (必選)：</label><div class="grid grid-cols-2 gap-2">${sugars.map((s, idx) => `<label class="cursor-pointer"><input type="radio" name="opt-sugar" value="${s.name}" data-price="${s.price}" ${idx === 0 ? 'checked' : ''} class="peer hidden" onchange="updateModalPrice()"><div class="border rounded-xl p-2.5 text-center font-bold text-[11px] peer-checked:bg-[#213c64] peer-checked:text-white peer-checked:border-[#213c64] transition">${s.name} ${s.price > 0 ? `(+NT$${s.price})` : ''}</div></label>`).join('')}</div></div>`;
+      }
+      const addonsList = getActiveAddonsList(activeItem);
+      if (addonsList.length > 0) {
+        html += `<div><label class="font-extrabold text-[#213c64] block mb-1.5">🎁 加購區 (可複選)：</label><div class="space-y-2">${addonsList.map(addon => `<label class="flex items-center justify-between border rounded-xl p-3 cursor-pointer bg-amber-50/40 hover:bg-amber-50 transition"><span class="font-bold text-gray-800">${addon.name} ${addon.price > 0 ? `<span class="text-amber-700">(+NT$${addon.price})</span>` : ''}</span><input type="checkbox" name="custom-rule-option" data-price="${addon.price}" value="${addon.name}${addon.price > 0 ? ` (+NT$${addon.price})` : ''}" class="w-4 h-4 accent-[#213c64] custom-addon-checkbox" onchange="updateModalPrice()"></label>`).join('')}</div></div>`;
+      }
+      document.getElementById('modal-options-container').innerHTML = html;
+      toggleIceLevelBox();
+      updateModalPrice();
+
+      const addBtn = document.getElementById('modal-add-btn');
+      const addBtnText = document.getElementById('modal-add-btn-text');
+      if (isStoreCurrentlyOpen) {
+        addBtn.disabled = false;
+        addBtn.className = "bg-[#213c64] hover:bg-opacity-90 text-white px-6 py-3 rounded-xl font-extrabold text-xs shadow-lg flex items-center gap-2";
+        addBtnText.innerText = "加入購物車";
+      } else {
+        addBtn.disabled = true;
+        addBtn.className = "bg-gray-400 text-white px-5 py-3 rounded-xl font-extrabold text-xs cursor-not-allowed flex items-center gap-2";
+        addBtnText.innerText = "🌙 非營業時間僅供瀏覽";
+      }
+      document.getElementById('customize-modal').classList.remove('hidden');
+    };
+
+    window.updateModalPrice = function() {
+      if (!activeItem) return;
+      let base = activeItem.price;
+      const beanEl = document.querySelector('input[name="opt-bean"]:checked');
+      if (beanEl) base += Number(beanEl.getAttribute('data-price') || 0);
+      const sugarEl = document.querySelector('input[name="opt-sugar"]:checked');
+      if (sugarEl) base += Number(sugarEl.getAttribute('data-price') || 0);
+      document.querySelectorAll('.custom-addon-checkbox:checked').forEach(el => {
+        base += Number(el.getAttribute('data-price') || 0);
       });
+      document.getElementById('modal-item-price').innerText = `NT$${base * currentQty}`;
+    };
 
-      const hadUnacceptedBefore = hasUnacceptedOrders;
-      hasUnacceptedOrders = unacceptedCount > 0;
-      const alarmBar = document.getElementById('unaccepted-alarm-bar');
-      if (hasUnacceptedOrders) {
-        alarmBar.classList.remove('hidden');
-        if (!hadUnacceptedBefore) playLoudOrderBell();
-      } else {
-        alarmBar.classList.add('hidden');
+    window.closeModal = function() {
+      document.getElementById('customize-modal').classList.add('hidden');
+    };
+
+    window.adjustQty = function(change) {
+      currentQty += change;
+      if (currentQty < 1) currentQty = 1;
+      document.getElementById('modal-qty').innerText = currentQty;
+      updateModalPrice();
+    };
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.classList.remove('hidden');
+      setTimeout(() => t.classList.add('hidden'), 2200);
+    }
+
+    window.confirmAddToCart = function() {
+      if (!isStoreCurrentlyOpen) { alert(`抱歉，${storeCloseReason}，目前僅供瀏覽菜單喔！`); return; }
+      if (!activeItem) return;
+      const modifiers = [];
+      let finalUnitPrice = activeItem.price;
+      const tempEl = document.querySelector('input[name="opt-temp"]:checked');
+      if (tempEl) {
+        modifiers.push(tempEl.value);
+        if (tempEl.value === '冰飲') {
+          const iceLvlEl = document.querySelector('input[name="opt-ice-level"]:checked');
+          if (iceLvlEl) modifiers.push(iceLvlEl.value);
+        }
       }
-
-      document.getElementById('stat-pending').innerText = `${activeOrders.length} 筆`;
-      document.getElementById('stat-completed').innerText = `${completedOrders.length} 筆`;
-      document.getElementById('stat-revenue').innerText = `NT$${todayRevenue}`;
-
-      const topListEl = document.getElementById('top-selling-list');
-      const sortedSales = Object.entries(itemSalesMap).sort((a, b) => b[1] - a[1]);
-      if (sortedSales.length === 0) {
-        topListEl.innerHTML = `<p class="text-gray-400 col-span-4">今日尚無已完成銷售統計</p>`;
-      } else {
-        topListEl.innerHTML = sortedSales.map(([name, count], idx) => `
-          <div class="bg-amber-50/70 border border-amber-200 p-2.5 rounded-xl flex justify-between items-center">
-            <span class="font-bold text-gray-800">${idx + 1}. ${name}</span>
-            <span class="font-extrabold text-amber-800 bg-white px-2 py-0.5 rounded-full border">${count} 杯</span>
-          </div>
-        `).join('');
+      const beanEl = document.querySelector('input[name="opt-bean"]:checked');
+      if (beanEl) {
+        const p = Number(beanEl.getAttribute('data-price') || 0);
+        modifiers.push(p > 0 ? `${beanEl.value}(+$${p})` : beanEl.value);
+        finalUnitPrice += p;
       }
+      const sugarEl = document.querySelector('input[name="opt-sugar"]:checked');
+      if (sugarEl) {
+        const p = Number(sugarEl.getAttribute('data-price') || 0);
+        modifiers.push(p > 0 ? `${sugarEl.value}(+$${p})` : sugarEl.value);
+        finalUnitPrice += p;
+      }
+      document.querySelectorAll('input[name="custom-rule-option"]:checked').forEach(el => {
+        modifiers.push(el.value);
+        finalUnitPrice += Number(el.getAttribute('data-price') || 0);
+      });
+      const note = document.getElementById('modal-note').value.trim();
+      cart.push({ id: activeItem.id, name: activeItem.name, price: finalUnitPrice, qty: currentQty, modifiers, note });
+      updateCartBadge();
+      closeModal();
+      showToast(`✅ 已加入：${activeItem.name} x${currentQty}`);
+    };
 
-      if (activeOrders.length === 0) {
-        container.innerHTML = `<p class="text-gray-400 text-sm py-6 text-center">目前沒有待處理的新訂單...</p>`;
+    window.openCart = function() {
+      const listEl = document.getElementById('cart-items-list');
+      const totalEl = document.getElementById('cart-total');
+      if (cart.length === 0) {
+        listEl.innerHTML = `<p class="text-center text-gray-400 text-xs py-10">購物車目前是空的...</p>`;
+        totalEl.innerText = 'NT$0';
       } else {
-        container.innerHTML = activeOrders.map(order => {
-          const isPending = order.status === "pending";
-          const timeStr = order.time.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
-          const phoneMatch = order.customerPhone || (order.customerInfo && order.customerInfo.match(/\d{8,10}/)?.[0]) || '';
-          const orderNum = order.orderNumber || '#---';
-          const pickupTime = order.pickupTime || '現場立即製作';
-
-          const mDoc = (order.lineUserId && membersMap[order.lineUserId]) || {};
-          const completedCnt = Number(mDoc.completedCount ?? order.memberCompletedCount ?? 0);
-          const abandonedCnt = Number(mDoc.abandonedCount ?? order.memberAbandonedCount ?? 0);
-
-          let trustBadgeHtml = '';
-          if (abandonedCnt > 0) {
-            trustBadgeHtml = `<span class="bg-red-100 text-red-700 border border-red-300 text-xs font-extrabold px-2.5 py-0.5 rounded-full">🔴 ⚠️ 曾有棄單紀錄 (${abandonedCnt}次)</span>`;
-          } else if (completedCnt > 0) {
-            trustBadgeHtml = `<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-extrabold px-2.5 py-0.5 rounded-full">🟢 認證熟客 (已取餐 ${completedCnt} 次)</span>`;
-          } else {
-            trustBadgeHtml = `<span class="bg-amber-100 text-amber-900 border border-amber-300 text-xs font-extrabold px-2.5 py-0.5 rounded-full">🟡 🆕 首次點餐新客</span>`;
-          }
-
-          return `
-            <div class="border-2 ${isPending ? 'alarm-card' : 'border-blue-500 bg-blue-50/30'} p-4 rounded-2xl shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div class="space-y-1.5 w-full">
-                <div class="flex flex-wrap items-center gap-2">
-                  <span class="bg-[#213c64] text-white text-sm font-extrabold px-3 py-1 rounded-xl shadow">${orderNum}</span>
-                  <span class="${isPending ? 'bg-red-600' : 'bg-blue-600'} text-white text-xs font-extrabold px-2.5 py-1 rounded-full">
-                    ${isPending ? '🚨 新單未接收' : '⏳ 已接單製作中'}
-                  </span>
-                  <span class="bg-amber-100 text-amber-900 text-xs font-extrabold px-2.5 py-1 rounded-full border border-amber-300">
-                    ⏰ ${pickupTime}
-                  </span>
-                  ${trustBadgeHtml}
-                  <span class="text-xs text-gray-500 font-bold">下單時間 ${timeStr}</span>
-                </div>
-                <div class="flex flex-wrap items-center gap-2.5 pt-1">
-                  <h3 class="font-extrabold text-base text-gray-900">${order.customerInfo}</h3>
-                  ${order.lineDisplayName ? `<span class="text-xs text-gray-500 font-bold">(LINE: ${order.lineDisplayName})</span>` : ''}
-                  ${phoneMatch ? `<a href="tel:${phoneMatch}" class="inline-flex items-center gap-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-2.5 py-1 rounded-lg text-xs font-extrabold transition">📞 一鍵撥號 (${phoneMatch})</a>` : ''}
-                </div>
-                <div class="mt-2 space-y-1 text-sm text-gray-800 bg-white/80 p-3 rounded-xl border">
-                  ${order.items.map(i => `<p>• <b>${i.name}</b> x${i.qty} <span class="text-xs text-[#213c64] font-bold">(${i.modifiers.join(' / ') || '無客製'})</span> ${i.note ? `<span class="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">備註: ${i.note}</span>` : ''}</p>`).join('')}
-                </div>
-                <p class="font-extrabold text-amber-900 pt-1 text-sm">應收總計：NT$${order.totalAmount}</p>
-              </div>
-              <div class="flex flex-wrap md:flex-col gap-2 w-full md:w-auto shrink-0">
-                ${isPending ? `
-                  <button onclick="acceptOrder('${order.id}', '${order.lineUserId || ''}', '${order.orderNumber || ''}')" class="flex-1 bg-red-600 hover:bg-red-700 text-white px-6 py-3.5 rounded-xl font-extrabold text-sm shadow-lg transition animate-bounce">
-                    🔔 接收訂單 (通知已接單)
-                  </button>
-                ` : `
-                  <button onclick="completeOrder('${order.id}', '${order.lineUserId || ''}', '${order.orderNumber || ''}')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3.5 rounded-xl font-extrabold text-sm shadow-lg transition">
-                    ✓ 完成製作 (通知取餐)
-                  </button>
-                `}
-                <div class="flex gap-1.5 w-full">
-                  <button onclick="cancelOrder('${order.id}')" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-xl font-bold text-xs transition">
-                    一般取消
-                  </button>
-                  <button onclick="markOrderAbandoned('${order.id}', '${order.lineUserId || ''}', '${phoneMatch}', '${order.customerInfo}')" class="flex-1 bg-red-100 hover:bg-red-600 hover:text-white text-red-700 px-3 py-2 rounded-xl font-extrabold text-xs transition">
-                    🚫 棄單封鎖
-                  </button>
-                </div>
-              </div>
-            </div>
-          `;
+        let total = 0;
+        listEl.innerHTML = cart.map((item, idx) => {
+          const itemTotal = item.price * item.qty;
+          total += itemTotal;
+          return `<div class="flex justify-between items-center border-b pb-3 text-xs"><div class="pr-2"><p class="font-extrabold text-gray-900">${item.name} x${item.qty}</p><p class="text-[11px] text-gray-500 mt-0.5">${item.modifiers.join(' / ')} ${item.note ? `[備註: ${item.note}]` : ''}</p></div><div class="flex items-center gap-2 shrink-0"><span class="font-extrabold text-[#213c64]">NT$${itemTotal}</span><button onclick="removeFromCart(${idx})" class="text-red-500 font-bold px-2 py-1 rounded-lg bg-red-50">刪除</button></div></div>`;
         }).join('');
+        totalEl.innerText = `NT$${total}`;
       }
-
-      if (completedOrders.length === 0) {
-        completedContainer.innerHTML = `<p class="text-xs text-gray-400">尚無今日已完成訂單</p>`;
-      } else {
-        completedContainer.innerHTML = completedOrders.map(o => `
-          <div class="flex justify-between items-center bg-gray-50 p-2.5 rounded-xl border text-xs">
-            <div>
-              <span class="font-extrabold text-[#213c64] mr-1">${o.orderNumber || ''}</span>
-              <span class="font-bold text-gray-800">${o.customerInfo}</span>
-              <span class="text-gray-500 ml-2">${o.items.map(i => `${i.name}x${i.qty}`).join(', ')}</span>
-            </div>
-            <span class="font-extrabold text-emerald-700">NT$${o.totalAmount}</span>
-          </div>
-        `).join('');
-      }
-    });
-
-    window.acceptOrder = async function(orderId, lineUserId, orderNum) {
-      await updateDoc(doc(db, "orders", orderId), { status: "accepted" });
-      if (lineUserId) {
-        const msg = `🔥 【NODAY 吧台通知】\n親愛的客人，您的訂單 ${orderNum} 吧台已接單！\n正在為您現磨萃取中，請耐心等候。`;
-        await sendLinePushMessage(lineUserId, msg);
-      }
+      document.getElementById('cart-drawer').classList.remove('hidden');
     };
 
-    window.completeOrder = async function(orderId, lineUserId, orderNum) {
-      await updateDoc(doc(db, "orders", orderId), { status: "completed" });
-      if (lineUserId) {
-        try {
-          await setDoc(doc(db, "members", lineUserId), {
-            completedCount: increment(1)
-          }, { merge: true });
-        } catch (e) {}
-
-        const msg = `🎉 【NODAY 取餐通知】\n親愛的客人，您的餐點 ${orderNum} 已製作完成！\n請憑號碼牌至吧台領取您的咖啡，謝謝您！`;
-        await sendLinePushMessage(lineUserId, msg);
-      }
+    window.closeCart = function() {
+      document.getElementById('cart-drawer').classList.add('hidden');
     };
 
-    window.cancelOrder = async function(orderId) {
-      if (!confirm("確定要一般取消並刪除這筆訂單嗎？（不列入黑名單）")) return;
-      await deleteDoc(doc(db, "orders", orderId));
+    window.removeFromCart = function(idx) {
+      cart.splice(idx, 1);
+      updateCartBadge();
+      openCart();
     };
 
-    window.markOrderAbandoned = async function(orderId, lineUserId, phone, customerInfo) {
-      if (!confirm(`⚠️ 確定要將【${customerInfo}】標記為「惡意棄單」並立即封鎖他的 LINE 帳號與電話嗎？\n\n封鎖後該客人將無法再使用線上點餐！`)) return;
+    function updateCartBadge() {
+      const count = cart.reduce((sum, item) => sum + item.qty, 0);
+      const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+      document.getElementById('cart-badge').innerText = count;
+      document.getElementById('bottom-cart-count').innerText = count;
+      document.getElementById('bottom-cart-total').innerText = `NT$${total}`;
+      const bottomBar = document.getElementById('bottom-cart-bar');
+      if (count > 0) bottomBar.classList.remove('hidden');
+      else bottomBar.classList.add('hidden');
+    }
+
+    let customerAudioCtx = null;
+    function playPickupReadyChime() {
       try {
-        if (lineUserId) {
-          await setDoc(doc(db, "members", lineUserId), {
-            abandonedCount: increment(1),
-            isBlocked: true
-          }, { merge: true });
+        if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 500]);
+        if (!customerAudioCtx) customerAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (customerAudioCtx.state === 'suspended') customerAudioCtx.resume();
+        const now = customerAudioCtx.currentTime;
+        [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
+          const osc = customerAudioCtx.createOscillator();
+          const gain = customerAudioCtx.createGain();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(freq, now + idx * 0.15);
+          gain.gain.setValueAtTime(0.4, now + idx * 0.15);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.15 + 0.35);
+          osc.connect(gain);
+          gain.connect(customerAudioCtx.destination);
+          osc.start(now + idx * 0.15);
+          osc.stop(now + idx * 0.15 + 0.35);
+        });
+      } catch (e) {}
+    }
+
+    function watchOrderStatus(orderId) {
+      const banner = document.getElementById('active-order-banner');
+      const numBadge = document.getElementById('order-number-badge');
+      const badge = document.getElementById('order-status-badge');
+      const text = document.getElementById('order-status-text');
+      banner.classList.remove('hidden');
+      let notifiedCompleted = false;
+
+      onSnapshot(doc(db, "orders", orderId), (snap) => {
+        if (!snap.exists()) return;
+        const data = snap.data();
+        numBadge.innerText = data.orderNumber || '#001';
+        if (data.status === 'completed') {
+          badge.className = "bg-emerald-600 text-white text-xs font-extrabold px-3 py-1 rounded-full animate-bounce";
+          badge.innerText = "🎉 製作完成・請取餐";
+          text.innerText = `親愛的 ${data.customerInfo}，您的餐點好囉！請憑號碼牌【${data.orderNumber || ''}】至吧台取餐！`;
+          if (!notifiedCompleted) {
+            notifiedCompleted = true;
+            playPickupReadyChime();
+          }
+        } else if (data.status === 'accepted') {
+          badge.className = "bg-blue-600 text-white text-xs font-extrabold px-3 py-1 rounded-full";
+          badge.innerText = "🔥 吧台已接單製作中";
+          text.innerText = `吧台已接收您的 ${data.orderNumber || ''} 訂單（${data.pickupTime || '立即製作'}），正在為您現磨萃取中！`;
+        } else {
+          badge.className = "bg-amber-100 text-amber-800 text-xs font-extrabold px-3 py-1 rounded-full";
+          badge.innerText = "⏳ 等待吧台確認接單";
+          text.innerText = `已送出 ${data.orderNumber || ''} 訂單（共 NT$${data.totalAmount}），等待吧台人員確認中。`;
         }
-        if (phone) {
-          await setDoc(doc(db, "blocked_phones", phone), {
-            isBlocked: true,
-            customerInfo: customerInfo,
-            lineUserId: lineUserId || ""
-          }, { merge: true });
-        }
-        await deleteDoc(doc(db, "orders", orderId));
-        alert(`🚫 已將 ${customerInfo} 列入棄單黑名單並封鎖！`);
+      });
+    }
+
+    async function generateTodayOrderNumber() {
+      try {
+        const snap = await getDocs(collection(db, "orders"));
+        const todayStr = new Date().toLocaleDateString('zh-TW');
+        let count = 0;
+        snap.forEach(d => {
+          const dt = d.data().createdAt?.toDate ? d.data().createdAt.toDate() : new Date();
+          if (dt.toLocaleDateString('zh-TW') === todayStr) count++;
+        });
+        return `#${String(count + 1).padStart(3, '0')}`;
       } catch (e) {
-        console.error(e);
-        alert("封鎖操作失敗");
+        return `#${String(Math.floor(100 + Math.random() * 900))}`;
+      }
+    }
+
+    // ==================== 4. 首次點餐電話綁定彈窗控制（已補齊並鎖定背景滑動） ====================
+    window.closePhoneConfirmModal = function() {
+      document.getElementById('phone-confirm-modal').classList.add('hidden');
+      document.body.classList.remove('modal-open');
+      document.getElementById('customer-phone').focus();
+    };
+
+    window.confirmPhoneAndSubmit = async function() {
+      const confirmBtn = document.getElementById('final-confirm-submit-btn');
+      if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.innerText = "⏳ 送單中...";
+      }
+      document.getElementById('phone-confirm-modal').classList.add('hidden');
+      document.body.classList.remove('modal-open');
+      await executeFinalOrderSubmit();
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.innerText = "確認無誤並送單";
       }
     };
 
-    window.exportTodayCSV = function() {
-      if (todayAllOrders.length === 0) {
-        alert("今日尚無訂單可匯出！");
+    window.submitOrder = async function() {
+      applyStoreStatusUI();
+      if (!isStoreCurrentlyOpen) { alert(`抱歉，${storeCloseReason}，目前僅供瀏覽菜單，無法送出訂單喔！`); closeCart(); return; }
+      if (currentMemberDoc?.isBlocked) { document.getElementById('blocked-overlay').classList.remove('hidden'); closeCart(); return; }
+      if (hasPendingUnacceptedOrder) { alert("⏳ 您目前有一筆訂單正在等待吧台確認接單中！\n為避免重複下單，請待吧台按下接收後再加點喔！"); closeCart(); return; }
+
+      const customerName = document.getElementById('customer-name').value.trim();
+      const rawPhone = document.getElementById('customer-phone').value.trim();
+      if (!customerName || customerName.length < 2) { alert('請填寫正確的取餐人姓名（至少 2 個字）！'); closeCart(); document.getElementById('customer-name').focus(); return; }
+
+      const phoneCheck = validateTaiwanMobile(rawPhone);
+      if (!phoneCheck.valid) { alert(phoneCheck.msg); closeCart(); document.getElementById('customer-phone').focus(); return; }
+      if (cart.length === 0) { alert('購物車是空的喔！'); return; }
+
+      try {
+        const phoneBlockSnap = await getDoc(doc(db, "blocked_phones", phoneCheck.cleanPhone));
+        if (phoneBlockSnap.exists() && phoneBlockSnap.data().isBlocked) {
+          document.getElementById('blocked-overlay').classList.remove('hidden');
+          closeCart();
+          return;
+        }
+      } catch (e) {}
+
+      const totalCups = cart.reduce((sum, i) => sum + i.qty, 0);
+      const totalAmount = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
+      const completedCount = Number(currentMemberDoc?.completedCount || 0);
+
+      if (completedCount === 0 && (totalCups > 5 || totalAmount > 600)) {
+        alert(`🛡️ 首次點餐新客保護提醒：\n\n首次線上點餐單筆上限為「5 杯」或「NT$600」（目前選購 ${totalCups} 杯 / NT$${totalAmount}）。\n\n只要完成首次取餐升級為熟客後即自動解除限制！若為團體大額訂購，請直接電洽門市：04-7237933 確認。`);
         return;
       }
-      const headers = ["取餐號碼", "下單時間", "顧客資訊", "LINE名稱", "預計取餐", "訂單狀態", "點購明細", "總金額(NT$)"];
-      const rows = todayAllOrders.map(o => {
-        const timeStr = o.time.toLocaleTimeString('zh-TW');
-        const statusMap = { pending: "未接單", accepted: "製作中", completed: "已完成" };
-        const itemsStr = (o.items || []).map(i => `${i.name}x${i.qty}(${(i.modifiers || []).join('/')})`).join('；');
-        return [
-          o.orderNumber || "",
-          timeStr,
-          `"${(o.customerInfo || "").replace(/"/g, '""')}"`,
-          `"${(o.lineDisplayName || "").replace(/"/g, '""')}"`,
-          o.pickupTime || "立即製作",
-          statusMap[o.status] || o.status,
-          `"${itemsStr.replace(/"/g, '""')}"`,
-          o.totalAmount || 0
-        ].join(",");
-      });
 
-      const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\n");
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      const dateStr = new Date().toISOString().slice(0, 10);
-      a.href = url;
-      a.download = `NODAY_營業報表_${dateStr}.csv`;
-      a.click();
+      if (pickupMode === 'custom') {
+        const customVal = document.getElementById('custom-pickup-time').value;
+        if (!customVal) { alert('請選擇您的指定取餐時間！'); closeCart(); return; }
+      }
+
+      if (!currentMemberDoc?.phoneLocked) {
+        closeCart();
+        const formatted = `${phoneCheck.cleanPhone.slice(0,4)}-${phoneCheck.cleanPhone.slice(4,7)}-${phoneCheck.cleanPhone.slice(7)}`;
+        document.getElementById('confirm-phone-display').innerText = formatted;
+        document.getElementById('phone-confirm-modal').classList.remove('hidden');
+        document.body.classList.add('modal-open');
+        return;
+      }
+
+      await executeFinalOrderSubmit();
     };
 
-    loadAdminMenu();
+    async function executeFinalOrderSubmit() {
+      if (isSubmittingOrder) return;
+      isSubmittingOrder = true;
+      const submitBtn = document.getElementById('submit-btn');
+      submitBtn.disabled = true;
+      submitBtn.innerText = "⏳ 正在送出訂單...";
+
+      const customerName = document.getElementById('customer-name').value.trim();
+      const cleanPhone = validateTaiwanMobile(document.getElementById('customer-phone').value.trim()).cleanPhone;
+      let finalPickupTime = pickupMode;
+      if (pickupMode === 'custom') {
+        finalPickupTime = `指定 ${document.getElementById('custom-pickup-time').value} 取餐`;
+      }
+
+      try {
+        if (!customerAudioCtx) customerAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (customerAudioCtx.state === 'suspended') customerAudioCtx.resume();
+      } catch (e) {}
+
+      localStorage.setItem('noday_name', customerName);
+      localStorage.setItem('noday_phone', cleanPhone);
+      localStorage.setItem('noday_last_order', JSON.stringify(cart));
+
+      const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+      const customerInfo = `${customerName} (${cleanPhone})`;
+      const orderNumber = await generateTodayOrderNumber();
+      const memberCompleted = Number(currentMemberDoc?.completedCount || 0);
+      const memberAbandoned = Number(currentMemberDoc?.abandonedCount || 0);
+      const userId = lineProfile?.userId || `web_${cleanPhone}`;
+
+      try {
+        const updatedMemberData = {
+          lineUserId: userId,
+          lineDisplayName: lineProfile?.displayName || customerName,
+          pictureUrl: lineProfile?.pictureUrl || "",
+          name: customerName,
+          phone: cleanPhone,
+          phoneLocked: true,
+          completedCount: memberCompleted,
+          abandonedCount: memberAbandoned,
+          isBlocked: false,
+          updatedAt: serverTimestamp()
+        };
+        await setDoc(doc(db, "members", userId), updatedMemberData, { merge: true });
+        currentMemberDoc = updatedMemberData;
+        applyMemberStatusToUI();
+
+        const orderPayload = {
+          orderNumber: orderNumber,
+          orderType: "外帶自取",
+          pickupTime: finalPickupTime,
+          customerName: customerName,
+          customerPhone: cleanPhone,
+          customerInfo: customerInfo,
+          lineUserId: userId,
+          lineDisplayName: lineProfile?.displayName || "",
+          memberCompletedCount: memberCompleted,
+          memberAbandonedCount: memberAbandoned,
+          items: cart,
+          totalAmount: totalAmount,
+          status: "pending",
+          createdAt: serverTimestamp()
+        };
+
+        const docRef = await addDoc(collection(db, "orders"), orderPayload);
+        latestSubmittedOrder = { id: docRef.id, ...orderPayload };
+        cart = [];
+        updateCartBadge();
+        closeCart();
+        watchOrderStatus(docRef.id);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        showToast(`🎉 訂單 ${orderNumber} 已送出！`);
+
+        await sendOrderToLineChat();
+      } catch (e) {
+        console.error(e);
+        alert("送出失敗，請檢查網路連線後重試");
+      } finally {
+        isSubmittingOrder = false;
+        applyStoreStatusUI();
+      }
+    }
+
+    loadMenu();
   </script>
 </body>
 </html>
