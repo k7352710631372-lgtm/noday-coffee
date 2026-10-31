@@ -10,6 +10,7 @@
   <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    body.modal-open { overflow: hidden; touch-action: none; }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen text-gray-800 pb-28">
@@ -229,8 +230,8 @@
   </div>
 
   <!-- 首次點餐：真實電話綁定確認視窗 -->
-  <div id="phone-confirm-modal" class="fixed inset-0 bg-black/70 hidden z-[70] flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-2xl border-2 border-[#213c64]">
+  <div id="phone-confirm-modal" class="fixed inset-0 bg-black/75 hidden z-[95] flex items-center justify-center p-4 touch-none">
+    <div class="bg-white w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-2xl border-2 border-[#213c64] relative z-[100] pointer-events-auto">
       <div class="text-center space-y-1">
         <span class="bg-amber-100 text-amber-900 text-xs font-extrabold px-3 py-1 rounded-full">📱 首次點餐會員綁定確認</span>
         <h3 class="font-extrabold text-base text-gray-900 pt-1">請確認您的本人手機號碼</h3>
@@ -245,8 +246,12 @@
         <p>2. 餐點皆為現點現做，若填寫空號、假電話或無故未取餐，系統將直接封鎖帳號停權。</p>
       </div>
       <div class="flex gap-2.5 pt-1">
-        <button type="button" onclick="closePhoneConfirmModal()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-extrabold text-xs">返回修改電話</button>
-        <button type="button" onclick="confirmPhoneAndSubmit()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-extrabold text-xs shadow-lg">確認無誤並送單</button>
+        <button type="button" id="cancel-confirm-phone-btn" onclick="closePhoneConfirmModal()" class="flex-1 bg-gray-200 active:bg-gray-300 text-gray-700 py-3.5 rounded-xl font-extrabold text-xs cursor-pointer select-none">
+          返回修改電話
+        </button>
+        <button type="button" id="final-confirm-submit-btn" onclick="confirmPhoneAndSubmit()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white py-3.5 rounded-xl font-extrabold text-xs shadow-lg cursor-pointer select-none">
+          確認無誤並送單
+        </button>
       </div>
     </div>
   </div>
@@ -335,7 +340,7 @@
                 pendingOrder = { id: d.id, ...data };
               }
             });
-            hasPendingUnacceptedOrder = !!pendingOrder;
+            hasPendingUnacceptedOrder = (pendingOrder && pendingOrder.status === "pending");
             if (pendingOrder && !latestSubmittedOrder) {
               latestSubmittedOrder = pendingOrder;
               watchOrderStatus(pendingOrder.id);
@@ -870,6 +875,28 @@
       }
     }
 
+    // ==================== 4. 首次點餐電話綁定彈窗控制（已補齊並鎖定背景滑動） ====================
+    window.closePhoneConfirmModal = function() {
+      document.getElementById('phone-confirm-modal').classList.add('hidden');
+      document.body.classList.remove('modal-open');
+      document.getElementById('customer-phone').focus();
+    };
+
+    window.confirmPhoneAndSubmit = async function() {
+      const confirmBtn = document.getElementById('final-confirm-submit-btn');
+      if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.innerText = "⏳ 送單中...";
+      }
+      document.getElementById('phone-confirm-modal').classList.add('hidden');
+      document.body.classList.remove('modal-open');
+      await executeFinalOrderSubmit();
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.innerText = "確認無誤並送單";
+      }
+    };
+
     window.submitOrder = async function() {
       applyStoreStatusUI();
       if (!isStoreCurrentlyOpen) { alert(`抱歉，${storeCloseReason}，目前僅供瀏覽菜單，無法送出訂單喔！`); closeCart(); return; }
@@ -912,6 +939,7 @@
         const formatted = `${phoneCheck.cleanPhone.slice(0,4)}-${phoneCheck.cleanPhone.slice(4,7)}-${phoneCheck.cleanPhone.slice(7)}`;
         document.getElementById('confirm-phone-display').innerText = formatted;
         document.getElementById('phone-confirm-modal').classList.remove('hidden');
+        document.body.classList.add('modal-open');
         return;
       }
 
@@ -949,7 +977,7 @@
       const userId = lineProfile?.userId || `web_${cleanPhone}`;
 
       try {
-        await setDoc(doc(db, "members", userId), {
+        const updatedMemberData = {
           lineUserId: userId,
           lineDisplayName: lineProfile?.displayName || customerName,
           pictureUrl: lineProfile?.pictureUrl || "",
@@ -960,7 +988,10 @@
           abandonedCount: memberAbandoned,
           isBlocked: false,
           updatedAt: serverTimestamp()
-        }, { merge: true });
+        };
+        await setDoc(doc(db, "members", userId), updatedMemberData, { merge: true });
+        currentMemberDoc = updatedMemberData;
+        applyMemberStatusToUI();
 
         const orderPayload = {
           orderNumber: orderNumber,
