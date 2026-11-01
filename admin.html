@@ -2,263 +2,206 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>NODAY Coffee Roasters | 外帶線上點餐</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NODAY Coffee Roasters | 吧台接單與管理後台</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- 引入 LINE LIFF SDK -->
-  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    body.modal-open { overflow: hidden; touch-action: none; }
+    @media print {
+      body * { visibility: hidden !important; }
+      #print-area, #print-area * { visibility: visible !important; }
+      #print-area {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        display: block !important;
+      }
+      @page { margin: 0; }
+    }
   </style>
 </head>
-<body class="bg-gray-50 min-h-screen text-gray-800 pb-28">
+<body class="bg-slate-900 text-slate-100 min-h-screen pb-24">
 
-  <!-- 黑名單停權全螢幕遮罩 -->
-  <div id="blocked-overlay" class="fixed inset-0 bg-gray-900/95 z-[80] hidden flex items-center justify-center p-6">
-    <div class="bg-white rounded-3xl p-6 max-w-sm w-full text-center space-y-4 shadow-2xl border-2 border-red-500">
-      <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-3xl font-extrabold">🚫</div>
-      <h2 class="text-lg font-extrabold text-gray-900">線上預訂功能已暫停</h2>
-      <p id="blocked-reason-text" class="text-xs text-gray-600 leading-relaxed font-bold">
-        系統偵測到您的帳號或電話曾有「未取餐 / 棄單」紀錄，目前已暫停線上點餐權限。如需購買請直接至門市現場點餐，或電洽門市人員。
-      </p>
-      <a href="tel:04-7237933" class="block w-full bg-[#213c64] text-white py-3 rounded-xl text-xs font-extrabold shadow">
-        📞 撥打門市電話：04-7237933
-      </a>
-    </div>
-  </div>
-
-  <!-- 頂部品牌列 -->
-  <header class="bg-[#213c64] text-white p-4 shadow-md sticky top-0 z-30">
-    <div class="max-w-md mx-auto flex justify-between items-center">
-      <div>
-        <h1 class="text-lg font-extrabold tracking-wide">NODAY Coffee Roasters</h1>
-        <p id="store-status-header" class="text-[11px] text-amber-300 mt-0.5 flex items-center gap-1.5">
-          <span id="store-status-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span id="store-status-label">載入營業狀態中...</span>
-        </p>
+  <!-- 頂部導覽列 -->
+  <header class="bg-slate-800 border-b border-slate-700 p-4 sticky top-0 z-30 shadow-md">
+    <div class="max-w-6xl mx-auto flex flex-wrap justify-between items-center gap-3">
+      <div class="flex items-center gap-3">
+        <h1 class="text-base font-extrabold tracking-wide text-white">☕ NODAY 吧台管理後台</h1>
+        <span id="system-clock" class="text-xs font-mono text-amber-300 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-700">--:--:--</span>
+        <span id="conn-badge" class="text-[11px] bg-emerald-950 text-emerald-300 border border-emerald-700 px-2.5 py-0.5 rounded-full font-extrabold">🟢 系統啟動中...</span>
       </div>
-      <button onclick="openCart()" class="bg-amber-500 hover:bg-amber-600 text-white px-3.5 py-2 rounded-xl text-xs font-extrabold shadow flex items-center gap-1.5 transition">
-        🛒 購物車 <span id="cart-badge" class="bg-white text-amber-700 px-1.5 py-0.5 rounded-full text-[10px]">0</span>
-      </button>
+      <div class="flex items-center gap-2">
+        <button type="button" id="voice-toggle-btn" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold transition">
+          🔊 語音播報：已關閉 (點擊開啟)
+        </button>
+        <button type="button" id="pause-store-btn" class="bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-extrabold shadow transition">
+          ⏸️ 暫停接單 15分
+        </button>
+      </div>
     </div>
   </header>
 
-  <main class="max-w-md mx-auto p-4 space-y-4">
+  <main class="max-w-6xl mx-auto p-4 space-y-6">
 
-    <!-- LINE 會員身分識別卡 -->
-    <div id="member-status-bar" class="bg-white border border-blue-200 p-3 rounded-2xl shadow-sm flex items-center justify-between gap-2">
-      <div class="flex items-center gap-2.5">
-        <img id="member-avatar" src="https://cdn-icons-png.flaticon.com/512/847/847969.png" alt="avatar" class="w-9 h-9 rounded-full border border-gray-200 object-cover">
-        <div>
-          <div class="flex items-center gap-1.5">
-            <span id="member-display-name" class="text-xs font-extrabold text-gray-900">驗證 LINE 會員中...</span>
-            <span id="member-badge" class="text-[10px] bg-blue-100 text-[#213c64] px-2 py-0.5 rounded-full font-extrabold">連線中</span>
-          </div>
-          <p id="member-sub-note" class="text-[10px] text-gray-500 font-bold mt-0.5">點餐後將自動傳送明細至官方帳號</p>
-        </div>
+    <!-- 錯誤診斷提示框 (預設隱藏) -->
+    <div id="global-error-box" class="hidden bg-red-950 border-2 border-red-500 text-red-200 p-4 rounded-2xl text-xs space-y-1"></div>
+
+    <!-- 頂部今日數據統計列 -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div class="bg-slate-800 border border-slate-700 p-3.5 rounded-2xl">
+        <p class="text-[11px] text-slate-400 font-bold">⏳ 待接單筆數</p>
+        <p id="stat-pending" class="text-xl font-extrabold text-red-400 mt-0.5">0</p>
       </div>
-      <a id="open-in-line-btn" href="https://liff.line.me/2012300915-xAvn0ZeX" class="hidden bg-[#06C755] text-white px-3 py-1.5 rounded-xl text-[11px] font-extrabold shadow shrink-0">
-        LINE 開啟
-      </a>
-    </div>
-
-    <!-- 非營業時間提示 -->
-    <div id="closed-notice-banner" class="hidden bg-red-50 border-2 border-red-400 p-4 rounded-2xl shadow-sm space-y-1.5">
-      <div class="flex justify-between items-center">
-        <p id="closed-notice-title" class="text-sm font-extrabold text-red-700">🌙 目前非營業時間（僅供瀏覽菜單）</p>
-        <button onclick="toggleScheduleModal()" class="text-[11px] bg-white border border-red-300 text-red-700 px-2.5 py-1 rounded-lg font-bold">查看營業時間</button>
+      <div class="bg-slate-800 border border-slate-700 p-3.5 rounded-2xl">
+        <p class="text-[11px] text-slate-400 font-bold">🔥 製作中筆數</p>
+        <p id="stat-accepted" class="text-xl font-extrabold text-blue-400 mt-0.5">0</p>
       </div>
-      <p id="closed-notice-sub" class="text-xs text-red-600 font-bold">您仍可瀏覽完整菜單與價格，營業時間開始後即可下單。</p>
-    </div>
-
-    <!-- 即時訂單狀態追蹤卡 -->
-    <div id="active-order-banner" class="hidden bg-white border-2 border-[#213c64] p-4 rounded-2xl shadow-md space-y-2">
-      <div class="flex justify-between items-center">
-        <div class="flex items-center gap-2">
-          <span id="order-number-badge" class="bg-[#213c64] text-white text-sm font-extrabold px-3 py-1 rounded-xl">#001</span>
-          <span class="text-xs font-extrabold text-[#213c64]">外帶取餐進度</span>
-        </div>
-        <span id="order-status-badge" class="bg-amber-100 text-amber-800 text-xs font-extrabold px-2.5 py-1 rounded-full">⏳ 等待吧台接單</span>
+      <div class="bg-slate-800 border border-slate-700 p-3.5 rounded-2xl">
+        <p class="text-[11px] text-slate-400 font-bold">☕ 今日累積杯數</p>
+        <p id="stat-today-cups" class="text-xl font-extrabold text-emerald-400 mt-0.5">0 杯</p>
       </div>
-      <p id="order-status-text" class="text-xs text-gray-700 font-bold">訂單已送出，等待吧台人員確認接單中！</p>
-      <p id="line-auto-sent-hint" class="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1.5 rounded-xl font-extrabold">
-        ✅ 訂單已即時連線送達吧台系統，接單與完成時將透過 LINE 自動通知您！
-      </p>
-    </div>
-
-    <!-- 店家公告 -->
-    <div class="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl text-xs text-amber-900 shadow-sm space-y-1">
-      <div class="flex justify-between items-center">
-        <p id="ann-title" class="font-extrabold flex items-center gap-1">📢 外帶取餐提醒</p>
-        <button onclick="toggleScheduleModal()" class="text-[11px] text-[#213c64] underline font-bold">營業與休假時間</button>
-      </div>
-      <p id="ann-text" class="text-[11px] text-amber-800 whitespace-pre-line leading-relaxed">本店為外帶專門店（無內用），現點現做請耐心等候。</p>
-    </div>
-
-    <!-- 熟客快速點餐 (一鍵再買一次) -->
-    <div id="reorder-section" class="hidden bg-white p-3.5 rounded-2xl shadow-sm border border-blue-100 space-y-2">
-      <div class="flex justify-between items-center">
-        <span class="text-xs font-extrabold text-[#213c64]">🔄 熟客快速點餐（您上次點的咖啡）</span>
-        <button onclick="reorderLastItems()" class="bg-[#213c64] hover:bg-[#192e4d] text-white px-3 py-1 rounded-lg text-[11px] font-extrabold shadow-sm transition">
-          ＋ 一鍵再買一次
-        </button>
-      </div>
-      <p id="reorder-summary" class="text-[11px] text-gray-600 font-bold"></p>
-    </div>
-
-    <!-- 取餐人姓名、真實電話綁定 ＆ 預計取餐時間 -->
-    <div class="bg-white p-3.5 rounded-2xl shadow-sm border space-y-3">
-      <div class="grid grid-cols-2 gap-2.5">
-        <div>
-          <label class="text-[11px] font-extrabold text-gray-600 block mb-1">取餐人姓名 <span class="text-red-500">*</span></label>
-          <input type="text" id="customer-name" placeholder="例如：王小明" class="w-full border rounded-xl p-2.5 text-xs focus:outline-none focus:border-[#213c64] bg-gray-50 font-bold">
-        </div>
-        <div>
-          <div class="flex justify-between items-center mb-1">
-            <label class="text-[11px] font-extrabold text-gray-600">本人手機號碼 <span class="text-red-500">*</span></label>
-            <span id="phone-lock-tag" class="hidden text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-extrabold">🔒 已綁定</span>
-          </div>
-          <input type="tel" id="customer-phone" maxlength="10" placeholder="09xxxxxxxx" class="w-full border rounded-xl p-2.5 text-xs focus:outline-none focus:border-[#213c64] bg-gray-50 font-bold">
-        </div>
-      </div>
-      <p id="phone-bind-notice" class="text-[10px] text-gray-500 font-bold">
-        🛡️ 為防範惡意棄單，首次點餐將綁定您的 LINE 帳號與真實電話（綁定後即鎖定，如需更改請洽門市）。
-      </p>
-
-      <div class="pt-1 border-t">
-        <label class="text-[11px] font-extrabold text-gray-600 block mb-1.5">⏰ 預計取餐時間：</label>
-        <div class="grid grid-cols-4 gap-1.5 text-[11px]">
-          <button type="button" onclick="selectPickupMode('現場立即製作')" id="pk-now" class="py-2 rounded-xl font-extrabold border bg-[#213c64] text-white">立即製作</button>
-          <button type="button" onclick="selectPickupMode('15分鐘後取餐')" id="pk-15" class="py-2 rounded-xl font-bold border bg-gray-50 text-gray-700">15分後</button>
-          <button type="button" onclick="selectPickupMode('30分鐘後取餐')" id="pk-30" class="py-2 rounded-xl font-bold border bg-gray-50 text-gray-700">30分後</button>
-          <button type="button" onclick="selectPickupMode('custom')" id="pk-custom" class="py-2 rounded-xl font-bold border bg-gray-50 text-gray-700">指定時間</button>
-        </div>
-        <div id="custom-pickup-box" class="hidden mt-2 flex items-center gap-2">
-          <span class="text-xs font-bold text-gray-600">選擇時間：</span>
-          <input type="time" id="custom-pickup-time" class="border rounded-xl p-2 text-xs font-extrabold bg-gray-50 flex-1">
-        </div>
+      <div class="bg-slate-800 border border-slate-700 p-3.5 rounded-2xl">
+        <p class="text-[11px] text-slate-400 font-bold">💰 今日累積營收</p>
+        <p id="stat-today-rev" class="text-xl font-extrabold text-amber-400 mt-0.5">NT$0</p>
       </div>
     </div>
 
-    <div id="category-tabs" class="flex gap-2 overflow-x-auto py-1 sticky top-[68px] bg-gray-50/95 backdrop-blur z-20 no-scrollbar"></div>
-    <div id="menu-container" class="space-y-6">
-      <p class="text-center text-gray-400 py-10 text-xs">正在載入雲端菜單...</p>
-    </div>
-  </main>
-
-  <div id="bottom-cart-bar" class="fixed bottom-0 inset-x-0 p-3 bg-white/95 backdrop-blur border-t shadow-2xl z-30 hidden">
-    <div class="max-w-md mx-auto flex items-center justify-between gap-3">
-      <div onclick="openCart()" class="cursor-pointer">
-        <p class="text-[11px] text-gray-500 font-bold">已選購 <span id="bottom-cart-count" class="text-[#213c64] font-extrabold">0</span> 杯</p>
-        <p id="bottom-cart-total" class="text-base font-extrabold text-amber-800">NT$0</p>
-      </div>
-      <button onclick="openCart()" class="bg-[#213c64] hover:bg-[#192e4d] text-white px-6 py-3 rounded-xl font-extrabold text-xs shadow-lg transition">
-        前往結帳送單 ➔
+    <!-- 標籤頁切換 -->
+    <div class="flex flex-wrap gap-2 border-b border-slate-800 pb-2">
+      <button type="button" data-tab="orders" id="tab-btn-orders" class="tab-switch-btn px-4 py-2 rounded-xl text-xs font-extrabold bg-[#213c64] text-white shadow">
+        📦 即時訂單看板 <span id="pending-count-badge" class="bg-red-500 text-white px-1.5 py-0.5 rounded-full text-[10px] ml-1">0</span>
+      </button>
+      <button type="button" data-tab="menu" id="tab-btn-menu" class="tab-switch-btn px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300">
+        📋 雲端菜單與加購管理
+      </button>
+      <button type="button" data-tab="settings" id="tab-btn-settings" class="tab-switch-btn px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300">
+        ⚙️ 營業、優惠碼與黑名單
       </button>
     </div>
-  </div>
 
-  <div id="toast" class="fixed top-20 left-1/2 -translate-x-1/2 bg-gray-900/90 text-white px-4 py-2 rounded-full text-xs font-bold shadow-lg hidden z-[90]">
-    ✅ 已加入購物車
-  </div>
-
-  <!-- 營業時間說明視窗 -->
-  <div id="schedule-modal" class="fixed inset-0 bg-black/60 hidden z-50 flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-2xl">
-      <div class="flex justify-between items-center border-b pb-2">
-        <h3 class="font-extrabold text-base text-[#213c64]">🕒 營業時間 ＆ 休假公告</h3>
-        <button onclick="toggleScheduleModal()" class="text-gray-400 font-bold text-lg">✕</button>
+    <!-- ==================== 1. 即時訂單看板 ==================== -->
+    <section id="tab-orders" class="space-y-4">
+      <div class="flex flex-wrap justify-between items-center gap-2">
+        <h2 class="text-sm font-extrabold text-slate-200">🔥 即時外帶訂單串流（自動同步）</h2>
+        <div class="flex gap-1.5 text-xs">
+          <button type="button" data-filter="all" id="filter-all" class="filter-order-btn px-3 py-1.5 rounded-xl bg-slate-700 font-extrabold border border-slate-500 text-white">全部訂單</button>
+          <button type="button" data-filter="pending" id="filter-pending" class="filter-order-btn px-3 py-1.5 rounded-xl bg-slate-800 font-bold border border-slate-700 text-slate-400">⏳ 待接單</button>
+          <button type="button" data-filter="active" id="filter-active" class="filter-order-btn px-3 py-1.5 rounded-xl bg-slate-800 font-bold border border-slate-700 text-slate-400">🔥 製作中</button>
+          <button type="button" data-filter="tomorrow" id="filter-tomorrow" class="filter-order-btn px-3 py-1.5 rounded-xl bg-slate-800 font-bold border border-slate-700 text-amber-300">🌅 明日預訂</button>
+        </div>
       </div>
-      <div id="schedule-modal-body" class="space-y-2 text-xs"></div>
-    </div>
-  </div>
 
-  <!-- 飲品客製與加購彈跳視窗 -->
-  <div id="customize-modal" class="fixed inset-0 bg-black/60 hidden z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 space-y-4 max-h-[88vh] overflow-y-auto shadow-2xl">
-      <div class="flex justify-between items-start border-b pb-3">
+      <div id="orders-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <p class="text-slate-400 text-xs col-span-2 py-10 text-center">⏳ 正在連線至雲端訂單資料庫...</p>
+      </div>
+    </section>
+
+    <!-- ==================== 2. 雲端菜單與加購管理 ==================== -->
+    <section id="tab-menu" class="hidden space-y-4">
+      <div class="flex flex-wrap justify-between items-center gap-2 bg-slate-800 p-4 rounded-2xl border border-slate-700">
         <div>
-          <h3 id="modal-item-name" class="font-extrabold text-base text-gray-950">品項名稱</h3>
-          <p id="modal-item-desc" class="text-[11px] text-gray-500 mt-0.5"></p>
+          <h2 class="text-sm font-extrabold text-slate-200">📋 飲品狀態、售價 ＆ 購物車順手加購設定</h2>
+          <p class="text-[11px] text-slate-400 mt-0.5">點擊「🛍️ 設為加購」可讓商品顯示於購物車推薦區；點擊「供應中 / 已售完」可即時切換前台狀態。</p>
         </div>
-        <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 font-bold text-lg px-2">✕</button>
+        <button type="button" id="reload-menu-btn" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold">
+          🔄 重新整理菜單
+        </button>
       </div>
-      <div id="modal-options-container" class="space-y-4 text-xs"></div>
+      <div id="admin-menu-container" class="space-y-4">
+        <p class="text-slate-400 text-xs py-10 text-center">正在載入雲端菜單...</p>
+      </div>
+    </section>
+
+    <!-- ==================== 3. 營業時間、優惠碼與黑名單設定 ==================== -->
+    <section id="tab-settings" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6">
+      
+      <!-- 左欄：營業狀態與公告 -->
+      <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 space-y-4 shadow-lg h-fit">
+        <h2 class="text-sm font-extrabold text-slate-200 border-b border-slate-700 pb-2">🕒 營業狀態與店休公告</h2>
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs font-bold text-slate-400 block mb-1">營業模式切換</label>
+            <select id="set-store-mode" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs font-bold text-white">
+              <option value="auto">🕒 自動依每週時段營業</option>
+              <option value="open">🟢 強制持續營業（手動開店）</option>
+              <option value="closed">🌙 強制打烊休息（僅開放明日預訂）</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-400 block mb-1">店家公告標題</label>
+            <input type="text" id="set-ann-title" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs font-bold text-white" placeholder="例如：📢 外帶取餐提醒">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-400 block mb-1">公告內文</label>
+            <textarea id="set-ann-text" rows="3" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs font-bold text-white" placeholder="輸入公告內容..."></textarea>
+          </div>
+          <button type="button" id="save-store-settings-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-extrabold shadow">
+            💾 儲存營業與公告設定
+          </button>
+        </div>
+      </div>
+
+      <!-- 右欄：優惠碼管理 + 封鎖電話管理 -->
+      <div class="space-y-6">
+        <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 space-y-4 shadow-lg">
+          <div class="flex justify-between items-center border-b border-slate-700 pb-2">
+            <div>
+              <h2 class="text-sm font-extrabold text-slate-200">🎟️ 優惠碼折扣管理</h2>
+              <p class="text-[11px] text-slate-400">打折請填折數（如 90 代表 9 折；85 代表 85 折）</p>
+            </div>
+            <button type="button" id="add-promo-row-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl text-xs font-extrabold">＋ 新增優惠碼</button>
+          </div>
+          <div id="promo-codes-list" class="space-y-2.5"></div>
+          <button type="button" id="save-promo-codes-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-extrabold shadow">
+            💾 儲存優惠碼設定
+          </button>
+        </div>
+
+        <!-- 手動封鎖/解封電話 -->
+        <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 space-y-3 shadow-lg">
+          <h2 class="text-sm font-extrabold text-red-400 border-b border-slate-700 pb-2">🚫 棄單黑名單電話管理</h2>
+          <div class="flex gap-2">
+            <input type="tel" id="block-phone-input" maxlength="10" placeholder="輸入手機號碼 (09xxxxxxxx)" class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white">
+            <button type="button" id="btn-block-phone" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-xl text-xs font-extrabold shrink-0">封鎖</button>
+            <button type="button" id="btn-unblock-phone" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-xl text-xs font-extrabold shrink-0">解封</button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- 隱藏的列印標籤專用區 -->
+  <div id="print-area" class="hidden"></div>
+
+  <!-- 訊息回傳彈跳視窗 -->
+  <div id="reply-modal" class="fixed inset-0 bg-black/75 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-800 w-full max-w-sm rounded-2xl p-5 space-y-4 border border-slate-600 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-700 pb-2">
+        <h3 class="font-extrabold text-sm text-white">💬 一鍵傳送通知給客人</h3>
+        <button type="button" id="close-reply-modal-x" class="text-slate-400 font-bold text-base">✕</button>
+      </div>
+      <input type="hidden" id="reply-order-id">
+      <div class="space-y-2 text-xs">
+        <p class="text-[11px] text-slate-400 font-bold">點擊快速套用罐頭訊息：</p>
+        <button type="button" data-preset="目前現場訂單較多，您的餐點預計將順延 10~15 分鐘完成，感謝耐心等候！" class="reply-preset-btn w-full text-left bg-slate-900 hover:bg-slate-700 p-2.5 rounded-xl border border-slate-700 font-bold text-slate-200">⏱️ 現場訂單較多・順延 10~15 分鐘</button>
+        <button type="button" data-preset="抱歉，您點的單品手沖豆剛好最後一杯沖完了！請電洽吧台 04-7237933 為您換購其他豆款。" class="reply-preset-btn w-full text-left bg-slate-900 hover:bg-slate-700 p-2.5 rounded-xl border border-slate-700 font-bold text-slate-200">☕ 手沖豆剛好售完・請電洽換購</button>
+        <button type="button" data-preset="您的明日預訂訂單吧台已確認收悉，將於明日指定時間前為您現磨沖煮！" class="reply-preset-btn w-full text-left bg-slate-900 hover:bg-slate-700 p-2.5 rounded-xl border border-slate-700 font-bold text-slate-200">🌅 明日預訂已確認收悉</button>
+      </div>
       <div>
-        <label class="text-[11px] font-bold text-gray-600 block mb-1">特別備註 (選填)</label>
-        <input type="text" id="modal-note" placeholder="例如：杯蓋貼紙註記" class="w-full border rounded-xl p-2.5 text-xs bg-gray-50 focus:outline-none focus:border-[#213c64]">
+        <label class="text-[11px] font-bold text-slate-400 block mb-1">或輸入自訂提醒內容：</label>
+        <textarea id="reply-custom-text" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white font-bold" placeholder="輸入要顯示在客人手機與 LINE 的訊息..."></textarea>
       </div>
-      <div class="flex items-center justify-between pt-2 border-t">
-        <div class="flex items-center gap-3">
-          <button onclick="adjustQty(-1)" class="w-9 h-9 rounded-xl border bg-gray-100 font-extrabold text-base flex items-center justify-center">-</button>
-          <span id="modal-qty" class="font-extrabold text-sm w-5 text-center">1</span>
-          <button onclick="adjustQty(1)" class="w-9 h-9 rounded-xl border bg-gray-100 font-extrabold text-base flex items-center justify-center">+</button>
-        </div>
-        <button id="modal-add-btn" onclick="confirmAddToCart()" class="bg-[#213c64] hover:bg-opacity-90 text-white px-6 py-3 rounded-xl font-extrabold text-xs shadow-lg flex items-center gap-2">
-          <span id="modal-add-btn-text">加入購物車</span>
-          <span id="modal-item-price" class="bg-white/20 px-2 py-0.5 rounded-lg">NT$0</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 購物車抽屜 -->
-  <div id="cart-drawer" class="fixed inset-0 bg-black/60 hidden z-50 flex justify-end">
-    <div class="bg-white w-full max-w-sm h-full p-5 flex flex-col justify-between shadow-2xl">
-      <div class="flex justify-between items-center border-b pb-3">
-        <h2 class="font-extrabold text-base">🛒 外帶購物車明細</h2>
-        <button onclick="closeCart()" class="text-gray-400 font-bold text-lg px-2">✕</button>
-      </div>
-      <div id="cart-items-list" class="flex-1 overflow-y-auto py-4 space-y-3">
-        <p class="text-center text-gray-400 text-xs py-10">購物車目前是空的...</p>
-      </div>
-      <div class="border-t pt-4 space-y-3">
-        <div id="new-member-limit-hint" class="hidden bg-amber-50 border border-amber-200 p-2.5 rounded-xl text-[11px] text-amber-900 font-bold">
-          🆕 首次點餐新客保護：首單上限為 5 杯（或 NT$600），完成首次取餐升級為認證熟客後即自動解除限制！
-        </div>
-        <div class="flex justify-between items-center font-extrabold text-sm">
-          <span>外帶應付總計：</span>
-          <span id="cart-total" class="text-amber-800 text-lg">NT$0</span>
-        </div>
-        <button onclick="submitOrder()" id="submit-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-extrabold text-sm shadow-lg transition">
-          🚀 確認送出外帶訂單
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 首次點餐：真實電話綁定確認視窗 -->
-  <div id="phone-confirm-modal" class="fixed inset-0 bg-black/75 hidden z-[95] flex items-center justify-center p-4 touch-none">
-    <div class="bg-white w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-2xl border-2 border-[#213c64] relative z-[100] pointer-events-auto">
-      <div class="text-center space-y-1">
-        <span class="bg-amber-100 text-amber-900 text-xs font-extrabold px-3 py-1 rounded-full">📱 首次點餐會員綁定確認</span>
-        <h3 class="font-extrabold text-base text-gray-900 pt-1">請確認您的本人手機號碼</h3>
-      </div>
-      <div class="bg-gray-50 p-3.5 rounded-xl border text-center space-y-1">
-        <p class="text-xs text-gray-500 font-bold">即將綁定之手機號碼：</p>
-        <p id="confirm-phone-display" class="text-xl font-extrabold text-[#213c64] tracking-wider">0912-345-678</p>
-      </div>
-      <div class="text-[11px] text-red-600 bg-red-50 p-3 rounded-xl font-bold space-y-1 leading-relaxed border border-red-200">
-        <p>⚠️ 請注意：</p>
-        <p>1. 確認送出後，此電話將與您的 LINE 帳號永久綁定，無法自行隨意更改。</p>
-        <p>2. 餐點皆為現點現做，若填寫空號、假電話或無故未取餐，系統將直接封鎖帳號停權。</p>
-      </div>
-      <div class="flex gap-2.5 pt-1">
-        <button type="button" id="cancel-confirm-phone-btn" onclick="closePhoneConfirmModal()" class="flex-1 bg-gray-200 active:bg-gray-300 text-gray-700 py-3.5 rounded-xl font-extrabold text-xs cursor-pointer select-none">
-          返回修改電話
-        </button>
-        <button type="button" id="final-confirm-submit-btn" onclick="confirmPhoneAndSubmit()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white py-3.5 rounded-xl font-extrabold text-xs shadow-lg cursor-pointer select-none">
-          確認無誤並送單
-        </button>
+      <div class="flex gap-2 pt-1">
+        <button type="button" id="cancel-reply-btn" class="flex-1 bg-slate-700 text-slate-300 py-2.5 rounded-xl font-extrabold text-xs">取消</button>
+        <button type="button" id="send-reply-btn" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl font-extrabold text-xs shadow">確認發送通知</button>
       </div>
     </div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, getDocs, getDoc, setDoc, addDoc, doc, onSnapshot, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, setDoc, doc, updateDoc, deleteDoc, onSnapshot, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBMdycidtvbE7JmQtvXn-lCqUwod5RxR44",
@@ -269,767 +212,680 @@
       appId: "1:1001674084827:web:18b47455008c89e70b97fe"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    const LIFF_ID = "2012300915-xAvn0ZeX";
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzwgJ2Yt0g2emcxpR7sEpgGtQBWaSoGg6C87KuuLJXp05Sz6ieqR1MOSWDkjP3I6EMJ/exec";
 
-    let catalog = [];
-    let cart = [];
-    let activeItem = null;
-    let currentQty = 1;
-    let pickupMode = "現場立即製作";
-    let isStoreCurrentlyOpen = true;
-    let storeCloseReason = "";
+    let db = null;
+    let allOrders = [];
+    let adminCatalog = [];
+    let currentFilter = "all";
     let latestStoreSettings = {};
-    let latestSubmittedOrder = null;
-    let isSubmittingOrder = false;
-    let lineProfile = null;
-    let currentMemberDoc = null;
-    let hasPendingUnacceptedOrder = false;
+    let isVoiceEnabled = false;
+    let knownPendingIds = new Set();
+    let isFirstLoad = true;
+    let audioCtx = null;
 
-    // ==================== 1. LINE LIFF 初始化與安全身分檢核 ====================
-    async function initLiffAndMember() {
-      const nameEl = document.getElementById('member-display-name');
-      const badgeEl = document.getElementById('member-badge');
-      const subEl = document.getElementById('member-sub-note');
-      const avatarEl = document.getElementById('member-avatar');
-      const openLineBtn = document.getElementById('open-in-line-btn');
-
-      try {
-        if (typeof liff === 'undefined') throw new Error("LIFF SDK 未載入");
-        await liff.init({ liffId: LIFF_ID });
-
-        if (!liff.isInClient()) {
-          openLineBtn.classList.remove('hidden');
-        }
-
-        if (liff.isLoggedIn()) {
-          lineProfile = await liff.getProfile();
-          if (lineProfile.pictureUrl) avatarEl.src = lineProfile.pictureUrl;
-          nameEl.innerText = lineProfile.displayName || "LINE 會員";
-
-          onSnapshot(doc(db, "members", lineProfile.userId), (snap) => {
-            if (snap.exists()) {
-              currentMemberDoc = snap.data();
-              applyMemberStatusToUI();
-            } else {
-              currentMemberDoc = {
-                lineUserId: lineProfile.userId,
-                lineDisplayName: lineProfile.displayName || "",
-                pictureUrl: lineProfile.pictureUrl || "",
-                name: "",
-                phone: "",
-                phoneLocked: false,
-                completedCount: 0,
-                abandonedCount: 0,
-                isBlocked: false
-              };
-              setDoc(doc(db, "members", lineProfile.userId), currentMemberDoc, { merge: true });
-              applyMemberStatusToUI();
-            }
-          });
-
-          const pendingQ = query(collection(db, "orders"), where("lineUserId", "==", lineProfile.userId));
-          onSnapshot(pendingQ, (snap) => {
-            let pendingOrder = null;
-            snap.forEach(d => {
-              const data = d.data();
-              if (data.status === "pending" || data.status === "accepted") {
-                pendingOrder = { id: d.id, ...data };
-              }
-            });
-            hasPendingUnacceptedOrder = (pendingOrder && pendingOrder.status === "pending");
-            if (pendingOrder && !latestSubmittedOrder) {
-              latestSubmittedOrder = pendingOrder;
-              watchOrderStatus(pendingOrder.id);
-            }
-          });
-        } else {
-          nameEl.innerText = "訪客模式";
-          badgeEl.innerText = "一般網頁";
-          openLineBtn.classList.remove('hidden');
-        }
-      } catch (e) {
-        console.warn("LIFF 初始化提醒:", e);
-        nameEl.innerText = "訪客模式";
-        badgeEl.innerText = "一般網頁";
-        openLineBtn.classList.remove('hidden');
-      }
-    }
-
-    function applyMemberStatusToUI() {
-      if (!currentMemberDoc) return;
-      const badgeEl = document.getElementById('member-badge');
-      const subEl = document.getElementById('member-sub-note');
-      const nameInput = document.getElementById('customer-name');
-      const phoneInput = document.getElementById('customer-phone');
-      const lockTag = document.getElementById('phone-lock-tag');
-      const bindNotice = document.getElementById('phone-bind-notice');
-      const newLimitHint = document.getElementById('new-member-limit-hint');
-
-      if (currentMemberDoc.isBlocked) {
-        document.getElementById('blocked-overlay').classList.remove('hidden');
-        return;
-      } else {
-        document.getElementById('blocked-overlay').classList.add('hidden');
-      }
-
-      const completed = Number(currentMemberDoc.completedCount || 0);
-      if (completed > 0) {
-        badgeEl.innerText = `🟢 認證熟客 (已取餐 ${completed} 次)`;
-        badgeEl.className = "text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-extrabold";
-        subEl.innerText = "感謝支持！吧台接單與完成時將自動發送 LINE 通知";
-        newLimitHint.classList.add('hidden');
-      } else {
-        badgeEl.innerText = "🆕 首次點餐新會員";
-        badgeEl.className = "text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-extrabold";
-        subEl.innerText = "首次下單將綁定您的真實手機號碼（首單上限 5 杯）";
-        newLimitHint.classList.remove('hidden');
-      }
-
-      if (currentMemberDoc.name && !nameInput.value) {
-        nameInput.value = currentMemberDoc.name;
-      } else if (!nameInput.value && lineProfile?.displayName) {
-        nameInput.value = lineProfile.displayName;
-      }
-
-      if (currentMemberDoc.phone && currentMemberDoc.phoneLocked) {
-        phoneInput.value = currentMemberDoc.phone;
-        phoneInput.readOnly = true;
-        phoneInput.className = "w-full border border-emerald-300 rounded-xl p-2.5 text-xs bg-emerald-50/50 text-gray-700 font-extrabold cursor-not-allowed";
-        lockTag.classList.remove('hidden');
-        bindNotice.innerText = "✅ 您的真實電話已與此 LINE 帳號安全綁定（如需變更號碼請洽吧台人員）。";
-        bindNotice.className = "text-[10px] text-emerald-700 font-bold";
-      } else {
-        phoneInput.readOnly = false;
-        lockTag.classList.add('hidden');
-      }
-    }
-
-    initLiffAndMember();
-
-    // ==================== 2. 嚴格台灣手機號碼真實性檢核 ====================
-    function validateTaiwanMobile(rawPhone) {
-      const phone = rawPhone.replace(/[\s-]/g, '');
-      if (!/^09\d{8}$/.test(phone)) {
-        return { valid: false, msg: "請輸入正確的台灣手機號碼（09 開頭共 10 碼數字）！" };
-      }
-      return { valid: true, cleanPhone: phone };
-    }
-
-    // ==================== 3. 自動傳送訂單至 LINE 聊天室 ====================
-    function buildOrderTextMessage(o) {
-      const itemLines = (o.items || []).map(i => {
-        const mods = (i.modifiers && i.modifiers.length > 0) ? i.modifiers.join('/') : '標準';
-        const noteStr = i.note ? ` (備註:${i.note})` : '';
-        return `• ${i.name} x${i.qty} ($${i.price * i.qty})\n  [${mods}]${noteStr}`;
-      }).join('\n');
-      return `📦 【NODAY 外帶訂單 ${o.orderNumber}】\n` +
-             `取餐人：${o.customerInfo}\n` +
-             `預計取餐：${o.pickupTime}\n` +
-             `--------------------\n` +
-             `${itemLines}\n` +
-             `--------------------\n` +
-             `應付總額：NT$${o.totalAmount}\n` +
-             `狀態：⏳ 已送出，等待吧台製作`;
-    }
-
-    window.sendOrderToLineChat = async function() {
-      if (!latestSubmittedOrder) return false;
-      const o = latestSubmittedOrder;
-      const textMsg = buildOrderTextMessage(o);
-      const hintEl = document.getElementById('line-auto-sent-hint');
-
-      if (typeof liff !== 'undefined' && liff.isInClient()) {
-        try {
-          await liff.sendMessages([{ type: 'text', text: textMsg }]);
-          if (hintEl) {
-            hintEl.innerText = `✅ 已自動將訂單 ${o.orderNumber} 回傳至官方帳號聊天室，吧台接單與完成時將自動通知您！`;
-          }
-          return true;
-        } catch (err) {
-          console.warn("背景自動傳訊略過:", err);
-        }
-      }
-      if (hintEl) {
-        hintEl.innerText = `✅ 訂單 ${o.orderNumber} 已送達吧台！接單與製作完成時，官方帳號將自動發送 LINE 通知給您！`;
-      }
-      return false;
-    };
-
-    document.getElementById('customer-name').value = localStorage.getItem('noday_name') || '';
-    document.getElementById('customer-phone').value = localStorage.getItem('noday_phone') || '';
-
-    window.loadLastOrderHistory = function() {
-      try {
-        const lastItems = JSON.parse(localStorage.getItem('noday_last_order') || '[]');
-        if (Array.isArray(lastItems) && lastItems.length > 0) {
-          document.getElementById('reorder-section').classList.remove('hidden');
-          document.getElementById('reorder-summary').innerText = lastItems.map(i => `${i.name} x${i.qty} (${(i.modifiers || []).join('/')})`).join('、');
-        }
-      } catch (e) {}
-    };
-    loadLastOrderHistory();
-
-    window.reorderLastItems = function() {
-      if (!isStoreCurrentlyOpen) { alert(`抱歉，${storeCloseReason}，目前僅供瀏覽菜單喔！`); return; }
-      try {
-        const lastItems = JSON.parse(localStorage.getItem('noday_last_order') || '[]');
-        if (lastItems.length > 0) {
-          lastItems.forEach(i => cart.push({ ...i }));
-          updateCartBadge();
-          showToast("✅ 已將上次點的咖啡加入購物車！");
-        }
-      } catch (e) {}
-    };
-
-    window.selectPickupMode = function(mode) {
-      pickupMode = mode;
-      const modes = { '現場立即製作': 'pk-now', '15分鐘後取餐': 'pk-15', '30分鐘後取餐': 'pk-30', 'custom': 'pk-custom' };
-      Object.entries(modes).forEach(([k, id]) => {
-        document.getElementById(id).className = (k === mode) ? "py-2 rounded-xl font-extrabold border bg-[#213c64] text-white" : "py-2 rounded-xl font-bold border bg-gray-50 text-gray-700";
-      });
-      const customBox = document.getElementById('custom-pickup-box');
-      if (mode === 'custom') customBox.classList.remove('hidden');
-      else customBox.classList.add('hidden');
-    };
-
-    const dayNames = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
-    function evaluateOpenStatus(settings) {
-      const mode = settings.storeMode || 'auto';
-      if (mode === 'open') return { isOpen: true, reason: '外帶自取・營業接單中' };
-      if (mode === 'closed') return { isOpen: false, reason: '目前店家暫停接單 / 休息中' };
-
-      const now = new Date();
-      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-      const dayIdx = String(now.getDay());
-
-      const matchedHoliday = (settings.holidays || []).find(h => todayStr >= h.startDate && todayStr <= h.endDate);
-      if (matchedHoliday) return { isOpen: false, reason: `今日店休（${matchedHoliday.note || '公休'}）` };
-
-      const wh = settings.weeklyHours || {};
-      const dayCfg = wh[dayIdx] || { open: true, start: "07:00", end: "17:00" };
-      if (!dayCfg.open) return { isOpen: false, reason: `今日固定公休（${dayNames[now.getDay()]}）` };
-      if (timeStr < dayCfg.start || timeStr > dayCfg.end) return { isOpen: false, reason: '目前非營業時間' };
-      return { isOpen: true, reason: `營業接單中（至 ${dayCfg.end}）` };
-    }
-
-    function applyStoreStatusUI() {
-      const st = evaluateOpenStatus(latestStoreSettings);
-      isStoreCurrentlyOpen = st.isOpen;
-      storeCloseReason = st.reason;
-      const dot = document.getElementById('store-status-dot');
-      const label = document.getElementById('store-status-label');
-      const closedBanner = document.getElementById('closed-notice-banner');
-      const submitBtn = document.getElementById('submit-btn');
-      label.innerText = st.reason;
-      if (st.isOpen) {
-        dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
-        closedBanner.classList.add('hidden');
-        submitBtn.disabled = false;
-        submitBtn.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-extrabold text-sm shadow-lg transition";
-        submitBtn.innerText = "🚀 確認送出外帶訂單";
-      } else {
-        dot.className = "w-2 h-2 rounded-full bg-red-400";
-        closedBanner.classList.remove('hidden');
-        submitBtn.disabled = true;
-        submitBtn.className = "w-full bg-gray-400 text-white py-3.5 rounded-xl font-extrabold text-sm cursor-not-allowed";
-        submitBtn.innerText = "🌙 非營業時間僅供瀏覽";
-      }
-    }
-
-    onSnapshot(doc(db, "settings", "store"), (snap) => {
-      if (snap.exists()) {
-        latestStoreSettings = snap.data();
-        if (latestStoreSettings.announcementTitle) document.getElementById('ann-title').innerText = latestStoreSettings.announcementTitle;
-        if (latestStoreSettings.announcementText) document.getElementById('ann-text').innerText = latestStoreSettings.announcementText;
-      }
-      applyStoreStatusUI();
-    });
-
-    window.toggleScheduleModal = function() {
-      const modal = document.getElementById('schedule-modal');
-      const body = document.getElementById('schedule-modal-body');
-      const wh = latestStoreSettings.weeklyHours || {};
-      const holidays = latestStoreSettings.holidays || [];
-      const orderDays = [1, 2, 3, 4, 5, 6, 0];
-      let html = `<div class="space-y-1.5"><p class="font-extrabold text-gray-700">📅 每週營業時間：</p>`;
-      orderDays.forEach(d => {
-        const cfg = wh[String(d)] || { open: true, start: "07:00", end: "17:00" };
-        html += `<div class="flex justify-between py-1 border-b"><span class="font-bold">${dayNames[d]}</span><span class="${cfg.open ? 'text-emerald-700 font-extrabold' : 'text-red-500 font-bold'}">${cfg.open ? `${cfg.start} - ${cfg.end}` : '公休'}</span></div>`;
-      });
-      html += `</div>`;
-      if (holidays.length > 0) {
-        html += `<div class="pt-2 space-y-1"><p class="font-extrabold text-red-700">🏖️ 近期店休預告：</p>`;
-        holidays.forEach(h => html += `<p class="bg-red-50 text-red-700 p-2 rounded-lg font-bold">${h.startDate} ~ ${h.endDate}：${h.note || '店休'}</p>`);
-        html += `</div>`;
-      }
-      body.innerHTML = html;
-      modal.classList.toggle('hidden');
-    };
-
-    async function loadMenu() {
-      try {
-        const querySnapshot = await getDocs(collection(db, "menu"));
-        if (querySnapshot.empty) return;
-        catalog = [];
-        querySnapshot.forEach(d => catalog.push(d.data()));
-        catalog.sort((a, b) => a.order - b.order);
-        renderMenu();
-      } catch (e) { console.error(e); }
-    }
-
-    function renderMenu() {
-      const tabs = document.getElementById('category-tabs');
-      const container = document.getElementById('menu-container');
-      tabs.innerHTML = catalog.map((cat, idx) => `
-        <button onclick="scrollToCat('${cat.category}')" class="whitespace-nowrap px-3.5 py-1.5 rounded-xl text-xs font-bold ${idx === 0 ? 'bg-[#213c64] text-white' : 'bg-white text-gray-700 border'} shadow-sm">
-          ${cat.category}
-        </button>
-      `).join('');
-      container.innerHTML = catalog.map(cat => `
-        <div id="cat-${cat.category}" class="space-y-3 scroll-mt-28">
-          <h2 class="font-extrabold text-sm text-[#213c64] border-b pb-1.5">${cat.category}</h2>
-          <div class="grid grid-cols-1 gap-2.5">
-            ${cat.items.map(item => `
-              <div onclick="${item.soldOut ? '' : `openModal('${cat.category}', '${item.id}')`}" class="bg-white p-3.5 rounded-2xl border shadow-sm flex justify-between items-center ${item.soldOut ? 'opacity-50 bg-gray-100 cursor-not-allowed' : 'cursor-pointer hover:border-[#213c64] active:scale-[0.99] transition'}">
-                <div class="space-y-1 pr-3">
-                  <h3 class="font-extrabold text-xs text-gray-900">${item.name}</h3>
-                  ${item.desc ? `<p class="text-[11px] text-gray-500 leading-relaxed">${item.desc}</p>` : ''}
-                  <p class="font-extrabold text-xs text-[#213c64] pt-0.5">NT$${item.price}</p>
-                </div>
-                <div class="shrink-0">
-                  ${item.soldOut ? '<span class="bg-red-500 text-white px-2.5 py-1 rounded-xl text-[10px] font-bold">已售完</span>' : '<span class="bg-[#213c64]/10 text-[#213c64] px-3 py-1.5 rounded-xl text-xs font-extrabold">查看 / 選購</span>'}
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `).join('');
-    }
-
-    window.scrollToCat = function(catName) {
-      document.getElementById(`cat-${catName}`).scrollIntoView({ behavior: 'smooth' });
-    };
-
-    function getActiveAddonsList(item) {
-      const opts = item.options || {};
-      const list = [];
-      if (opts.addonShot !== undefined) {
-        if (opts.addonShot) list.push({ name: '加一份濃縮', price: Number(opts.priceAddonShot || 0) });
-        if (opts.addonOat) list.push({ name: '更換燕麥奶', price: Number(opts.priceAddonOat || 0) });
-        if (opts.addonCocoa) list.push({ name: '可可粉', price: Number(opts.priceAddonCocoa || 0) });
-        if (opts.addonBrownSugar) list.push({ name: '黑糖粉', price: Number(opts.priceAddonBrownSugar || 0) });
-        if (opts.addonCinnamon) list.push({ name: '肉桂粉', price: Number(opts.priceAddonCinnamon || 0) });
-        if (Array.isArray(opts.extraAddons)) {
-          opts.extraAddons.forEach(a => {
-            if (a.enabled && a.name) list.push({ name: a.name, price: Number(a.price || 0) });
-          });
-        }
-      }
-      return list;
-    }
-
-    window.toggleIceLevelBox = function() {
-      const tempEl = document.querySelector('input[name="opt-temp"]:checked');
-      const box = document.getElementById('ice-level-box');
+    function showGlobalError(msg) {
+      const box = document.getElementById("global-error-box");
       if (!box) return;
-      if (tempEl && tempEl.value === '冰飲') box.classList.remove('hidden');
-      else box.classList.add('hidden');
-    };
-
-    window.openModal = function(catName, itemId) {
-      const cat = catalog.find(c => c.category === catName);
-      if (!cat) return;
-      activeItem = cat.items.find(i => i.id === itemId);
-      if (!activeItem) return;
-      currentQty = 1;
-      document.getElementById('modal-item-name').innerText = activeItem.name;
-      document.getElementById('modal-item-desc').innerText = activeItem.desc || '';
-      document.getElementById('modal-qty').innerText = currentQty;
-      document.getElementById('modal-note').value = '';
-
-      const opts = activeItem.options || {};
-      let html = '';
-      const temps = [];
-      if (opts.ice) temps.push('冰');
-      if (opts.hot) temps.push('熱');
-      if (temps.length > 0) {
-        html += `<div><label class="font-extrabold text-gray-700 block mb-1.5">🌡️ 飲品溫度 (必選)：</label><div class="grid grid-cols-2 gap-2">${temps.map((t, idx) => `<label class="cursor-pointer"><input type="radio" name="opt-temp" value="${t}飲" ${idx === 0 ? 'checked' : ''} class="peer hidden" onchange="toggleIceLevelBox()"><div class="border rounded-xl p-2.5 text-center font-bold peer-checked:bg-[#213c64] peer-checked:text-white peer-checked:border-[#213c64] transition">${t}飲</div></label>`).join('')}</div></div>`;
-      }
-      if (opts.ice && opts.iceLevel !== false) {
-        const iceLevels = ['正常冰', '少冰', '微冰', '去冰'];
-        html += `<div id="ice-level-box"><label class="font-extrabold text-gray-700 block mb-1.5">🧊 冰量選擇：</label><div class="grid grid-cols-4 gap-1.5">${iceLevels.map((lvl, idx) => `<label class="cursor-pointer"><input type="radio" name="opt-ice-level" value="${lvl}" ${idx === 0 ? 'checked' : ''} class="peer hidden"><div class="border rounded-xl py-2 text-center font-bold text-[11px] peer-checked:bg-sky-700 peer-checked:text-white peer-checked:border-sky-700 transition">${lvl}</div></label>`).join('')}</div></div>`;
-      }
-      const beans = [];
-      if (opts.bean5) beans.push({ name: '5號 中焙', price: Number(opts.priceBean5 || 0) });
-      if (opts.bean1) beans.push({ name: '1號 淺焙', price: Number(opts.priceBean1 || 0) });
-      if (beans.length > 0) {
-        html += `<div><label class="font-extrabold text-gray-700 block mb-1.5">🫘 選擇配方豆 (必選)：</label><div class="grid grid-cols-2 gap-2">${beans.map((b, idx) => `<label class="cursor-pointer"><input type="radio" name="opt-bean" value="${b.name}" data-price="${b.price}" ${idx === 0 ? 'checked' : ''} class="peer hidden" onchange="updateModalPrice()"><div class="border rounded-xl p-2.5 text-center font-bold text-[11px] peer-checked:bg-[#213c64] peer-checked:text-white peer-checked:border-[#213c64] transition">${b.name} ${b.price > 0 ? `(+NT$${b.price})` : ''}</div></label>`).join('')}</div></div>`;
-      }
-      const sugars = [];
-      if (opts.sugarFree) sugars.push({ name: '無糖', price: Number(opts.priceSugarFree || 0) });
-      if (opts.sugarMicro) sugars.push({ name: '微糖', price: Number(opts.priceSugarMicro || 0) });
-      if (opts.sugarHalf) sugars.push({ name: '半糖', price: Number(opts.priceSugarHalf || 0) });
-      if (opts.sugarNormal) sugars.push({ name: '正常甜', price: Number(opts.priceSugarNormal || 0) });
-      if (sugars.length > 0) {
-        html += `<div><label class="font-extrabold text-gray-700 block mb-1.5">🍯 甜度選擇 (必選)：</label><div class="grid grid-cols-2 gap-2">${sugars.map((s, idx) => `<label class="cursor-pointer"><input type="radio" name="opt-sugar" value="${s.name}" data-price="${s.price}" ${idx === 0 ? 'checked' : ''} class="peer hidden" onchange="updateModalPrice()"><div class="border rounded-xl p-2.5 text-center font-bold text-[11px] peer-checked:bg-[#213c64] peer-checked:text-white peer-checked:border-[#213c64] transition">${s.name} ${s.price > 0 ? `(+NT$${s.price})` : ''}</div></label>`).join('')}</div></div>`;
-      }
-      const addonsList = getActiveAddonsList(activeItem);
-      if (addonsList.length > 0) {
-        html += `<div><label class="font-extrabold text-[#213c64] block mb-1.5">🎁 加購區 (可複選)：</label><div class="space-y-2">${addonsList.map(addon => `<label class="flex items-center justify-between border rounded-xl p-3 cursor-pointer bg-amber-50/40 hover:bg-amber-50 transition"><span class="font-bold text-gray-800">${addon.name} ${addon.price > 0 ? `<span class="text-amber-700">(+NT$${addon.price})</span>` : ''}</span><input type="checkbox" name="custom-rule-option" data-price="${addon.price}" value="${addon.name}${addon.price > 0 ? ` (+NT$${addon.price})` : ''}" class="w-4 h-4 accent-[#213c64] custom-addon-checkbox" onchange="updateModalPrice()"></label>`).join('')}</div></div>`;
-      }
-      document.getElementById('modal-options-container').innerHTML = html;
-      toggleIceLevelBox();
-      updateModalPrice();
-
-      const addBtn = document.getElementById('modal-add-btn');
-      const addBtnText = document.getElementById('modal-add-btn-text');
-      if (isStoreCurrentlyOpen) {
-        addBtn.disabled = false;
-        addBtn.className = "bg-[#213c64] hover:bg-opacity-90 text-white px-6 py-3 rounded-xl font-extrabold text-xs shadow-lg flex items-center gap-2";
-        addBtnText.innerText = "加入購物車";
-      } else {
-        addBtn.disabled = true;
-        addBtn.className = "bg-gray-400 text-white px-5 py-3 rounded-xl font-extrabold text-xs cursor-not-allowed flex items-center gap-2";
-        addBtnText.innerText = "🌙 非營業時間僅供瀏覽";
-      }
-      document.getElementById('customize-modal').classList.remove('hidden');
-    };
-
-    window.updateModalPrice = function() {
-      if (!activeItem) return;
-      let base = activeItem.price;
-      const beanEl = document.querySelector('input[name="opt-bean"]:checked');
-      if (beanEl) base += Number(beanEl.getAttribute('data-price') || 0);
-      const sugarEl = document.querySelector('input[name="opt-sugar"]:checked');
-      if (sugarEl) base += Number(sugarEl.getAttribute('data-price') || 0);
-      document.querySelectorAll('.custom-addon-checkbox:checked').forEach(el => {
-        base += Number(el.getAttribute('data-price') || 0);
-      });
-      document.getElementById('modal-item-price').innerText = `NT$${base * currentQty}`;
-    };
-
-    window.closeModal = function() {
-      document.getElementById('customize-modal').classList.add('hidden');
-    };
-
-    window.adjustQty = function(change) {
-      currentQty += change;
-      if (currentQty < 1) currentQty = 1;
-      document.getElementById('modal-qty').innerText = currentQty;
-      updateModalPrice();
-    };
-
-    function showToast(msg) {
-      const t = document.getElementById('toast');
-      t.innerText = msg;
-      t.classList.remove('hidden');
-      setTimeout(() => t.classList.add('hidden'), 2200);
+      box.classList.remove("hidden");
+      box.innerText = "⚠️ 系統提示：" + msg;
     }
 
-    window.confirmAddToCart = function() {
-      if (!isStoreCurrentlyOpen) { alert(`抱歉，${storeCloseReason}，目前僅供瀏覽菜單喔！`); return; }
-      if (!activeItem) return;
-      const modifiers = [];
-      let finalUnitPrice = activeItem.price;
-      const tempEl = document.querySelector('input[name="opt-temp"]:checked');
-      if (tempEl) {
-        modifiers.push(tempEl.value);
-        if (tempEl.value === '冰飲') {
-          const iceLvlEl = document.querySelector('input[name="opt-ice-level"]:checked');
-          if (iceLvlEl) modifiers.push(iceLvlEl.value);
-        }
-      }
-      const beanEl = document.querySelector('input[name="opt-bean"]:checked');
-      if (beanEl) {
-        const p = Number(beanEl.getAttribute('data-price') || 0);
-        modifiers.push(p > 0 ? `${beanEl.value}(+$${p})` : beanEl.value);
-        finalUnitPrice += p;
-      }
-      const sugarEl = document.querySelector('input[name="opt-sugar"]:checked');
-      if (sugarEl) {
-        const p = Number(sugarEl.getAttribute('data-price') || 0);
-        modifiers.push(p > 0 ? `${sugarEl.value}(+$${p})` : sugarEl.value);
-        finalUnitPrice += p;
-      }
-      document.querySelectorAll('input[name="custom-rule-option"]:checked').forEach(el => {
-        modifiers.push(el.value);
-        finalUnitPrice += Number(el.getAttribute('data-price') || 0);
-      });
-      const note = document.getElementById('modal-note').value.trim();
-      cart.push({ id: activeItem.id, name: activeItem.name, price: finalUnitPrice, qty: currentQty, modifiers, note });
-      updateCartBadge();
-      closeModal();
-      showToast(`✅ 已加入：${activeItem.name} x${currentQty}`);
-    };
-
-    window.openCart = function() {
-      const listEl = document.getElementById('cart-items-list');
-      const totalEl = document.getElementById('cart-total');
-      if (cart.length === 0) {
-        listEl.innerHTML = `<p class="text-center text-gray-400 text-xs py-10">購物車目前是空的...</p>`;
-        totalEl.innerText = 'NT$0';
-      } else {
-        let total = 0;
-        listEl.innerHTML = cart.map((item, idx) => {
-          const itemTotal = item.price * item.qty;
-          total += itemTotal;
-          return `<div class="flex justify-between items-center border-b pb-3 text-xs"><div class="pr-2"><p class="font-extrabold text-gray-900">${item.name} x${item.qty}</p><p class="text-[11px] text-gray-500 mt-0.5">${item.modifiers.join(' / ')} ${item.note ? `[備註: ${item.note}]` : ''}</p></div><div class="flex items-center gap-2 shrink-0"><span class="font-extrabold text-[#213c64]">NT$${itemTotal}</span><button onclick="removeFromCart(${idx})" class="text-red-500 font-bold px-2 py-1 rounded-lg bg-red-50">刪除</button></div></div>`;
-        }).join('');
-        totalEl.innerText = `NT$${total}`;
-      }
-      document.getElementById('cart-drawer').classList.remove('hidden');
-    };
-
-    window.closeCart = function() {
-      document.getElementById('cart-drawer').classList.add('hidden');
-    };
-
-    window.removeFromCart = function(idx) {
-      cart.splice(idx, 1);
-      updateCartBadge();
-      openCart();
-    };
-
-    function updateCartBadge() {
-      const count = cart.reduce((sum, item) => sum + item.qty, 0);
-      const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-      document.getElementById('cart-badge').innerText = count;
-      document.getElementById('bottom-cart-count').innerText = count;
-      document.getElementById('bottom-cart-total').innerText = `NT$${total}`;
-      const bottomBar = document.getElementById('bottom-cart-bar');
-      if (count > 0) bottomBar.classList.remove('hidden');
-      else bottomBar.classList.add('hidden');
+    function escapeHtml(str) {
+      return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
     }
 
-    let customerAudioCtx = null;
-    function playPickupReadyChime() {
+    try {
+      const app = initializeApp(firebaseConfig);
+      db = getFirestore(app);
+    } catch (err) {
+      showGlobalError("Firebase 初始化失敗：" + err.message);
+    }
+
+    // 時鐘與暫停接單狀態更新
+    setInterval(() => {
+      const now = new Date();
+      const clockEl = document.getElementById("system-clock");
+      if (clockEl) {
+        clockEl.innerText =
+          String(now.getHours()).padStart(2, "0") + ":" +
+          String(now.getMinutes()).padStart(2, "0") + ":" +
+          String(now.getSeconds()).padStart(2, "0");
+      }
+      updatePauseButtonUI();
+    }, 1000);
+
+    function updatePauseButtonUI() {
+      const btn = document.getElementById("pause-store-btn");
+      if (!btn) return;
+      const pauseUntil = Number(latestStoreSettings.pauseUntil || 0);
+      if (pauseUntil > Date.now()) {
+        const remainMin = Math.ceil((pauseUntil - Date.now()) / 60000);
+        btn.className = "bg-red-600 hover:bg-red-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-extrabold shadow animate-pulse";
+        btn.innerText = "▶️ 忙碌暫停中 (剩" + remainMin + "分・點擊恢復)";
+      } else {
+        btn.className = "bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-extrabold shadow transition";
+        btn.innerText = "⏸️ 暫停接單 15分";
+      }
+    }
+
+    // 語音與音效
+    function speakText(text) {
+      if (!isVoiceEnabled) return;
       try {
-        if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 500]);
-        if (!customerAudioCtx) customerAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (customerAudioCtx.state === 'suspended') customerAudioCtx.resume();
-        const now = customerAudioCtx.currentTime;
-        [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
-          const osc = customerAudioCtx.createOscillator();
-          const gain = customerAudioCtx.createGain();
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = "zh-TW";
+        u.rate = 1.0;
+        window.speechSynthesis.speak(u);
+      } catch (e) {}
+    }
+
+    function playNewOrderChime() {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === "suspended") audioCtx.resume();
+        const now = audioCtx.currentTime;
+        [659.25, 830.61, 987.77, 1318.5].forEach((freq, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
           osc.type = "triangle";
-          osc.frequency.setValueAtTime(freq, now + idx * 0.15);
-          gain.gain.setValueAtTime(0.4, now + idx * 0.15);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.15 + 0.35);
+          osc.frequency.setValueAtTime(freq, now + idx * 0.16);
+          gain.gain.setValueAtTime(0.45, now + idx * 0.16);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.16 + 0.35);
           osc.connect(gain);
-          gain.connect(customerAudioCtx.destination);
-          osc.start(now + idx * 0.15);
-          osc.stop(now + idx * 0.15 + 0.35);
+          gain.connect(audioCtx.destination);
+          osc.start(now + idx * 0.16);
+          osc.stop(now + idx * 0.16 + 0.35);
         });
       } catch (e) {}
     }
 
-    function watchOrderStatus(orderId) {
-      const banner = document.getElementById('active-order-banner');
-      const numBadge = document.getElementById('order-number-badge');
-      const badge = document.getElementById('order-status-badge');
-      const text = document.getElementById('order-status-text');
-      banner.classList.remove('hidden');
-      let notifiedCompleted = false;
+    function getOrderMillis(o) {
+      if (!o || !o.createdAt) return 0;
+      if (typeof o.createdAt.toMillis === "function") return o.createdAt.toMillis();
+      if (o.createdAt.seconds) return o.createdAt.seconds * 1000;
+      return new Date(o.createdAt).getTime() || 0;
+    }
 
-      onSnapshot(doc(db, "orders", orderId), (snap) => {
-        if (!snap.exists()) return;
-        const data = snap.data();
-        numBadge.innerText = data.orderNumber || '#001';
-        if (data.status === 'completed') {
-          badge.className = "bg-emerald-600 text-white text-xs font-extrabold px-3 py-1 rounded-full animate-bounce";
-          badge.innerText = "🎉 製作完成・請取餐";
-          text.innerText = `親愛的 ${data.customerInfo}，您的餐點好囉！請憑號碼牌【${data.orderNumber || ''}】至吧台取餐！`;
-          if (!notifiedCompleted) {
-            notifiedCompleted = true;
-            playPickupReadyChime();
+    // 推播 LINE 訊息給客人
+    async function pushLineMessageToCustomer(orderObj, messageText) {
+      if (!orderObj || !orderObj.lineUserId || String(orderObj.lineUserId).startsWith("web_")) return;
+      try {
+        await fetch(GAS_WEB_APP_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "pushMessage",
+            userId: orderObj.lineUserId,
+            message: messageText
+          })
+        });
+      } catch (e) {}
+    }
+
+    // ==================== 1. 即時監聽訂單 ====================
+    if (db) {
+      onSnapshot(collection(db, "orders"), (snapshot) => {
+        const badge = document.getElementById("conn-badge");
+        if (badge) {
+          badge.innerText = "🟢 雲端已連線";
+          badge.className = "text-[11px] bg-emerald-950 text-emerald-300 border border-emerald-700 px-2.5 py-0.5 rounded-full font-extrabold";
+        }
+
+        const temp = [];
+        let pendingCount = 0;
+        let acceptedCount = 0;
+        let todayCups = 0;
+        let todayRev = 0;
+        const todayStr = new Date().toLocaleDateString("zh-TW");
+        let newlyArrivedOrder = null;
+
+        snapshot.forEach((d) => {
+          const data = { id: d.id, ...d.data() };
+          temp.push(data);
+
+          if (data.status === "pending") {
+            pendingCount++;
+            if (!knownPendingIds.has(data.id)) {
+              knownPendingIds.add(data.id);
+              if (!isFirstLoad) newlyArrivedOrder = data;
+            }
+          } else if (data.status === "accepted") {
+            acceptedCount++;
           }
-        } else if (data.status === 'accepted') {
-          badge.className = "bg-blue-600 text-white text-xs font-extrabold px-3 py-1 rounded-full";
-          badge.innerText = "🔥 吧台已接單製作中";
-          text.innerText = `吧台已接收您的 ${data.orderNumber || ''} 訂單（${data.pickupTime || '立即製作'}），正在為您現磨萃取中！`;
-        } else {
-          badge.className = "bg-amber-100 text-amber-800 text-xs font-extrabold px-3 py-1 rounded-full";
-          badge.innerText = "⏳ 等待吧台確認接單";
-          text.innerText = `已送出 ${data.orderNumber || ''} 訂單（共 NT$${data.totalAmount}），等待吧台人員確認中。`;
+
+          const ms = getOrderMillis(data);
+          if (ms > 0) {
+            const dtStr = new Date(ms).toLocaleDateString("zh-TW");
+            if (dtStr === todayStr && data.status !== "abandoned") {
+              todayRev += Number(data.totalAmount || 0);
+              (data.items || []).forEach((i) => {
+                todayCups += Number(i.qty || 0);
+              });
+            }
+          }
+        });
+
+        isFirstLoad = false;
+        temp.sort((a, b) => getOrderMillis(b) - getOrderMillis(a));
+        allOrders = temp;
+
+        document.getElementById("pending-count-badge").innerText = pendingCount;
+        document.getElementById("stat-pending").innerText = pendingCount;
+        document.getElementById("stat-accepted").innerText = acceptedCount;
+        document.getElementById("stat-today-cups").innerText = todayCups + " 杯";
+        document.getElementById("stat-today-rev").innerText = "NT$" + todayRev;
+
+        renderOrders();
+
+        if (newlyArrivedOrder) {
+          playNewOrderChime();
+          const itemSummary = (newlyArrivedOrder.items || []).map((i) => i.name + i.qty + "杯").join("、");
+          speakText("新訂單 " + (newlyArrivedOrder.orderNumber || "") + "，" + (newlyArrivedOrder.customerName || "") + "，" + itemSummary + "，" + (newlyArrivedOrder.pickupTime || ""));
+        }
+      }, (error) => {
+        const badge = document.getElementById("conn-badge");
+        if (badge) {
+          badge.innerText = "🔴 讀取失敗";
+          badge.className = "text-[11px] bg-red-950 text-red-300 border border-red-700 px-2.5 py-0.5 rounded-full font-extrabold";
+        }
+        showGlobalError("讀取訂單失敗：" + error.message);
+      });
+
+      // 監聽商店設定
+      onSnapshot(doc(db, "settings", "store"), (snap) => {
+        if (snap.exists()) {
+          latestStoreSettings = snap.data();
+          if (latestStoreSettings.storeMode) document.getElementById("set-store-mode").value = latestStoreSettings.storeMode;
+          if (latestStoreSettings.announcementTitle) document.getElementById("set-ann-title").value = latestStoreSettings.announcementTitle;
+          if (latestStoreSettings.announcementText) document.getElementById("set-ann-text").value = latestStoreSettings.announcementText;
+          renderPromoCodesList(latestStoreSettings.promoCodes || []);
+          updatePauseButtonUI();
         }
       });
     }
 
-    async function generateTodayOrderNumber() {
-      try {
-        const snap = await getDocs(collection(db, "orders"));
-        const todayStr = new Date().toLocaleDateString('zh-TW');
-        let count = 0;
-        snap.forEach(d => {
-          const dt = d.data().createdAt?.toDate ? d.data().createdAt.toDate() : new Date();
-          if (dt.toLocaleDateString('zh-TW') === todayStr) count++;
-        });
-        return `#${String(count + 1).padStart(3, '0')}`;
-      } catch (e) {
-        return `#${String(Math.floor(100 + Math.random() * 900))}`;
+    function renderOrders() {
+      const container = document.getElementById("orders-container");
+      if (!container) return;
+
+      let list = allOrders;
+      if (currentFilter === "pending") {
+        list = allOrders.filter((o) => o.status === "pending");
+      } else if (currentFilter === "active") {
+        list = allOrders.filter((o) => o.status === "accepted");
+      } else if (currentFilter === "tomorrow") {
+        list = allOrders.filter((o) => o.isPreorderTomorrow || String(o.pickupTime || "").includes("明日預訂"));
+      }
+
+      if (list.length === 0) {
+        container.innerHTML = '<p class="text-slate-500 text-xs col-span-2 py-12 text-center font-bold">目前沒有符合此篩選條件的訂單</p>';
+        return;
+      }
+
+      container.innerHTML = list.map((o) => {
+        const oid = escapeHtml(o.id);
+        const isPending = o.status === "pending";
+        const isAccepted = o.status === "accepted";
+        const isCompleted = o.status === "completed";
+        const isAbandoned = o.status === "abandoned";
+
+        let badgeHtml = '<span class="bg-red-950 text-red-300 border border-red-700 px-2.5 py-1 rounded-full text-xs font-extrabold">⏳ 待接單</span>';
+        if (isAccepted) badgeHtml = '<span class="bg-blue-950 text-blue-300 border border-blue-700 px-2.5 py-1 rounded-full text-xs font-extrabold">🔥 製作中</span>';
+        if (isCompleted) badgeHtml = '<span class="bg-emerald-950 text-emerald-300 border border-emerald-700 px-2.5 py-1 rounded-full text-xs font-extrabold">🎉 已完成取餐</span>';
+        if (isAbandoned) badgeHtml = '<span class="bg-gray-800 text-gray-400 border border-gray-600 px-2.5 py-1 rounded-full text-xs font-extrabold">🚫 棄單未取</span>';
+
+        const memberTag = Number(o.memberCompletedCount || 0) > 0
+          ? '<span class="bg-emerald-900/70 text-emerald-300 px-1.5 py-0.5 rounded text-[10px] font-extrabold">熟客(' + Number(o.memberCompletedCount) + '次)</span>'
+          : '<span class="bg-amber-900/70 text-amber-300 px-1.5 py-0.5 rounded text-[10px] font-extrabold">🆕 首單新客</span>';
+
+        const itemsHtml = (o.items || []).map((i) => {
+          const cupTag = i.cupLabel ? '<span class="bg-blue-900 text-blue-200 px-1.5 py-0.5 rounded text-[10px] font-extrabold ml-1">🏷️ ' + escapeHtml(i.cupLabel) + '</span>' : '';
+          const modsStr = (i.modifiers && i.modifiers.length > 0) ? escapeHtml(i.modifiers.join(" / ")) : "標準";
+          const noteStr = i.note ? ' <span class="text-amber-300 font-extrabold">[備註: ' + escapeHtml(i.note) + ']</span>' : '';
+          return '<div class="flex justify-between items-start text-xs py-1.5 border-b border-slate-700/60">' +
+            '<div class="pr-2">' +
+              '<span class="font-extrabold text-amber-300 text-sm">' + Number(i.qty || 1) + 'x</span> ' +
+              '<span class="font-extrabold text-white text-sm">' + escapeHtml(i.name) + '</span>' + cupTag +
+              '<p class="text-[11px] text-slate-300 font-bold mt-0.5">' + modsStr + noteStr + '</p>' +
+            '</div>' +
+            '<span class="font-mono font-extrabold text-slate-200 shrink-0">NT$' + (Number(i.price || 0) * Number(i.qty || 1)) + '</span>' +
+          '</div>';
+        }).join("");
+
+        const taxBadge = o.taxId ? '<span class="bg-purple-900/80 text-purple-200 border border-purple-600 px-2 py-0.5 rounded text-[11px] font-extrabold">🧾 統編：' + escapeHtml(o.taxId) + '</span>' : '';
+        const promoBadge = Number(o.discountAmount || 0) > 0 ? '<span class="bg-emerald-900/80 text-emerald-200 px-2 py-0.5 rounded text-[11px] font-extrabold">🎟️ 優惠碼 ' + escapeHtml(o.promoCode || "") + ' (-$' + Number(o.discountAmount) + ')</span>' : '';
+        const replyHistory = o.baristaMessage ? '<div class="bg-indigo-950/70 border border-indigo-700/70 p-2 rounded-xl text-[11px] text-indigo-200 font-bold">💬 已發送提醒：' + escapeHtml(o.baristaMessage) + '</div>' : '';
+
+        const ms = getOrderMillis(o);
+        const timeFormatted = ms > 0 ? new Date(ms).toLocaleString("zh-TW", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "剛剛";
+
+        let mainActionBtn = "";
+        if (isPending) {
+          mainActionBtn = '<button type="button" data-action="accept" data-id="' + oid + '" class="order-action-btn bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-xs font-extrabold shadow col-span-4">🔥 確認接單・開始製作 (自動發送 LINE 通知)</button>';
+        } else if (isAccepted) {
+          mainActionBtn = '<button type="button" data-action="complete" data-id="' + oid + '" class="order-action-btn bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-extrabold shadow col-span-4">🎉 製作完成・通知客人取餐 (熟客次數+1)</button>';
+        } else {
+          mainActionBtn = '<button type="button" data-action="delete" data-id="' + oid + '" class="order-action-btn bg-slate-700 hover:bg-red-900/70 text-slate-300 py-2 rounded-xl text-xs font-bold col-span-4">🗑️ 刪除此筆歷史紀錄</button>';
+        }
+
+        return '<div class="bg-slate-800 border-2 ' + (isPending ? 'border-red-500 shadow-lg' : 'border-slate-700') + ' rounded-2xl p-4 space-y-3 flex flex-col justify-between">' +
+          '<div class="space-y-2.5">' +
+            '<div class="flex justify-between items-start border-b border-slate-700 pb-2.5">' +
+              '<div class="space-y-1">' +
+                '<div class="flex items-center gap-2 flex-wrap">' +
+                  '<span class="bg-[#213c64] text-white font-extrabold text-sm px-3 py-1 rounded-xl">' + escapeHtml(o.orderNumber || "#001") + '</span>' +
+                  '<span class="text-xs font-extrabold text-white">' + escapeHtml(o.customerInfo || o.customerName || "客人") + '</span>' +
+                  memberTag +
+                '</div>' +
+                '<p class="text-[11px] text-amber-400 font-extrabold">⏰ ' + escapeHtml(o.pickupTime || "現場立即製作") + '</p>' +
+              '</div>' +
+              badgeHtml +
+            '</div>' +
+            ((taxBadge || promoBadge) ? '<div class="flex flex-wrap gap-1.5">' + taxBadge + promoBadge + '</div>' : '') +
+            '<div class="space-y-0.5">' + itemsHtml + '</div>' +
+            replyHistory +
+          '</div>' +
+          '<div class="space-y-2.5 pt-2">' +
+            '<div class="flex justify-between items-center text-xs font-extrabold text-slate-300">' +
+              '<span>應收總計：<span class="text-amber-400 text-base">NT$' + Number(o.totalAmount || 0) + '</span></span>' +
+              '<span class="text-[10px] text-slate-400 font-mono">下單：' + timeFormatted + '</span>' +
+            '</div>' +
+            '<div class="grid grid-cols-4 gap-1.5 pt-2 border-t border-slate-700">' +
+              '<button type="button" data-action="print" data-id="' + oid + '" class="order-action-btn bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-xl text-[11px] font-extrabold">🖨️ 印杯貼</button>' +
+              '<button type="button" data-action="reply" data-id="' + oid + '" class="order-action-btn bg-indigo-900/70 hover:bg-indigo-800 text-indigo-200 border border-indigo-700 py-2 rounded-xl text-[11px] font-extrabold">💬 傳提醒</button>' +
+              '<a href="tel:' + escapeHtml(o.customerPhone || "") + '" class="bg-slate-700 hover:bg-slate-600 text-slate-200 py-2 rounded-xl text-[11px] font-extrabold text-center">📞 撥電話</a>' +
+              '<button type="button" data-action="abandon" data-id="' + oid + '" class="order-action-btn bg-red-950/70 hover:bg-red-900 text-red-300 border border-red-800/70 py-2 rounded-xl text-[11px] font-extrabold">🚫 棄單封鎖</button>' +
+              mainActionBtn +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join("");
+    }
+
+    // ==================== 2. 訂單操作處理函式 ====================
+    async function handleOrderAction(action, orderId) {
+      const order = allOrders.find((o) => o.id === orderId);
+      if (!order) return;
+
+      if (action === "print") {
+        printOrderCupLabels(order);
+        return;
+      }
+      if (action === "reply") {
+        document.getElementById("reply-order-id").value = orderId;
+        document.getElementById("reply-custom-text").value = "";
+        document.getElementById("reply-modal").classList.remove("hidden");
+        return;
+      }
+      if (action === "accept") {
+        try {
+          await updateDoc(doc(db, "orders", orderId), { status: "accepted" });
+          await pushLineMessageToCustomer(order, "🔥 【NODAY Coffee】吧台已接收您的訂單 " + (order.orderNumber || "") + "（" + (order.pickupTime || "") + "），正在為您現磨沖煮中！");
+        } catch (e) {
+          alert("更新失敗：" + e.message);
+        }
+        return;
+      }
+      if (action === "complete") {
+        try {
+          await updateDoc(doc(db, "orders", orderId), { status: "completed" });
+          if (order.lineUserId) {
+            await setDoc(doc(db, "members", order.lineUserId), { completedCount: increment(1) }, { merge: true });
+          }
+          await pushLineMessageToCustomer(order, "🎉 【NODAY Coffee】親愛的 " + (order.customerName || "") + "，您的外帶餐點 " + (order.orderNumber || "") + " 已經製作完成囉！請至吧台取餐，謝謝您！");
+        } catch (e) {
+          alert("更新失敗：" + e.message);
+        }
+        return;
+      }
+      if (action === "abandon") {
+        if (!confirm("⚠️ 確定要將【" + (order.customerInfo || "") + "】標記為「未取餐棄單」並直接封鎖帳號與電話嗎？")) return;
+        try {
+          await updateDoc(doc(db, "orders", orderId), { status: "abandoned" });
+          if (order.lineUserId) {
+            await setDoc(doc(db, "members", order.lineUserId), { isBlocked: true, abandonedCount: increment(1) }, { merge: true });
+          }
+          if (order.customerPhone) {
+            await setDoc(doc(db, "blocked_phones", order.customerPhone), { isBlocked: true, customerName: order.customerName || "" }, { merge: true });
+          }
+          alert("🚫 已將該筆訂單標記為棄單，並封鎖其帳號與手機號碼！");
+        } catch (e) {
+          alert("操作失敗：" + e.message);
+        }
+        return;
+      }
+      if (action === "delete") {
+        if (!confirm("確定要永久刪除此筆訂單紀錄嗎？")) return;
+        try {
+          await deleteDoc(doc(db, "orders", orderId));
+        } catch (e) {
+          alert("刪除失敗：" + e.message);
+        }
       }
     }
 
-    // ==================== 4. 首次點餐電話綁定彈窗控制（已補齊並鎖定背景滑動） ====================
-    window.closePhoneConfirmModal = function() {
-      document.getElementById('phone-confirm-modal').classList.add('hidden');
-      document.body.classList.remove('modal-open');
-      document.getElementById('customer-phone').focus();
-    };
+    // 🖨️ 列印杯貼
+    function printOrderCupLabels(order) {
+      const printArea = document.getElementById("print-area");
+      let cupsHtml = "";
+      const totalCups = (order.items || []).reduce((s, i) => s + Number(i.qty || 1), 0);
+      let cupCounter = 1;
 
-    window.confirmPhoneAndSubmit = async function() {
-      const confirmBtn = document.getElementById('final-confirm-submit-btn');
-      if (confirmBtn) {
-        confirmBtn.disabled = true;
-        confirmBtn.innerText = "⏳ 送單中...";
-      }
-      document.getElementById('phone-confirm-modal').classList.add('hidden');
-      document.body.classList.remove('modal-open');
-      await executeFinalOrderSubmit();
-      if (confirmBtn) {
-        confirmBtn.disabled = false;
-        confirmBtn.innerText = "確認無誤並送單";
-      }
-    };
+      (order.items || []).forEach((item) => {
+        const qty = Number(item.qty || 1);
+        for (let q = 0; q < qty; q++) {
+          const cupNameHtml = item.cupLabel
+            ? '<div style="font-size: 13px; font-weight: 900; border: 1.5px solid #000; padding: 1px 4px; display: inline-block; margin-bottom: 2px;">🏷️ ' + escapeHtml(item.cupLabel) + '</div>'
+            : '';
+          const modsStr = (item.modifiers && item.modifiers.length > 0) ? escapeHtml(item.modifiers.join(" / ")) : "標準配方";
+          const noteHtml = item.note ? '<div style="font-size: 10px; font-weight: bold;">備註: ' + escapeHtml(item.note) + '</div>' : '';
+          const taxHtml = order.taxId ? '<div style="font-size: 9px; font-weight: bold;">統編: ' + escapeHtml(order.taxId) + '</div>' : '';
 
-    window.submitOrder = async function() {
-      applyStoreStatusUI();
-      if (!isStoreCurrentlyOpen) { alert(`抱歉，${storeCloseReason}，目前僅供瀏覽菜單，無法送出訂單喔！`); closeCart(); return; }
-      if (currentMemberDoc?.isBlocked) { document.getElementById('blocked-overlay').classList.remove('hidden'); closeCart(); return; }
-      if (hasPendingUnacceptedOrder) { alert("⏳ 您目前有一筆訂單正在等待吧台確認接單中！\n為避免重複下單，請待吧台按下接收後再加點喔！"); closeCart(); return; }
+          cupsHtml +=
+            '<div style="width: 48mm; min-height: 33mm; padding: 2mm; margin: 0 auto 3mm auto; font-family: sans-serif; page-break-after: always; box-sizing: border-box; background: #fff; color: #000; border-bottom: 1px dotted #999;">' +
+              '<div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; font-weight: 900; border-bottom: 1.5px solid #000; padding-bottom: 1mm; margin-bottom: 1.5mm;">' +
+                '<span>' + escapeHtml(order.orderNumber || "#001") + '</span>' +
+                '<span style="font-size: 11px;">(' + cupCounter + '/' + totalCups + ')</span>' +
+              '</div>' +
+              cupNameHtml +
+              '<div style="font-size: 15px; font-weight: 900; line-height: 1.2; margin-bottom: 1mm;">' + escapeHtml(item.name) + '</div>' +
+              '<div style="font-size: 11px; font-weight: bold; line-height: 1.25; margin-bottom: 1mm;">' + modsStr + '</div>' +
+              noteHtml +
+              '<div style="font-size: 9px; margin-top: 1.5mm; border-top: 1px dashed #666; padding-top: 1mm; display: flex; justify-content: space-between;">' +
+                '<span>' + escapeHtml(order.customerName || "") + '</span>' +
+                '<span>NODAY</span>' +
+              '</div>' +
+              taxHtml +
+            '</div>';
+          cupCounter++;
+        }
+      });
 
-      const customerName = document.getElementById('customer-name').value.trim();
-      const rawPhone = document.getElementById('customer-phone').value.trim();
-      if (!customerName || customerName.length < 2) { alert('請填寫正確的取餐人姓名（至少 2 個字）！'); closeCart(); document.getElementById('customer-name').focus(); return; }
+      printArea.innerHTML = cupsHtml;
+      printArea.classList.remove("hidden");
+      setTimeout(() => {
+        window.print();
+        setTimeout(() => { printArea.classList.add("hidden"); }, 800);
+      }, 150);
+    }
 
-      const phoneCheck = validateTaiwanMobile(rawPhone);
-      if (!phoneCheck.valid) { alert(phoneCheck.msg); closeCart(); document.getElementById('customer-phone').focus(); return; }
-      if (cart.length === 0) { alert('購物車是空的喔！'); return; }
-
+    // ==================== 3. 雲端菜單與加購管理 ====================
+    async function loadAdminMenu() {
+      const container = document.getElementById("admin-menu-container");
       try {
-        const phoneBlockSnap = await getDoc(doc(db, "blocked_phones", phoneCheck.cleanPhone));
-        if (phoneBlockSnap.exists() && phoneBlockSnap.data().isBlocked) {
-          document.getElementById('blocked-overlay').classList.remove('hidden');
-          closeCart();
+        const snap = await getDocs(collection(db, "menu"));
+        if (snap.empty) {
+          container.innerHTML = '<p class="text-xs text-slate-400">目前雲端尚無菜單資料</p>';
           return;
         }
-      } catch (e) {}
-
-      const totalCups = cart.reduce((sum, i) => sum + i.qty, 0);
-      const totalAmount = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
-      const completedCount = Number(currentMemberDoc?.completedCount || 0);
-
-      if (completedCount === 0 && (totalCups > 5 || totalAmount > 600)) {
-        alert(`🛡️ 首次點餐新客保護提醒：\n\n首次線上點餐單筆上限為「5 杯」或「NT$600」（目前選購 ${totalCups} 杯 / NT$${totalAmount}）。\n\n只要完成首次取餐升級為熟客後即自動解除限制！若為團體大額訂購，請直接電洽門市：04-7237933 確認。`);
-        return;
-      }
-
-      if (pickupMode === 'custom') {
-        const customVal = document.getElementById('custom-pickup-time').value;
-        if (!customVal) { alert('請選擇您的指定取餐時間！'); closeCart(); return; }
-      }
-
-      if (!currentMemberDoc?.phoneLocked) {
-        closeCart();
-        const formatted = `${phoneCheck.cleanPhone.slice(0,4)}-${phoneCheck.cleanPhone.slice(4,7)}-${phoneCheck.cleanPhone.slice(7)}`;
-        document.getElementById('confirm-phone-display').innerText = formatted;
-        document.getElementById('phone-confirm-modal').classList.remove('hidden');
-        document.body.classList.add('modal-open');
-        return;
-      }
-
-      await executeFinalOrderSubmit();
-    };
-
-    async function executeFinalOrderSubmit() {
-      if (isSubmittingOrder) return;
-      isSubmittingOrder = true;
-      const submitBtn = document.getElementById('submit-btn');
-      submitBtn.disabled = true;
-      submitBtn.innerText = "⏳ 正在送出訂單...";
-
-      const customerName = document.getElementById('customer-name').value.trim();
-      const cleanPhone = validateTaiwanMobile(document.getElementById('customer-phone').value.trim()).cleanPhone;
-      let finalPickupTime = pickupMode;
-      if (pickupMode === 'custom') {
-        finalPickupTime = `指定 ${document.getElementById('custom-pickup-time').value} 取餐`;
-      }
-
-      try {
-        if (!customerAudioCtx) customerAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (customerAudioCtx.state === 'suspended') customerAudioCtx.resume();
-      } catch (e) {}
-
-      localStorage.setItem('noday_name', customerName);
-      localStorage.setItem('noday_phone', cleanPhone);
-      localStorage.setItem('noday_last_order', JSON.stringify(cart));
-
-      const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-      const customerInfo = `${customerName} (${cleanPhone})`;
-      const orderNumber = await generateTodayOrderNumber();
-      const memberCompleted = Number(currentMemberDoc?.completedCount || 0);
-      const memberAbandoned = Number(currentMemberDoc?.abandonedCount || 0);
-      const userId = lineProfile?.userId || `web_${cleanPhone}`;
-
-      try {
-        const updatedMemberData = {
-          lineUserId: userId,
-          lineDisplayName: lineProfile?.displayName || customerName,
-          pictureUrl: lineProfile?.pictureUrl || "",
-          name: customerName,
-          phone: cleanPhone,
-          phoneLocked: true,
-          completedCount: memberCompleted,
-          abandonedCount: memberAbandoned,
-          isBlocked: false,
-          updatedAt: serverTimestamp()
-        };
-        await setDoc(doc(db, "members", userId), updatedMemberData, { merge: true });
-        currentMemberDoc = updatedMemberData;
-        applyMemberStatusToUI();
-
-        const orderPayload = {
-          orderNumber: orderNumber,
-          orderType: "外帶自取",
-          pickupTime: finalPickupTime,
-          customerName: customerName,
-          customerPhone: cleanPhone,
-          customerInfo: customerInfo,
-          lineUserId: userId,
-          lineDisplayName: lineProfile?.displayName || "",
-          memberCompletedCount: memberCompleted,
-          memberAbandonedCount: memberAbandoned,
-          items: cart,
-          totalAmount: totalAmount,
-          status: "pending",
-          createdAt: serverTimestamp()
-        };
-
-        const docRef = await addDoc(collection(db, "orders"), orderPayload);
-        latestSubmittedOrder = { id: docRef.id, ...orderPayload };
-        cart = [];
-        updateCartBadge();
-        closeCart();
-        watchOrderStatus(docRef.id);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        showToast(`🎉 訂單 ${orderNumber} 已送出！`);
-
-        await sendOrderToLineChat();
+        adminCatalog = [];
+        snap.forEach((d) => {
+          adminCatalog.push({ docId: d.id, ...d.data() });
+        });
+        adminCatalog.sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+        renderAdminMenu();
       } catch (e) {
-        console.error(e);
-        alert("送出失敗，請檢查網路連線後重試");
-      } finally {
-        isSubmittingOrder = false;
-        applyStoreStatusUI();
+        container.innerHTML = '<p class="text-xs text-red-400">載入菜單失敗：' + escapeHtml(e.message) + '</p>';
       }
     }
 
-    loadMenu();
+    function renderAdminMenu() {
+      const container = document.getElementById("admin-menu-container");
+      container.innerHTML = adminCatalog.map((cat, cIdx) => {
+        const rows = (cat.items || []).map((item, iIdx) => {
+          const soldBtnClass = item.soldOut ? "bg-red-600 text-white" : "bg-emerald-600 text-white";
+          const upsellBtnClass = item.isUpsell ? "bg-amber-500 text-slate-950 font-extrabold" : "bg-slate-700 text-slate-300";
+
+          return '<div class="flex flex-wrap justify-between items-center gap-2 bg-slate-900 p-3 rounded-xl border border-slate-700 text-xs">' +
+            '<div class="space-y-0.5">' +
+              '<span class="font-extrabold text-white text-sm">' + escapeHtml(item.name) + '</span>' +
+              (item.desc ? '<p class="text-[11px] text-slate-400">' + escapeHtml(item.desc) + '</p>' : '') +
+            '</div>' +
+            '<div class="flex items-center gap-2">' +
+              '<div class="flex items-center gap-1 bg-slate-800 border border-slate-600 rounded-lg px-2 py-1">' +
+                '<span class="text-slate-400 text-[11px]">NT$</span>' +
+                '<input type="number" data-cidx="' + cIdx + '" data-iidx="' + iIdx + '" value="' + Number(item.price || 0) + '" class="menu-price-input w-14 bg-transparent text-amber-300 font-extrabold text-xs focus:outline-none">' +
+              '</div>' +
+              '<button type="button" data-menu-action="upsell" data-cidx="' + cIdx + '" data-iidx="' + iIdx + '" class="menu-item-btn px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition ' + upsellBtnClass + '">' +
+                (item.isUpsell ? '🛍️ 已設加購' : '設為加購') +
+              '</button>' +
+              '<button type="button" data-menu-action="soldout" data-cidx="' + cIdx + '" data-iidx="' + iIdx + '" class="menu-item-btn px-3 py-1.5 rounded-lg text-[11px] font-extrabold transition ' + soldBtnClass + '">' +
+                (item.soldOut ? '🚫 已售完' : '🟢 供應中') +
+              '</button>' +
+            '</div>' +
+          '</div>';
+        }).join("");
+
+        return '<div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 space-y-3">' +
+          '<h3 class="font-extrabold text-sm text-amber-300 border-b border-slate-700 pb-2">' + escapeHtml(cat.category) + '</h3>' +
+          '<div class="space-y-2">' + rows + '</div>' +
+        '</div>';
+      }).join("");
+    }
+
+    // ==================== 4. 優惠碼渲染 ====================
+    function renderPromoCodesList(promos) {
+      const container = document.getElementById("promo-codes-list");
+      if (!promos || promos.length === 0) {
+        container.innerHTML = '<p class="text-xs text-slate-400">目前尚無優惠碼，可點擊右上角「＋ 新增優惠碼」。</p>';
+        return;
+      }
+      container.innerHTML = promos.map((p) =>
+        '<div class="grid grid-cols-4 gap-2 bg-slate-900 p-2.5 rounded-xl border border-slate-700 text-xs items-center promo-row">' +
+          '<input type="text" value="' + escapeHtml(p.code || "") + '" placeholder="代碼(如VIP90)" class="bg-slate-800 border border-slate-700 rounded-lg p-1.5 font-extrabold uppercase text-white promo-code-val">' +
+          '<select class="bg-slate-800 border border-slate-700 rounded-lg p-1.5 font-bold text-white promo-type-val">' +
+            '<option value="fixed" ' + (p.type === "fixed" ? "selected" : "") + '>折現($)</option>' +
+            '<option value="percent" ' + (p.type === "percent" ? "selected" : "") + '>打折(%)</option>' +
+          '</select>' +
+          '<input type="number" value="' + Number(p.value || 0) + '" placeholder="數值" class="bg-slate-800 border border-slate-700 rounded-lg p-1.5 font-bold text-white promo-val-val">' +
+          '<div class="flex gap-1">' +
+            '<input type="number" value="' + Number(p.minSpend || 0) + '" placeholder="低消" class="bg-slate-800 border border-slate-700 rounded-lg p-1.5 font-bold text-white w-full promo-min-val">' +
+            '<button type="button" class="remove-promo-btn bg-red-900/70 text-red-200 px-2.5 py-1 rounded-lg font-extrabold shrink-0">✕</button>' +
+          '</div>' +
+        '</div>'
+      ).join("");
+    }
+
+    // ==================== 5. 綁定所有按鈕事件委派 (零引號衝突) ====================
+    document.getElementById("voice-toggle-btn").addEventListener("click", () => {
+      const btn = document.getElementById("voice-toggle-btn");
+      isVoiceEnabled = !isVoiceEnabled;
+      if (isVoiceEnabled) {
+        btn.className = "bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-extrabold shadow transition";
+        btn.innerText = "🔊 語音播報：已開啟";
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === "suspended") audioCtx.resume();
+        speakText("吧台語音播報已開啟");
+      } else {
+        btn.className = "bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold transition";
+        btn.innerText = "🔊 語音播報：已關閉 (點擊開啟)";
+      }
+    });
+
+    document.getElementById("pause-store-btn").addEventListener("click", async () => {
+      try {
+        const pauseUntil = Number(latestStoreSettings.pauseUntil || 0);
+        if (pauseUntil > Date.now()) {
+          await setDoc(doc(db, "settings", "store"), { pauseUntil: 0 }, { merge: true });
+          alert("🟢 已立即恢復正常線上接單！");
+        } else {
+          const targetTime = Date.now() + 15 * 60 * 1000;
+          await setDoc(doc(db, "settings", "store"), { pauseUntil: targetTime }, { merge: true });
+          alert("⏸️ 已啟動「暫停即時接單 15 分鐘」！\n期間客人仍可預訂明日取餐，15 分鐘後將自動恢復。");
+        }
+      } catch (e) {
+        alert("設定失敗：" + e.message);
+      }
+    });
+
+    document.querySelectorAll(".tab-switch-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const tabName = btn.getAttribute("data-tab");
+        ["orders", "menu", "settings"].forEach((t) => {
+          document.getElementById("tab-" + t).classList.toggle("hidden", t !== tabName);
+          const b = document.getElementById("tab-btn-" + t);
+          b.className = (t === tabName)
+            ? "tab-switch-btn px-4 py-2 rounded-xl text-xs font-extrabold bg-[#213c64] text-white shadow"
+            : "tab-switch-btn px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300";
+        });
+        if (tabName === "menu") loadAdminMenu();
+      });
+    });
+
+    document.querySelectorAll(".filter-order-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        currentFilter = btn.getAttribute("data-filter");
+        document.querySelectorAll(".filter-order-btn").forEach((b) => {
+          b.className = (b.getAttribute("data-filter") === currentFilter)
+            ? "filter-order-btn px-3 py-1.5 rounded-xl bg-slate-700 font-extrabold border border-slate-500 text-white"
+            : "filter-order-btn px-3 py-1.5 rounded-xl bg-slate-800 font-bold border border-slate-700 text-slate-400";
+        });
+        renderOrders();
+      });
+    });
+
+    document.getElementById("orders-container").addEventListener("click", (e) => {
+      const btn = e.target.closest(".order-action-btn");
+      if (!btn) return;
+      const action = btn.getAttribute("data-action");
+      const id = btn.getAttribute("data-id");
+      handleOrderAction(action, id);
+    });
+
+    document.getElementById("reload-menu-btn").addEventListener("click", loadAdminMenu);
+
+    document.getElementById("admin-menu-container").addEventListener("click", async (e) => {
+      const btn = e.target.closest(".menu-item-btn");
+      if (!btn) return;
+      const act = btn.getAttribute("data-menu-action");
+      const cIdx = Number(btn.getAttribute("data-cidx"));
+      const iIdx = Number(btn.getAttribute("data-iidx"));
+      const cat = adminCatalog[cIdx];
+      if (!cat || !cat.items[iIdx]) return;
+
+      if (act === "soldout") cat.items[iIdx].soldOut = !cat.items[iIdx].soldOut;
+      if (act === "upsell") cat.items[iIdx].isUpsell = !cat.items[iIdx].isUpsell;
+      renderAdminMenu();
+      await setDoc(doc(db, "menu", cat.docId), { items: cat.items }, { merge: true });
+    });
+
+    document.getElementById("admin-menu-container").addEventListener("change", async (e) => {
+      const input = e.target.closest(".menu-price-input");
+      if (!input) return;
+      const cIdx = Number(input.getAttribute("data-cidx"));
+      const iIdx = Number(input.getAttribute("data-iidx"));
+      const cat = adminCatalog[cIdx];
+      if (!cat || !cat.items[iIdx]) return;
+      cat.items[iIdx].price = Number(input.value || 0);
+      await setDoc(doc(db, "menu", cat.docId), { items: cat.items }, { merge: true });
+    });
+
+    // 訊息回傳視窗事件
+    document.getElementById("close-reply-modal-x").addEventListener("click", () => {
+      document.getElementById("reply-modal").classList.add("hidden");
+    });
+    document.getElementById("cancel-reply-btn").addEventListener("click", () => {
+      document.getElementById("reply-modal").classList.add("hidden");
+    });
+    document.querySelectorAll(".reply-preset-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.getElementById("reply-custom-text").value = btn.getAttribute("data-preset");
+      });
+    });
+    document.getElementById("send-reply-btn").addEventListener("click", async () => {
+      const orderId = document.getElementById("reply-order-id").value;
+      const text = document.getElementById("reply-custom-text").value.trim();
+      if (!text) { alert("請選擇或輸入要通知客人的訊息！"); return; }
+      const order = allOrders.find((o) => o.id === orderId);
+      try {
+        await updateDoc(doc(db, "orders", orderId), { baristaMessage: text });
+        if (order) {
+          await pushLineMessageToCustomer(order, "💬 【NODAY 吧台通知】關於您的訂單 " + (order.orderNumber || "") + "：\n" + text);
+        }
+        document.getElementById("reply-modal").classList.add("hidden");
+        alert("✅ 已傳送通知！客人點餐畫面與 LINE 將同步收到提醒。");
+      } catch (e) {
+        alert("發送失敗：" + e.message);
+      }
+    });
+
+    // 營業設定與優惠碼事件
+    document.getElementById("save-store-settings-btn").addEventListener("click", async () => {
+      const storeMode = document.getElementById("set-store-mode").value;
+      const announcementTitle = document.getElementById("set-ann-title").value.trim();
+      const announcementText = document.getElementById("set-ann-text").value.trim();
+      try {
+        await setDoc(doc(db, "settings", "store"), { storeMode, announcementTitle, announcementText }, { merge: true });
+        alert("✅ 營業模式與公告已儲存並同步至前台！");
+      } catch (e) {
+        alert("儲存失敗：" + e.message);
+      }
+    });
+
+    document.getElementById("add-promo-row-btn").addEventListener("click", () => {
+      const container = document.getElementById("promo-codes-list");
+      if (container.querySelector("p")) container.innerHTML = "";
+      const div = document.createElement("div");
+      div.className = "grid grid-cols-4 gap-2 bg-slate-900 p-2.5 rounded-xl border border-slate-700 text-xs items-center promo-row";
+      div.innerHTML =
+        '<input type="text" placeholder="代碼(如NODAY20)" class="bg-slate-800 border border-slate-700 rounded-lg p-1.5 font-extrabold uppercase text-white promo-code-val">' +
+        '<select class="bg-slate-800 border border-slate-700 rounded-lg p-1.5 font-bold text-white promo-type-val">' +
+          '<option value="fixed" selected>折現($)</option>' +
+          '<option value="percent">打折(%)</option>' +
+        '</select>' +
+        '<input type="number" placeholder="數值(如20)" class="bg-slate-800 border border-slate-700 rounded-lg p-1.5 font-bold text-white promo-val-val">' +
+        '<div class="flex gap-1">' +
+          '<input type="number" value="0" placeholder="低消" class="bg-slate-800 border border-slate-700 rounded-lg p-1.5 font-bold text-white w-full promo-min-val">' +
+          '<button type="button" class="remove-promo-btn bg-red-900/70 text-red-200 px-2.5 py-1 rounded-lg font-extrabold shrink-0">✕</button>' +
+        '</div>';
+      container.appendChild(div);
+    });
+
+    document.getElementById("promo-codes-list").addEventListener("click", (e) => {
+      const btn = e.target.closest(".remove-promo-btn");
+      if (btn) btn.closest(".promo-row").remove();
+    });
+
+    document.getElementById("save-promo-codes-btn").addEventListener("click", async () => {
+      const rows = document.querySelectorAll(".promo-row");
+      const promoCodes = [];
+      rows.forEach((r) => {
+        const code = r.querySelector(".promo-code-val").value.trim().toUpperCase();
+        const type = r.querySelector(".promo-type-val").value;
+        const value = Number(r.querySelector(".promo-val-val").value || 0);
+        const minSpend = Number(r.querySelector(".promo-min-val").value || 0);
+        if (code && value > 0) promoCodes.push({ code, type, value, minSpend, enabled: true });
+      });
+      try {
+        await setDoc(doc(db, "settings", "store"), { promoCodes: promoCodes }, { merge: true });
+        alert("✅ 優惠碼設定已成功儲存！");
+      } catch (e) {
+        alert("儲存失敗：" + e.message);
+      }
+    });
+
+    async function blockOrUnblockPhone(shouldBlock) {
+      const phone = document.getElementById("block-phone-input").value.trim();
+      if (!/^09\d{8}$/.test(phone)) { alert("請輸入正確的 10 碼手機號碼！"); return; }
+      try {
+        await setDoc(doc(db, "blocked_phones", phone), { isBlocked: shouldBlock }, { merge: true });
+        alert(shouldBlock ? "🚫 已封鎖手機號碼：" + phone : "🟢 已解除封鎖手機號碼：" + phone);
+        document.getElementById("block-phone-input").value = "";
+      } catch (e) {
+        alert("操作失敗：" + e.message);
+      }
+    }
+
+    document.getElementById("btn-block-phone").addEventListener("click", () => blockOrUnblockPhone(true));
+    document.getElementById("btn-unblock-phone").addEventListener("click", () => blockOrUnblockPhone(false));
   </script>
 </body>
 </html>
