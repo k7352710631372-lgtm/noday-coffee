@@ -28,9 +28,8 @@
         <h1 class="text-xl font-extrabold flex flex-wrap items-center gap-2">
           ☕ NODAY 吧台旗艦管理系統
           <span id="header-store-badge" class="text-xs bg-emerald-500 text-white px-2.5 py-0.5 rounded-full font-bold">載入中</span>
-          <span id="header-preorder-badge" class="hidden text-xs bg-amber-500 text-white px-2.5 py-0.5 rounded-full font-bold">🌅 明日預訂開放中</span>
         </h1>
-        <p class="text-xs text-gray-200 mt-0.5">高分貝循環鈴聲 ＆ LINE 推播 ＆ 杯貼列印 ＆ 單品烘焙度/明日預訂管理</p>
+        <p class="text-xs text-gray-200 mt-0.5">高分貝循環鈴聲 ＆ LINE 推播 ＆ 單品烘焙度/優惠碼/雲端菜單管理</p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
         <button onclick="togglePause15Mins()" id="pause-15-btn" class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-xl text-xs font-extrabold shadow transition">
@@ -80,7 +79,7 @@
       </div>
     </section>
 
-    <!-- 會員與棄單黑名單管理面板 (可展開) -->
+    <!-- 會員與棄單黑名單管理面板 -->
     <section id="members-panel" class="hidden bg-white p-5 rounded-2xl shadow-sm border-2 border-purple-300 space-y-4">
       <div class="flex flex-wrap justify-between items-center gap-2 border-b pb-3">
         <div>
@@ -94,7 +93,7 @@
       </div>
     </section>
 
-    <!-- 今日熱銷排行榜 (可展開) -->
+    <!-- 今日熱銷排行榜 -->
     <section id="stats-panel" class="hidden bg-white p-5 rounded-2xl shadow-sm border border-amber-200">
       <div class="flex justify-between items-center mb-3">
         <h3 class="text-sm font-extrabold text-gray-900">🏆 今日熱銷飲品統計</h3>
@@ -119,19 +118,18 @@
         <p class="text-gray-400 text-sm py-6 text-center">目前沒有待處理的新訂單...</p>
       </div>
 
-      <!-- 已完成歷史訂單區 -->
       <div id="completed-orders-section" class="hidden mt-6 pt-4 border-t">
         <h3 class="text-xs font-extrabold text-gray-500 mb-3">📋 今日已完成訂單紀錄</h3>
         <div id="completed-orders-container" class="space-y-2 max-h-64 overflow-y-auto"></div>
       </div>
     </section>
 
-    <!-- 2. 營業狀態、明日預訂、暫停接單、優惠碼 ＆ 店家公告管理 -->
+    <!-- 2. 營業狀態、暫停接單、優惠碼 ＆ 店家公告管理 -->
     <section class="bg-white p-5 rounded-2xl shadow-sm border space-y-5">
       <div class="flex flex-wrap justify-between items-center gap-2 border-b pb-3">
         <div>
-          <h2 class="text-base font-extrabold text-gray-900">🏪 營業狀態、明日預訂、優惠碼 ＆ 店家公告管理</h2>
-          <p class="text-xs text-gray-500 mt-0.5">當打烊或按下「暫停接單 15 分鐘」時，若開啟明日預訂，客人端會自動切換為「🌅 預訂明日取餐」。</p>
+          <h2 class="text-base font-extrabold text-gray-900">🏪 營業狀態、每週營業時間、優惠碼 ＆ 店家公告管理</h2>
+          <p class="text-xs text-gray-500 mt-0.5">非營業時間、店休或按下「暫停接單 15 分鐘」時，客人端將自動切換為暫停點餐模式。</p>
         </div>
         <button onclick="saveStoreSettings()" class="bg-[#213c64] hover:bg-[#192e4d] text-white px-5 py-2.5 rounded-xl text-xs font-extrabold shadow transition">
           💾 儲存公告與營業設定
@@ -139,7 +137,7 @@
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- 左側：營業總開關、明日預訂開關、店家公告、優惠碼管理 -->
+        <!-- 左側：營業總開關、暫停 15 分鐘、店家公告、優惠碼管理 -->
         <div class="space-y-4">
           <div class="bg-gray-50 p-4 rounded-xl border space-y-3">
             <label class="text-xs font-extrabold text-[#213c64] block">🚦 營業接單模式總開關：</label>
@@ -158,25 +156,14 @@
               </label>
             </div>
 
-            <!-- 明日預訂開關 & 暫停 15 分鐘快捷控制 -->
-            <div class="pt-2 border-t flex flex-col gap-2">
-              <label class="flex items-center justify-between bg-amber-50 border border-amber-200 p-2.5 rounded-xl cursor-pointer">
-                <div>
-                  <span class="text-xs font-extrabold text-amber-950 block">🌅 開放「預訂明日取餐」（打烊/暫停時照常接隔天單）</span>
-                  <span class="text-[11px] text-amber-800">開啟後，非營業時間或暫停 15 分鐘期間，客人可選隔天營業時段取餐</span>
-                </div>
-                <input type="checkbox" id="setting-allow-preorder" checked class="w-5 h-5 accent-amber-600 shrink-0">
-              </label>
-
-              <div class="flex items-center justify-between bg-orange-50 border border-orange-200 p-2.5 rounded-xl text-xs">
-                <div>
-                  <span class="font-extrabold text-orange-950">⏸️ 吧台忙碌暫停接單 15 分鐘</span>
-                  <p id="pause-status-text" class="text-[11px] text-orange-700">目前未開啟臨時暫停</p>
-                </div>
-                <button type="button" onclick="togglePause15Mins()" id="pause-15-inline-btn" class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg font-extrabold shrink-0 transition">
-                  啟動暫停 15 分
-                </button>
+            <div class="pt-2 border-t flex items-center justify-between bg-orange-50 border border-orange-200 p-2.5 rounded-xl text-xs">
+              <div>
+                <span class="font-extrabold text-orange-950">⏸️ 吧台忙碌暫停接單 15 分鐘</span>
+                <p id="pause-status-text" class="text-[11px] text-orange-700">目前未開啟臨時暫停</p>
               </div>
+              <button type="button" onclick="togglePause15Mins()" id="pause-15-inline-btn" class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg font-extrabold shrink-0 transition">
+                啟動暫停 15 分
+              </button>
             </div>
           </div>
 
@@ -193,14 +180,12 @@
             </div>
           </div>
 
-          <!-- 🎟️ 優惠碼設定管理 (與購物車即時連動) -->
+          <!-- 🎟️ 優惠碼設定管理 -->
           <div class="bg-emerald-50/50 p-4 rounded-xl border border-emerald-200 space-y-3">
-            <div class="flex justify-between items-center">
-              <label class="text-xs font-extrabold text-emerald-950 block">🎟️ 優惠碼折抵設定（與前台購物車即時連動）：</label>
-            </div>
+            <label class="text-xs font-extrabold text-emerald-950 block">🎟️ 優惠碼折抵設定（與前台購物車即時連動）：</label>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
               <div>
-                <span class="text-[10px] text-gray-500 font-bold">優惠碼 (不分大小寫)</span>
+                <span class="text-[10px] text-gray-500 font-bold">優惠碼</span>
                 <input type="text" id="promo-code-input" placeholder="例：NODAY20" class="w-full border rounded-lg p-1.5 text-xs font-extrabold uppercase bg-white">
               </div>
               <div>
@@ -211,7 +196,7 @@
                 </select>
               </div>
               <div>
-                <span class="text-[10px] text-gray-500 font-bold">數值 (例:20元 或 90=9折)</span>
+                <span class="text-[10px] text-gray-500 font-bold">數值 (例:20 或 90)</span>
                 <input type="number" id="promo-val-input" placeholder="20" class="w-full border rounded-lg p-1.5 text-xs font-bold bg-white">
               </div>
               <div>
@@ -220,7 +205,7 @@
               </div>
             </div>
             <div class="flex gap-2">
-              <input type="text" id="promo-note-input" placeholder="優惠說明（例：學校老師團購滿百折20）" class="flex-1 border rounded-lg p-1.5 text-xs bg-white">
+              <input type="text" id="promo-note-input" placeholder="優惠說明（例：滿百折20）" class="flex-1 border rounded-lg p-1.5 text-xs bg-white">
               <button type="button" onclick="addPromoCode()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-lg text-xs font-extrabold shadow-sm shrink-0 transition">
                 ＋ 新增優惠碼
               </button>
@@ -266,7 +251,7 @@
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
         <div>
           <h2 class="text-base font-extrabold text-gray-900">🛠️ 雲端菜單、單品手沖烘焙度設定（淺焙/中淺焙/中烘焙/中深烘焙）＆ 細項加價管理</h2>
-          <p class="text-xs text-gray-500 mt-0.5">單品手沖可直接於列表下拉切換「淺焙 / 中淺焙 / 中烘焙 / 中深烘焙」，且嚴格隔離非手沖品項，避免前台篩選時跳出拿鐵。</p>
+          <p class="text-xs text-gray-500 mt-0.5">單品手沖可直接於列表下拉切換「淺焙 / 中淺焙 / 中烘焙 / 中深烘焙」，並可標記「🛍️ 設為加購推薦」於客人購物車曝光。</p>
         </div>
       </div>
       <div id="admin-menu-list" class="space-y-5">
@@ -310,11 +295,9 @@
         </div>
       </div>
 
-      <!-- 🫘 單品手沖專屬烘焙度欄位 (淺焙 / 中淺焙 / 中烘焙 / 中深烘焙) -->
+      <!-- 🫘 單品手沖專屬烘焙度欄位 -->
       <div id="pourover-roast-box" class="border-2 border-amber-400 rounded-xl p-3.5 bg-amber-50/70 space-y-2">
-        <div class="flex items-center justify-between">
-          <label class="text-xs font-extrabold text-amber-950 block">🫘 單品手沖專屬「烘焙度欄位」（僅單品手沖會套用前台篩選）：</label>
-        </div>
+        <label class="text-xs font-extrabold text-amber-950 block">🫘 單品手沖專屬「烘焙度欄位」（僅單品手沖會套用前台篩選）：</label>
         <div class="grid grid-cols-2 sm:grid-cols-5 gap-1.5 text-xs">
           <label class="cursor-pointer">
             <input type="radio" name="edit-roast-level" value="" class="peer hidden" onchange="syncRoastToDescInput()">
@@ -337,7 +320,7 @@
             <div class="border rounded-lg p-2 text-center font-extrabold bg-white peer-checked:bg-stone-800 peer-checked:text-white peer-checked:border-stone-800 transition">中深烘焙</div>
           </label>
         </div>
-        <p class="text-[11px] text-amber-800">💡 選擇上方烘焙度後，會自動同步寫入商品的 `roastLevel` 屬性與描述前綴；非「單品手沖」分類會自動設為「無」，確保前台篩選絕不跳出拿鐵。</p>
+        <p class="text-[11px] text-amber-800">💡 選擇後會自動同步寫入商品的 `roastLevel` 與描述前綴；非「單品手沖」分類自動設為「無」，確保前台篩選絕不跳出拿鐵。</p>
       </div>
 
       <div>
@@ -350,7 +333,7 @@
         <label class="flex items-center justify-between cursor-pointer">
           <div>
             <span class="text-xs font-extrabold text-purple-950 block">🛍️ 設為購物車「結帳順手加購」推薦品項</span>
-            <span class="text-[11px] text-purple-700">勾選後，客人打開購物車準備結帳時，會自動顯示此商品供按「＋」一鍵入車（適合甜點、濾紙、燕麥奶）</span>
+            <span class="text-[11px] text-purple-700">勾選後，客人打開購物車準備結帳時，會自動顯示此商品供按「＋」一鍵入車</span>
           </div>
           <input type="checkbox" id="opt-is-upsell" class="w-5 h-5 accent-purple-600 shrink-0">
         </label>
@@ -375,9 +358,9 @@
         </label>
       </div>
 
-      <!-- 2. 配方豆設定（統一為「5號 中焙 / 1號 淺焙」） -->
+      <!-- 2. 配方豆設定 -->
       <div class="border rounded-xl p-3.5 bg-gray-50 space-y-2">
-        <label class="text-xs font-extrabold text-[#213c64] block">🫘 義式配方豆設定（美式/拿鐵選豆用，不會影響單品手沖分類）：</label>
+        <label class="text-xs font-extrabold text-[#213c64] block">🫘 義式配方豆設定（美式/拿鐵選豆用）：</label>
         <div class="space-y-2 text-xs">
           <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border shadow-sm">
             <label class="flex items-center gap-2 cursor-pointer font-bold">
@@ -402,7 +385,7 @@
 
       <!-- 3. 甜度選項與加價設定 -->
       <div class="border rounded-xl p-3.5 bg-gray-50 space-y-2">
-        <label class="text-xs font-extrabold text-[#213c64] block">🍯 甜度選項設定（可單獨打勾與調整價錢）：</label>
+        <label class="text-xs font-extrabold text-[#213c64] block">🍯 甜度選項設定：</label>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
           <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border shadow-sm">
             <label class="flex items-center gap-2 cursor-pointer font-bold"><input type="checkbox" id="opt-sugar-free" class="w-4 h-4 accent-[#213c64]"> 無糖</label>
@@ -426,7 +409,7 @@
       <!-- 4. 獨立加購區 -->
       <div class="border-2 border-amber-300 rounded-xl p-3.5 bg-amber-50/40 space-y-2.5">
         <div class="flex justify-between items-center">
-          <label class="text-xs font-extrabold text-amber-900 block">🎁 單杯加購區設定（可單獨打勾與調整價錢）：</label>
+          <label class="text-xs font-extrabold text-amber-900 block">🎁 單杯加購區設定：</label>
           <button type="button" onclick="addCustomAddonRow('', 0, true)" class="text-[11px] bg-amber-600 hover:bg-amber-700 text-white px-2.5 py-1 rounded-lg font-bold shadow-sm">
             ＋ 新增其他加購項
           </button>
@@ -442,7 +425,6 @@
               <input type="number" id="price-addon-shot" class="w-16 border rounded-lg p-1 text-xs text-center font-bold" value="20">
             </div>
           </div>
-
           <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border border-amber-200 shadow-sm">
             <label class="flex items-center gap-2 cursor-pointer font-bold text-gray-800">
               <input type="checkbox" id="opt-addon-oat" class="w-4 h-4 accent-[#213c64]"> 更換燕麥奶
@@ -452,7 +434,6 @@
               <input type="number" id="price-addon-oat" class="w-16 border rounded-lg p-1 text-xs text-center font-bold" value="25">
             </div>
           </div>
-
           <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border border-amber-200 shadow-sm">
             <label class="flex items-center gap-2 cursor-pointer font-bold text-gray-800">
               <input type="checkbox" id="opt-addon-cocoa" class="w-4 h-4 accent-[#213c64]"> 可可粉
@@ -462,7 +443,6 @@
               <input type="number" id="price-addon-cocoa" class="w-16 border rounded-lg p-1 text-xs text-center font-bold" value="10">
             </div>
           </div>
-
           <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border border-amber-200 shadow-sm">
             <label class="flex items-center gap-2 cursor-pointer font-bold text-gray-800">
               <input type="checkbox" id="opt-addon-brownsugar" class="w-4 h-4 accent-[#213c64]"> 黑糖粉
@@ -472,7 +452,6 @@
               <input type="number" id="price-addon-brownsugar" class="w-16 border rounded-lg p-1 text-xs text-center font-bold" value="10">
             </div>
           </div>
-
           <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border border-amber-200 shadow-sm">
             <label class="flex items-center gap-2 cursor-pointer font-bold text-gray-800">
               <input type="checkbox" id="opt-addon-cinnamon" class="w-4 h-4 accent-[#213c64]"> 肉桂粉
@@ -482,7 +461,6 @@
               <input type="number" id="price-addon-cinnamon" class="w-16 border rounded-lg p-1 text-xs text-center font-bold" value="10">
             </div>
           </div>
-
           <div id="extra-addons-container" class="space-y-2"></div>
         </div>
       </div>
@@ -496,7 +474,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, getDocs, getDoc, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBMdycidtvbE7JmQtvXn-lCqUwod5RxR44",
@@ -509,7 +487,6 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzwgJ2Yt0g2emcxpR7sEpgGtQBWaSoGg6C87KuuLJXp05Sz6ieqR1MOSWDkjP3I6EMJ/exec";
 
     let cachedCatalog = [];
@@ -522,12 +499,8 @@
     let currentPourOverFilter = "all";
 
     function ensureAudioContext() {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
     }
     document.addEventListener('click', ensureAudioContext, { once: false });
 
@@ -536,8 +509,7 @@
       try {
         ensureAudioContext();
         const now = audioCtx.currentTime;
-        const notes = [987.77, 1318.51, 987.77, 1318.51, 1567.98];
-        notes.forEach((freq, idx) => {
+        [987.77, 1318.51, 987.77, 1318.51, 1567.98].forEach((freq, idx) => {
           const osc = audioCtx.createOscillator();
           const gain = audioCtx.createGain();
           osc.type = "square";
@@ -553,9 +525,7 @@
     }
 
     setInterval(() => {
-      if (hasUnacceptedOrders && soundEnabled) {
-        playLoudOrderBell();
-      }
+      if (hasUnacceptedOrders && soundEnabled) playLoudOrderBell();
       updatePauseStatusUI();
     }, 1500);
 
@@ -575,30 +545,20 @@
       if (soundEnabled) playLoudOrderBell();
     };
 
-    window.toggleHistory = function() {
-      document.getElementById('completed-orders-section').classList.toggle('hidden');
-    };
-
-    window.toggleStatsPanel = function() {
-      document.getElementById('stats-panel').classList.toggle('hidden');
-    };
-
-    window.toggleMembersPanel = function() {
-      document.getElementById('members-panel').classList.toggle('hidden');
-    };
+    window.toggleHistory = () => document.getElementById('completed-orders-section').classList.toggle('hidden');
+    window.toggleStatsPanel = () => document.getElementById('stats-panel').classList.toggle('hidden');
+    window.toggleMembersPanel = () => document.getElementById('members-panel').classList.toggle('hidden');
 
     async function sendLinePushMessage(lineUserId, textMessage) {
-      if (!lineUserId || !GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes("example")) return;
+      if (!lineUserId || !GAS_WEB_APP_URL) return;
       try {
         await fetch(GAS_WEB_APP_URL, {
           method: "POST",
           mode: "no-cors",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lineUserId: lineUserId, message: textMessage })
+          body: JSON.stringify({ lineUserId, message: textMessage })
         });
-      } catch (e) {
-        console.warn("LINE Push 推播失敗:", e);
-      }
+      } catch (e) {}
     }
 
     // ==================== 會員與黑名單管理 ====================
@@ -618,7 +578,6 @@
       }
 
       list.sort((a, b) => (b.completedCount || 0) - (a.completedCount || 0));
-
       container.innerHTML = list.map(m => `
         <div class="flex flex-wrap justify-between items-center bg-gray-50 p-3 rounded-xl border ${m.isBlocked ? 'border-red-400 bg-red-50/50' : 'border-gray-200'} gap-2">
           <div class="flex items-center gap-2.5">
@@ -650,10 +609,7 @@
       const newPhone = prompt("請輸入要為此會員更改的新手機號碼（10碼）：", oldPhone);
       if (!newPhone) return;
       const clean = newPhone.trim();
-      if (!/^09\d{8}$/.test(clean)) {
-        alert("手機格式須為 09 開頭共 10 碼數字！");
-        return;
-      }
+      if (!/^09\d{8}$/.test(clean)) { alert("手機格式須為 09 開頭共 10 碼數字！"); return; }
       await updateDoc(doc(db, "members", memberId), { phone: clean, phoneLocked: true });
       alert("✅ 已更新該會員的綁定電話！");
     };
@@ -662,16 +618,14 @@
       const actionText = blockStatus ? "封鎖此會員並列入黑名單" : "解除此會員的黑名單封鎖";
       if (!confirm(`確定要「${actionText}」嗎？`)) return;
       await setDoc(doc(db, "members", memberId), { isBlocked: blockStatus }, { merge: true });
-      if (phone) {
-        await setDoc(doc(db, "blocked_phones", phone), { isBlocked: blockStatus, memberId }, { merge: true });
-      }
+      if (phone) await setDoc(doc(db, "blocked_phones", phone), { isBlocked: blockStatus, memberId }, { merge: true });
     };
 
-    // ==================== 營業設定、明日預訂、暫停 15 分鐘、優惠碼與休假 ====================
+    // ==================== 營業設定、暫停 15 分鐘、優惠碼與休假 ====================
     const dayNames = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
     const defaultStoreSettings = {
       storeMode: "auto",
-      allowPreorderTomorrow: true,
+      allowPreorderTomorrow: false,
       pauseUntil: 0,
       announcementTitle: "📢 外帶取餐提醒",
       announcementText: "彰化最早開的咖啡店，本店為外帶專門店（無內用），現點現做請耐心等候。訂餐問題請電洽：04-7237933",
@@ -695,8 +649,7 @@
     function renderWeeklyHoursUI() {
       const container = document.getElementById('weekly-hours-container');
       const wh = currentStoreSettings.weeklyHours || defaultStoreSettings.weeklyHours;
-      const orderDays = [1, 2, 3, 4, 5, 6, 0];
-      container.innerHTML = orderDays.map(d => {
+      container.innerHTML = [1, 2, 3, 4, 5, 6, 0].map(d => {
         const cfg = wh[String(d)] || { open: true, start: "07:00", end: "17:00" };
         return `
           <div class="flex items-center justify-between bg-white px-3 py-1.5 rounded-lg border">
@@ -764,7 +717,7 @@
       if (settings.pauseUntil && Number(settings.pauseUntil) > nowMs) {
         const untilDate = new Date(Number(settings.pauseUntil));
         const tStr = untilDate.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
-        return { isOpen: false, isPaused15: true, label: `⏸️ 暫停現場單 (至 ${tStr})` };
+        return { isOpen: false, label: `⏸️ 暫停接單中 (至 ${tStr})` };
       }
 
       const mode = settings.storeMode || 'auto';
@@ -772,25 +725,16 @@
       if (mode === 'closed') return { isOpen: false, label: '🔴 強制暫停接單' };
 
       const now = new Date();
-      const yyyy = now.getFullYear();
-      const mm = String(now.getMonth() + 1).padStart(2, '0');
-      const dd = String(now.getDate()).padStart(2, '0');
-      const todayStr = `${yyyy}-${mm}-${dd}`;
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
       const dayIdx = String(now.getDay());
 
       const matchedHoliday = (settings.holidays || []).find(h => todayStr >= h.startDate && todayStr <= h.endDate);
-      if (matchedHoliday) {
-        return { isOpen: false, label: `🏖️ 預約休假中 (${matchedHoliday.note || '公休'})` };
-      }
+      if (matchedHoliday) return { isOpen: false, label: `🏖️ 預約休假中 (${matchedHoliday.note || '公休'})` };
 
       const dayCfg = (settings.weeklyHours || defaultStoreSettings.weeklyHours)[dayIdx];
-      if (!dayCfg || !dayCfg.open) {
-        return { isOpen: false, label: '🌙 今日固定公休' };
-      }
-      if (timeStr < dayCfg.start || timeStr > dayCfg.end) {
-        return { isOpen: false, label: `🌙 非營業時間 (${dayCfg.start}-${dayCfg.end})` };
-      }
+      if (!dayCfg || !dayCfg.open) return { isOpen: false, label: '🌙 今日固定公休' };
+      if (timeStr < dayCfg.start || timeStr > dayCfg.end) return { isOpen: false, label: `🌙 非營業時間 (${dayCfg.start}-${dayCfg.end})` };
       return { isOpen: true, label: `🟢 營業中 (${dayCfg.start}-${dayCfg.end})` };
     }
 
@@ -812,9 +756,7 @@
           inlineBtn.innerText = "▶️ 立即恢復接單";
           inlineBtn.className = "bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-extrabold shrink-0 transition";
         }
-        if (statusText) {
-          statusText.innerText = `⏸️ 暫停現場單至 ${untilTime}（期間客人仍可預訂明日取餐）`;
-        }
+        if (statusText) statusText.innerText = `⏸️ 暫停接單至 ${untilTime}`;
       } else {
         if (topBtn) {
           topBtn.innerText = "⏸️ 暫停接單 15 分鐘";
@@ -824,45 +766,30 @@
           inlineBtn.innerText = "啟動暫停 15 分";
           inlineBtn.className = "bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg font-extrabold shrink-0 transition";
         }
-        if (statusText) {
-          statusText.innerText = "目前未開啟臨時暫停";
-        }
+        if (statusText) statusText.innerText = "目前未開啟臨時暫停";
       }
 
       const status = checkStoreOpenStatus(currentStoreSettings);
       const badge = document.getElementById('header-store-badge');
-      const preorderBadge = document.getElementById('header-preorder-badge');
       if (badge) {
         badge.innerText = status.label;
         badge.className = status.isOpen
           ? "text-xs bg-emerald-500 text-white px-2.5 py-0.5 rounded-full font-bold"
           : "text-xs bg-red-500 text-white px-2.5 py-0.5 rounded-full font-bold";
       }
-      if (preorderBadge) {
-        if (!status.isOpen && currentStoreSettings.allowPreorderTomorrow !== false) {
-          preorderBadge.classList.remove('hidden');
-        } else {
-          preorderBadge.classList.add('hidden');
-        }
-      }
     }
 
     window.togglePause15Mins = async function() {
       const nowMs = Date.now();
       const isPaused = currentStoreSettings.pauseUntil && Number(currentStoreSettings.pauseUntil) > nowMs;
-      if (isPaused) {
-        currentStoreSettings.pauseUntil = 0;
-        await setDoc(doc(db, "settings", "store"), currentStoreSettings, { merge: true });
-      } else {
-        currentStoreSettings.pauseUntil = nowMs + 15 * 60 * 1000;
-        await setDoc(doc(db, "settings", "store"), currentStoreSettings, { merge: true });
-      }
+      currentStoreSettings.pauseUntil = isPaused ? 0 : nowMs + 15 * 60 * 1000;
+      await setDoc(doc(db, "settings", "store"), currentStoreSettings, { merge: true });
       updatePauseStatusUI();
     };
 
     onSnapshot(doc(db, "settings", "store"), (snap) => {
       if (snap.exists()) {
-        currentStoreSettings = { ...defaultStoreSettings, ...snap.data() };
+        currentStoreSettings = { ...defaultStoreSettings, ...snap.data(), allowPreorderTomorrow: false };
       } else {
         setDoc(doc(db, "settings", "store"), defaultStoreSettings);
       }
@@ -870,7 +797,6 @@
       const modeRadio = document.querySelector(`input[name="store-mode"][value="${currentStoreSettings.storeMode || 'auto'}"]`);
       if (modeRadio) modeRadio.checked = true;
 
-      document.getElementById('setting-allow-preorder').checked = currentStoreSettings.allowPreorderTomorrow !== false;
       document.getElementById('setting-ann-title').value = currentStoreSettings.announcementTitle || '';
       document.getElementById('setting-ann-text').value = currentStoreSettings.announcementText || '';
 
@@ -881,6 +807,7 @@
     });
 
     async function syncPromoSettings() {
+      currentStoreSettings.allowPreorderTomorrow = false;
       await setDoc(doc(db, "settings", "store"), currentStoreSettings, { merge: true });
       await setDoc(doc(db, "settings", "promos"), { list: currentStoreSettings.promoCodes || [] }, { merge: true });
     }
@@ -892,10 +819,7 @@
       const minSpend = Number(document.getElementById('promo-min-input').value) || 0;
       const note = document.getElementById('promo-note-input').value.trim();
 
-      if (!code || !value) {
-        alert("請填寫優惠碼名稱與折抵數值！");
-        return;
-      }
+      if (!code || !value) { alert("請填寫優惠碼名稱與折抵數值！"); return; }
       currentStoreSettings.promoCodes = currentStoreSettings.promoCodes || [];
       const existIdx = currentStoreSettings.promoCodes.findIndex(p => p.code.toUpperCase() === code);
       if (existIdx >= 0) {
@@ -910,8 +834,8 @@
     };
 
     window.togglePromoCode = async function(idx) {
-      if (!currentStoreSettings.promoCodes || !currentStoreSettings.promoCodes[idx]) return;
-      currentStoreSettings.promoCodes[idx].enabled = currentStoreSettings.promoCodes[idx].enabled === false ? true : false;
+      if (!currentStoreSettings.promoCodes?.[idx]) return;
+      currentStoreSettings.promoCodes[idx].enabled = currentStoreSettings.promoCodes[idx].enabled === false;
       await syncPromoSettings();
     };
 
@@ -952,18 +876,16 @@
         };
       }
       currentStoreSettings.storeMode = modeEl ? modeEl.value : 'auto';
-      currentStoreSettings.allowPreorderTomorrow = document.getElementById('setting-allow-preorder').checked;
+      currentStoreSettings.allowPreorderTomorrow = false;
       currentStoreSettings.announcementTitle = document.getElementById('setting-ann-title').value.trim();
       currentStoreSettings.announcementText = document.getElementById('setting-ann-text').value.trim();
       currentStoreSettings.weeklyHours = weeklyHours;
 
       await syncPromoSettings();
-      alert("✅ 店家公告、明日預訂、營業時間與優惠碼設定已儲存並同步至前台！");
+      alert("✅ 店家公告、營業時間與優惠碼設定已儲存並同步至前台！");
     };
 
     // ==================== 單品手沖烘焙度標準化（淺焙 / 中淺焙 / 中烘焙 / 中深烘焙） ====================
-    const VALID_ROAST_LEVELS = ["淺焙", "中淺焙", "中烘焙", "中深烘焙"];
-
     function normalizeRoastLevelName(raw = "") {
       const s = String(raw || "").trim().replace(/培/g, "焙");
       if (!s) return "";
@@ -974,7 +896,6 @@
       return "";
     }
 
-    // 僅針對「單品手沖」解析烘焙度與風味標籤，非單品手沖一律回傳空烘焙度
     function getPourOverRoastAndTags(item, isPourOverCategory = true) {
       if (!isPourOverCategory) return { roast: "", tags: [] };
       const desc = item.desc || "";
@@ -997,7 +918,7 @@
       return cleanDesc ? `${normRoast}｜${cleanDesc}` : `${normRoast}｜`;
     }
 
-    // ==================== 菜單管理、單品手沖風味小卡與順手加購設定 ====================
+    // ==================== 菜單管理與預設菜單 ====================
     function buildOpts({
       ice = true, hot = true, iceLevel = true,
       bean5 = false, priceBean5 = 0, bean1 = false, priceBean1 = 0,
@@ -1140,7 +1061,6 @@
       renderAdminMenuDOM();
     };
 
-    // 後台列表直接下拉修改單品手沖烘焙度
     window.quickChangeRoastLevel = async function(categoryName, itemId, newRoastValue) {
       try {
         const catObj = cachedCatalog.find(c => c.category === categoryName);
@@ -1288,7 +1208,6 @@
       }).join('');
     }
 
-    // 當在 Modal 內切換分類時，若不是「單品手沖」，自動將單品烘焙度歸零為「無」
     window.handleCategoryChangeInModal = function() {
       const catName = document.getElementById('edit-cat-name').value;
       const roastBox = document.getElementById('pourover-roast-box');
@@ -1300,7 +1219,6 @@
       }
     };
 
-    // 當在 Modal 內點選「淺焙 / 中淺焙 / 中烘焙 / 中深烘焙」時，自動同步更新描述欄位前綴
     window.syncRoastToDescInput = function() {
       const catName = document.getElementById('edit-cat-name').value;
       const selectedRoast = document.querySelector('input[name="edit-roast-level"]:checked')?.value || "";
@@ -1528,9 +1446,7 @@
 
       try {
         let catObj = cachedCatalog.find(c => c.category === catName);
-        if (!catObj) {
-          catObj = { order: cachedCatalog.length + 1, category: catName, items: [] };
-        }
+        if (!catObj) catObj = { order: cachedCatalog.length + 1, category: catName, items: [] };
         if (mode === 'add') {
           catObj.items.push({ id: itemId, name: newName, price: newPrice, desc: newDesc, roastLevel: selectedRoast, isUpsell, options: newOptions, soldOut: false });
         } else {
@@ -1561,7 +1477,7 @@
       } catch (e) { console.error(e); alert("更新失敗"); }
     };
 
-    // ==================== 即時訂單監聽、明日預訂標記、杯貼列印、分帳複製 ====================
+    // ==================== 即時訂單監聽与分帳複製 ====================
     function formatModifiersDisplay(modifiers = []) {
       return modifiers.map(m => m.replace(/5號中焙/g, '5號 中焙').replace(/1號淺焙/g, '1號 淺焙'));
     }
@@ -1577,7 +1493,6 @@
       let todayRevenue = 0;
       let unacceptedCount = 0;
       const itemSalesMap = {};
-
       const todayStr = new Date().toLocaleDateString('zh-TW');
 
       snapshot.forEach(d => {
@@ -1588,9 +1503,7 @@
         const orderObj = { id: d.id, time: orderDate, ...data };
         activeOrdersCache[d.id] = orderObj;
 
-        if (isToday) {
-          todayAllOrders.push(orderObj);
-        }
+        if (isToday) todayAllOrders.push(orderObj);
 
         if (data.status === "pending" || data.status === "accepted") {
           activeOrders.push(orderObj);
@@ -1620,16 +1533,14 @@
 
       const topListEl = document.getElementById('top-selling-list');
       const sortedSales = Object.entries(itemSalesMap).sort((a, b) => b[1] - a[1]);
-      if (sortedSales.length === 0) {
-        topListEl.innerHTML = `<p class="text-gray-400 col-span-4">今日尚無已完成銷售統計</p>`;
-      } else {
-        topListEl.innerHTML = sortedSales.map(([name, count], idx) => `
-          <div class="bg-amber-50/70 border border-amber-200 p-2.5 rounded-xl flex justify-between items-center">
-            <span class="font-bold text-gray-800">${idx + 1}. ${name}</span>
-            <span class="font-extrabold text-amber-800 bg-white px-2 py-0.5 rounded-full border">${count} 杯</span>
-          </div>
-        `).join('');
-      }
+      topListEl.innerHTML = sortedSales.length === 0
+        ? `<p class="text-gray-400 col-span-4">今日尚無已完成銷售統計</p>`
+        : sortedSales.map(([name, count], idx) => `
+            <div class="bg-amber-50/70 border border-amber-200 p-2.5 rounded-xl flex justify-between items-center">
+              <span class="font-bold text-gray-800">${idx + 1}. ${name}</span>
+              <span class="font-extrabold text-amber-800 bg-white px-2 py-0.5 rounded-full border">${count} 杯</span>
+            </div>
+          `).join('');
 
       if (activeOrders.length === 0) {
         container.innerHTML = `<p class="text-gray-400 text-sm py-6 text-center">目前沒有待處理的新訂單...</p>`;
@@ -1640,8 +1551,6 @@
           const phoneMatch = order.customerPhone || (order.customerInfo && order.customerInfo.match(/\d{8,10}/)?.[0]) || '';
           const orderNum = order.orderNumber || '#---';
           const pickupTime = order.pickupTime || '現場立即製作';
-          const isTomorrowPreorder = !!(order.isPreorder || order.orderType === 'preorder' || pickupTime.includes('明日') || pickupTime.includes('隔天') || pickupTime.includes('預訂'));
-          const totalCups = (order.items || []).reduce((sum, i) => sum + Number(i.qty || 1), 0);
 
           const mDoc = (order.lineUserId && membersMap[order.lineUserId]) || {};
           const completedCnt = Number(mDoc.completedCount ?? order.memberCompletedCount ?? 0);
@@ -1664,7 +1573,6 @@
                   <span class="${isPending ? 'bg-red-600' : 'bg-blue-600'} text-white text-xs font-extrabold px-2.5 py-1 rounded-full">
                     ${isPending ? '🚨 新單未接收' : '⏳ 已接單製作中'}
                   </span>
-                  ${isTomorrowPreorder ? `<span class="bg-purple-700 text-white text-xs font-extrabold px-2.5 py-1 rounded-full shadow">🌅 明日預訂大單</span>` : ''}
                   <span class="bg-amber-100 text-amber-900 text-xs font-extrabold px-2.5 py-1 rounded-full border border-amber-300">
                     ⏰ ${pickupTime}
                   </span>
@@ -1680,25 +1588,12 @@
                   ${phoneMatch ? `<a href="tel:${phoneMatch}" class="inline-flex items-center gap-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-2.5 py-1 rounded-lg text-xs font-extrabold transition">📞 一鍵撥號 (${phoneMatch})</a>` : ''}
                 </div>
 
-                <div class="mt-2 space-y-1.5 text-sm text-gray-800 bg-white/90 p-3 rounded-xl border">
-                  ${(order.items || []).map((i, itemIdx) => {
-                    const cupTag = i.cupName || i.labelName || '';
+                <div class="mt-2 space-y-1 text-sm text-gray-800 bg-white/90 p-3 rounded-xl border">
+                  ${(order.items || []).map(i => {
                     const mods = formatModifiersDisplay(i.modifiers || []);
                     const unitPrice = Number(i.unitPrice || i.price || 0);
                     return `
-                      <div class="flex flex-wrap items-center justify-between gap-2 border-b last:border-b-0 pb-1.5 last:pb-0">
-                        <div>
-                          <span class="font-extrabold text-gray-900">• ${i.name} x${i.qty}</span>
-                          ${unitPrice ? `<span class="text-xs text-gray-500 font-bold ml-1">($${unitPrice}/杯)</span>` : ''}
-                          ${cupTag ? `<span class="ml-1.5 bg-purple-100 text-purple-900 border border-purple-300 text-xs font-extrabold px-2 py-0.5 rounded-md">🏷️ 杯貼：${cupTag}</span>` : ''}
-                          <span class="text-xs text-[#213c64] font-bold ml-1">(${mods.join(' / ') || '無客製'})</span>
-                          ${i.note ? `<span class="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold ml-1">備註: ${i.note}</span>` : ''}
-                        </div>
-                        <div class="flex items-center gap-1">
-                          <button onclick="editOrderItemCupName('${order.id}', ${itemIdx})" class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-0.5 rounded font-bold">✏️ 改杯貼名</button>
-                          <button onclick="printOrderLabels('${order.id}', ${itemIdx})" class="text-[11px] bg-amber-100 hover:bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-extrabold">🖨️ 印單張</button>
-                        </div>
-                      </div>
+                      <p>• <b>${i.name}</b> x${i.qty} ${unitPrice ? `<span class="text-xs text-gray-500 font-bold">($${unitPrice}/杯)</span>` : ''} <span class="text-xs text-[#213c64] font-bold">(${mods.join(' / ') || '無客製'})</span> ${i.note ? `<span class="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">備註: ${i.note}</span>` : ''}</p>
                     `;
                   }).join('')}
                 </div>
@@ -1708,14 +1603,9 @@
                     應收總計：NT$${order.totalAmount}
                     ${order.discountAmount ? `<span class="text-xs text-emerald-700 ml-1">(已折抵 NT$${order.discountAmount})</span>` : ''}
                   </p>
-                  <div class="flex flex-wrap gap-1.5">
-                    <button onclick="printOrderLabels('${order.id}')" class="bg-[#213c64] hover:bg-[#192e4d] text-white px-3 py-1.5 rounded-lg text-xs font-extrabold shadow-sm transition">
-                      🖨️ 列印整單杯貼 (${totalCups}張)
-                    </button>
-                    <button onclick="copyGroupSplitText('${order.id}')" class="bg-purple-100 hover:bg-purple-200 text-purple-900 border border-purple-300 px-3 py-1.5 rounded-lg text-xs font-extrabold transition">
-                      📋 複製團購分帳明細
-                    </button>
-                  </div>
+                  <button onclick="copyGroupSplitText('${order.id}')" class="bg-purple-100 hover:bg-purple-200 text-purple-900 border border-purple-300 px-3 py-1.5 rounded-lg text-xs font-extrabold transition">
+                    📋 複製團購分帳明細
+                  </button>
                 </div>
               </div>
 
@@ -1752,10 +1642,9 @@
               <span class="font-extrabold text-[#213c64] mr-1">${o.orderNumber || ''}</span>
               <span class="font-bold text-gray-800">${o.customerInfo}</span>
               ${o.taxId ? `<span class="bg-slate-200 text-slate-800 px-1.5 py-0.5 rounded font-bold ml-1">統編:${o.taxId}</span>` : ''}
-              <span class="text-gray-500 ml-2">${(o.items || []).map(i => `${i.cupName ? `[${i.cupName}]` : ''}${i.name}x${i.qty}`).join(', ')}</span>
+              <span class="text-gray-500 ml-2">${(o.items || []).map(i => `${i.name}x${i.qty}`).join(', ')}</span>
             </div>
             <div class="flex items-center gap-2">
-              <button onclick="printOrderLabels('${o.id}')" class="text-[11px] bg-white border hover:bg-gray-100 px-2 py-0.5 rounded font-bold">🖨️ 補印杯貼</button>
               <button onclick="copyGroupSplitText('${o.id}')" class="text-[11px] bg-purple-50 text-purple-800 border border-purple-200 px-2 py-0.5 rounded font-bold">📋 分帳明細</button>
               <span class="font-extrabold text-emerald-700">NT$${o.totalAmount}</span>
             </div>
@@ -1764,120 +1653,24 @@
       }
     });
 
-    window.editOrderItemCupName = async function(orderId, itemIdx) {
-      const order = activeOrdersCache[orderId];
-      if (!order || !order.items || !order.items[itemIdx]) return;
-      const currentName = order.items[itemIdx].cupName || order.items[itemIdx].labelName || '';
-      const newName = prompt("請輸入此杯飲品的「杯貼姓名 / 分袋標記」（例如：陳老師、林主任）：", currentName);
-      if (newName === null) return;
-      const updatedItems = [...order.items];
-      updatedItems[itemIdx] = { ...updatedItems[itemIdx], cupName: newName.trim() };
-      await updateDoc(doc(db, "orders", orderId), { items: updatedItems });
-    };
-
-    window.printOrderLabels = function(orderId, targetItemIdx = null) {
-      const order = activeOrdersCache[orderId];
-      if (!order) return;
-
-      const labels = [];
-      const allItems = order.items || [];
-      const totalCups = allItems.reduce((sum, i) => sum + Number(i.qty || 1), 0);
-      let currentSeq = 0;
-
-      allItems.forEach((item, idx) => {
-        const qty = Number(item.qty || 1);
-        for (let c = 0; c < qty; c++) {
-          currentSeq++;
-          if (targetItemIdx === null || targetItemIdx === idx) {
-            labels.push({
-              seq: `${currentSeq}/${totalCups}`,
-              orderNumber: order.orderNumber || '#---',
-              pickupTime: order.pickupTime || '立即製作',
-              cupName: item.cupName || item.labelName || '',
-              drinkName: item.name,
-              modifiers: formatModifiersDisplay(item.modifiers || []).join(' / ') || '正常',
-              note: item.note || ''
-            });
-          }
-        }
-      });
-
-      if (labels.length === 0) return;
-
-      const printWin = window.open('', '_blank', 'width=420,height=550');
-      if (!printWin) {
-        alert("請允許瀏覽器彈出視窗以列印杯貼！");
-        return;
-      }
-
-      const pagesHtml = labels.map(l => `
-        <div class="label-page">
-          <div class="top-row">
-            <span class="brand">NODAY COFFEE</span>
-            <span class="seq">${l.orderNumber} (${l.seq})</span>
-          </div>
-          ${l.cupName ? `<div class="cup-tag">🏷️ ${l.cupName}</div>` : ''}
-          <div class="drink-name">${l.drinkName}</div>
-          <div class="mods">${l.modifiers}</div>
-          ${l.note ? `<div class="note">備註：${l.note}</div>` : ''}
-          <div class="footer">${l.pickupTime}</div>
-        </div>
-      `).join('');
-
-      printWin.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <title>NODAY 杯貼列印 - ${order.orderNumber || ''}</title>
-          <style>
-            @page { size: 50mm 40mm; margin: 0; }
-            body { margin: 0; padding: 0; font-family: "Microsoft JhengHei", sans-serif; color: #000; }
-            .label-page {
-              width: 46mm;
-              height: 36mm;
-              padding: 2mm;
-              box-sizing: border-box;
-              page-break-after: always;
-              display: flex;
-              flex-direction: column;
-              justify-content: space-between;
-              border-bottom: 1px dashed #ccc;
-            }
-            .top-row { display: flex; justify-content: space-between; font-size: 9pt; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 1mm; }
-            .cup-tag { font-size: 12pt; font-weight: 900; background: #000; color: #fff; padding: 0.5mm 1.5mm; border-radius: 2px; display: inline-block; margin-top: 1mm; }
-            .drink-name { font-size: 12pt; font-weight: 900; line-height: 1.15; margin-top: 0.5mm; }
-            .mods { font-size: 8.5pt; font-weight: bold; line-height: 1.2; }
-            .note { font-size: 8pt; font-weight: bold; }
-            .footer { font-size: 7.5pt; text-align: right; font-weight: bold; }
-          </style>
-        </head>
-        <body onload="window.print(); setTimeout(() => window.close(), 500);">
-          ${pagesHtml}
-        </body>
-        </html>
-      `);
-      printWin.document.close();
-    };
-
     window.copyGroupSplitText = function(orderId) {
       const order = activeOrdersCache[orderId];
       if (!order) return;
 
-      const lines = [];
-      lines.push(`☕ 【NODAY Coffee 團購分帳明細】`);
-      lines.push(`📌 取餐單號：${order.orderNumber || '#---'}`);
-      lines.push(`⏰ 取餐時間：${order.pickupTime || '現場立即製作'}`);
+      const lines = [
+        `☕ 【NODAY Coffee 團購分帳明細】`,
+        `📌 取餐單號：${order.orderNumber || '#---'}`,
+        `⏰ 取餐時間：${order.pickupTime || '現場立即製作'}`
+      ];
       if (order.taxId) lines.push(`🧾 統一編號：${order.taxId}`);
       lines.push(`-------------------------`);
 
       (order.items || []).forEach((item, idx) => {
-        const cupTag = item.cupName || item.labelName ? `【${item.cupName || item.labelName}】` : `【第 ${idx + 1} 項】`;
         const mods = formatModifiersDisplay(item.modifiers || []).join('/');
         const qty = Number(item.qty || 1);
         const unitPrice = Number(item.unitPrice || item.price || 0);
         const subTotal = unitPrice ? unitPrice * qty : '';
-        lines.push(`${cupTag} ${item.name}${mods ? ` (${mods})` : ''} x${qty}${subTotal ? ` ➔ $${subTotal}` : ''}`);
+        lines.push(`${idx + 1}. ${item.name}${mods ? ` (${mods})` : ''} x${qty}${subTotal ? ` ➔ $${subTotal}` : ''}`);
       });
 
       lines.push(`-------------------------`);
@@ -1906,11 +1699,8 @@
       await updateDoc(doc(db, "orders", orderId), { status: "completed" });
       if (lineUserId) {
         try {
-          await setDoc(doc(db, "members", lineUserId), {
-            completedCount: increment(1)
-          }, { merge: true });
+          await setDoc(doc(db, "members", lineUserId), { completedCount: increment(1) }, { merge: true });
         } catch (e) {}
-
         const msg = `🎉 【NODAY 取餐通知】\n親愛的客人，您的餐點 ${orderNum} 已製作完成！\n請憑號碼牌至吧台領取您的咖啡，謝謝您！`;
         await sendLinePushMessage(lineUserId, msg);
       }
@@ -1925,17 +1715,10 @@
       if (!confirm(`⚠️ 確定要將【${customerInfo}】標記為「惡意棄單」並立即封鎖他的 LINE 帳號與電話嗎？\n\n封鎖後該客人將無法再使用線上點餐！`)) return;
       try {
         if (lineUserId) {
-          await setDoc(doc(db, "members", lineUserId), {
-            abandonedCount: increment(1),
-            isBlocked: true
-          }, { merge: true });
+          await setDoc(doc(db, "members", lineUserId), { abandonedCount: increment(1), isBlocked: true }, { merge: true });
         }
         if (phone) {
-          await setDoc(doc(db, "blocked_phones", phone), {
-            isBlocked: true,
-            customerInfo: customerInfo,
-            lineUserId: lineUserId || ""
-          }, { merge: true });
+          await setDoc(doc(db, "blocked_phones", phone), { isBlocked: true, customerInfo, lineUserId: lineUserId || "" }, { merge: true });
         }
         await deleteDoc(doc(db, "orders", orderId));
         alert(`🚫 已將 ${customerInfo} 列入棄單黑名單並封鎖！`);
@@ -1946,18 +1729,12 @@
     };
 
     window.exportTodayCSV = function() {
-      if (todayAllOrders.length === 0) {
-        alert("今日尚無訂單可匯出！");
-        return;
-      }
-      const headers = ["取餐號碼", "下單時間", "顧客資訊", "LINE名稱", "預計取餐", "統一編號", "優惠碼", "折抵金額", "訂單狀態", "點購明細(含杯貼姓名)", "總金額(NT$)"];
+      if (todayAllOrders.length === 0) { alert("今日尚無訂單可匯出！"); return; }
+      const headers = ["取餐號碼", "下單時間", "顧客資訊", "LINE名稱", "預計取餐", "統一編號", "優惠碼", "折抵金額", "訂單狀態", "點購明細", "總金額(NT$)"];
       const rows = todayAllOrders.map(o => {
         const timeStr = o.time.toLocaleTimeString('zh-TW');
         const statusMap = { pending: "未接單", accepted: "製作中", completed: "已完成" };
-        const itemsStr = (o.items || []).map(i => {
-          const tag = i.cupName || i.labelName ? `[${i.cupName || i.labelName}]` : '';
-          return `${tag}${i.name}x${i.qty}(${formatModifiersDisplay(i.modifiers || []).join('/')})`;
-        }).join('；');
+        const itemsStr = (o.items || []).map(i => `${i.name}x${i.qty}(${formatModifiersDisplay(i.modifiers || []).join('/')})`).join('；');
         return [
           o.orderNumber || "",
           timeStr,
@@ -1977,9 +1754,8 @@
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      const dateStr = new Date().toISOString().slice(0, 10);
       a.href = url;
-      a.download = `NODAY_營業報表_${dateStr}.csv`;
+      a.download = `NODAY_營業報表_${new Date().toISOString().slice(0, 10)}.csv`;
       a.click();
     };
 
