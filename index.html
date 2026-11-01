@@ -518,7 +518,8 @@
       const lines = list.map((i, idx) => {
         const sub = i.price * i.qty;
         total += sub;
-        const labelStr = i.cupLabel ? `【${i.cupLabel}】` : `第${idx + 1}杯`;
+        const labelVal = i.cupLabel || i.cupName || '';
+        const labelStr = labelVal ? `【${labelVal}】` : `第${idx + 1}杯`;
         const mods = (i.modifiers && i.modifiers.length > 0) ? i.modifiers.join('/') : '標準';
         return `${labelStr} ${i.name} x${i.qty} ($${sub}) - ${mods}${i.note ? ` [${i.note}]` : ''}`;
       }).join('\n');
@@ -559,7 +560,8 @@
 
     function buildOrderTextMessage(o) {
       const itemLines = (o.items || []).map(i => {
-        const labelTag = i.cupLabel ? `【🏷️${i.cupLabel}】` : '';
+        const labelVal = i.cupLabel || i.cupName || '';
+        const labelTag = labelVal ? `【🏷️${labelVal}】` : '';
         const mods = (i.modifiers && i.modifiers.length > 0) ? i.modifiers.join('/') : '標準';
         const noteStr = i.note ? ` (備註:${i.note})` : '';
         return `• ${labelTag}${i.name} x${i.qty} ($${i.price * i.qty})\n  [${mods}]${noteStr}`;
@@ -601,7 +603,7 @@
         const lastItems = JSON.parse(localStorage.getItem('noday_last_order') || '[]');
         if (Array.isArray(lastItems) && lastItems.length > 0) {
           document.getElementById('reorder-section').classList.remove('hidden');
-          document.getElementById('reorder-summary').innerText = lastItems.map(i => `${i.cupLabel ? `[${i.cupLabel}]` : ''}${i.name} x${i.qty}`).join('、');
+          document.getElementById('reorder-summary').innerText = lastItems.map(i => `${(i.cupLabel || i.cupName) ? `[${i.cupLabel || i.cupName}]` : ''}${i.name} x${i.qty}`).join('、');
         }
       } catch (e) {}
     };
@@ -644,7 +646,6 @@
     // ==================== 5. 營業狀態與「吧台暫停接單 15 分鐘」判斷 ====================
     const dayNames = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
     function evaluateOpenStatus(settings) {
-      // 檢查吧台是否啟動了「爆單暫停接單 15 分鐘」
       if (settings.pauseUntil && Number(settings.pauseUntil) > Date.now()) {
         const resumeDate = new Date(Number(settings.pauseUntil));
         const resumeStr = `${String(resumeDate.getHours()).padStart(2, '0')}:${String(resumeDate.getMinutes()).padStart(2, '0')}`;
@@ -724,7 +725,7 @@
       modal.classList.toggle('hidden');
     };
 
-    // ==================== 6. 菜單載入 ＆ 單品手沖「風味小卡」快速篩選 ====================
+    // ==================== 6. 菜單載入 ＆ 單品手沖「4 大烘焙度篩選 + 風味小卡」（不跳出拿鐵） ====================
     async function loadMenu() {
       try {
         const querySnapshot = await getDocs(collection(db, "menu"));
@@ -736,30 +737,63 @@
       } catch (e) { console.error(e); }
     }
 
+    function normalizeRoastLevel(raw = "") {
+      const s = String(raw || "").trim().replace(/培/g, "焙");
+      if (!s) return "";
+      if (s.includes("中淺焙") || s.includes("淺中焙")) return "中淺焙";
+      if (s.includes("中深焙") || s.includes("中深烘焙") || s.includes("深焙") || s.includes("深烘焙")) return "中深烘焙";
+      if (s.includes("中焙") || s.includes("中烘焙")) return "中烘焙";
+      if (s.includes("淺焙") || s.includes("淺烘焙")) return "淺焙";
+      return "";
+    }
+
+    function getPourOverItemRoast(item) {
+      if (item.roastLevel) {
+        const r = normalizeRoastLevel(item.roastLevel);
+        if (r) return r;
+      }
+      const desc = String(item.desc || "");
+      const parts = desc.split(/[｜┃|]/);
+      if (parts.length > 1) {
+        const r = normalizeRoastLevel(parts[0]);
+        if (r) return r;
+      }
+      return normalizeRoastLevel(desc);
+    }
+
     window.setPourOverFilter = function(filterType) {
       currentPourOverFilter = filterType;
       renderMenu();
+      const pourOverEl = document.querySelector('[id^="cat-單品手沖"]');
+      if (pourOverEl) {
+        pourOverEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     };
 
     function matchPourOverFilter(item, filterType) {
       if (filterType === 'all') return true;
-      const d = (item.desc || '') + (item.name || '');
-      if (filterType === 'light') return d.includes('淺焙') && !d.includes('中淺焙');
-      if (filterType === 'med-light') return d.includes('中淺焙');
-      if (filterType === 'med-dark') return d.includes('中深焙') || d.includes('中焙') || d.includes('深焙');
-      return true;
+      const itemRoast = getPourOverItemRoast(item);
+      return itemRoast === filterType;
     }
 
-    function renderFlavorBadges(desc) {
-      if (!desc) return '';
-      // 將「淺焙｜水蜜桃、柑橘」拆解成精美風味小卡標籤
-      const parts = desc.split(/[｜|]/);
-      if (parts.length === 2) {
-        const roast = parts[0].trim();
-        const notes = parts[1].split(/[、,，/]/).map(s => s.trim()).filter(Boolean);
+    function renderFlavorBadges(item) {
+      const desc = item.desc || '';
+      const roast = getPourOverItemRoast(item);
+      if (!desc && !roast) return '';
+
+      const parts = desc.split(/[｜┃|]/);
+      let notesStr = desc;
+      if (parts.length > 1) {
+        notesStr = parts.slice(1).join('、');
+      } else if (roast && desc.replace(/培/g, '焙').startsWith(roast)) {
+        notesStr = '';
+      }
+      const notes = notesStr.split(/[、,，/]/).map(s => s.trim()).filter(Boolean);
+
+      if (roast || notes.length > 0) {
         return `
           <div class="flex flex-wrap items-center gap-1 pt-0.5">
-            <span class="bg-[#213c64] text-white text-[10px] font-extrabold px-2 py-0.5 rounded-md">🔥 ${roast}</span>
+            ${roast ? `<span class="bg-[#213c64] text-white text-[10px] font-extrabold px-2 py-0.5 rounded-md">🔥 ${roast}</span>` : ''}
             ${notes.map(n => `<span class="bg-amber-50 text-amber-900 border border-amber-200 text-[10px] font-bold px-1.5 py-0.5 rounded-md">✨ ${n}</span>`).join('')}
           </div>
         `;
@@ -771,19 +805,33 @@
       const tabs = document.getElementById('category-tabs');
       const container = document.getElementById('menu-container');
       tabs.innerHTML = catalog.map((cat, idx) => `
-        <button onclick="scrollToCat('${cat.category}')" class="whitespace-nowrap px-3.5 py-1.5 rounded-xl text-xs font-bold ${idx === 0 ? 'bg-[#213c64] text-white' : 'bg-white text-gray-700 border'} shadow-sm">
+        <button onclick="scrollToCat('${cat.category}')" class="whitespace-nowrap px-3.5 py-1.5 rounded-xl text-xs font-bold ${idx === 0 && currentPourOverFilter === 'all' ? 'bg-[#213c64] text-white' : 'bg-white text-gray-700 border'} shadow-sm">
           ${cat.category}
         </button>
       `).join('');
 
-      container.innerHTML = catalog.map(cat => {
+      // 當使用者點選了單品手沖的特定烘焙度（淺焙 / 中淺焙 / 中烘焙 / 中深烘焙）時，只顯示「單品手沖」分類，不讓拿鐵等其他分類跳出來
+      const visibleCategories = currentPourOverFilter === 'all'
+        ? catalog
+        : catalog.filter(cat => cat.category.includes('手沖') || cat.category.includes('PourOver'));
+
+      container.innerHTML = visibleCategories.map(cat => {
         const isPourOver = cat.category.includes('手沖') || cat.category.includes('PourOver');
         const filterBarHtml = isPourOver ? `
-          <div class="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
-            <button onclick="setPourOverFilter('all')" class="px-2.5 py-1 rounded-lg text-[11px] font-extrabold border ${currentPourOverFilter === 'all' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-600'}">全部豆單</button>
-            <button onclick="setPourOverFilter('light')" class="px-2.5 py-1 rounded-lg text-[11px] font-extrabold border ${currentPourOverFilter === 'light' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-600'}">🌸 淺焙・花果香</button>
-            <button onclick="setPourOverFilter('med-light')" class="px-2.5 py-1 rounded-lg text-[11px] font-extrabold border ${currentPourOverFilter === 'med-light' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-600'}">🍊 中淺焙・酸甜平衡</button>
-            <button onclick="setPourOverFilter('med-dark')" class="px-2.5 py-1 rounded-lg text-[11px] font-extrabold border ${currentPourOverFilter === 'med-dark' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-600'}">🍫 中深焙・厚實堅果</button>
+          <div class="space-y-1.5">
+            <div class="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+              <button onclick="setPourOverFilter('all')" class="px-3 py-1.5 rounded-lg text-[11px] font-extrabold border shrink-0 transition ${currentPourOverFilter === 'all' ? 'bg-[#213c64] text-white border-[#213c64]' : 'bg-white text-gray-600'}">全部豆單</button>
+              <button onclick="setPourOverFilter('淺焙')" class="px-3 py-1.5 rounded-lg text-[11px] font-extrabold border shrink-0 transition ${currentPourOverFilter === '淺焙' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-600'}">淺焙</button>
+              <button onclick="setPourOverFilter('中淺焙')" class="px-3 py-1.5 rounded-lg text-[11px] font-extrabold border shrink-0 transition ${currentPourOverFilter === '中淺焙' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-600'}">中淺焙</button>
+              <button onclick="setPourOverFilter('中烘焙')" class="px-3 py-1.5 rounded-lg text-[11px] font-extrabold border shrink-0 transition ${currentPourOverFilter === '中烘焙' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-600'}">中烘焙</button>
+              <button onclick="setPourOverFilter('中深烘焙')" class="px-3 py-1.5 rounded-lg text-[11px] font-extrabold border shrink-0 transition ${currentPourOverFilter === '中深烘焙' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-600'}">中深烘焙</button>
+            </div>
+            ${currentPourOverFilter !== 'all' ? `
+              <div class="flex items-center justify-between bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl text-[11px]">
+                <span class="font-extrabold text-amber-900">🔍 目前僅顯示「單品手沖 - ${currentPourOverFilter}」</span>
+                <button onclick="setPourOverFilter('all')" class="text-[#213c64] underline font-extrabold">返回顯示全部菜單 ✕</button>
+              </div>
+            ` : ''}
           </div>
         ` : '';
 
@@ -794,11 +842,16 @@
           <h2 class="font-extrabold text-sm text-[#213c64] border-b pb-1.5">${cat.category}</h2>
           ${filterBarHtml}
           <div class="grid grid-cols-1 gap-2.5">
-            ${filteredItems.map(item => `
+            ${filteredItems.length === 0 ? `
+              <div class="bg-white p-6 rounded-2xl border text-center space-y-2">
+                <p class="text-xs font-extrabold text-gray-500">目前「${currentPourOverFilter}」分類尚無單品豆</p>
+                <button onclick="setPourOverFilter('all')" class="bg-[#213c64] text-white px-4 py-1.5 rounded-xl text-xs font-extrabold">查看全部手沖豆單</button>
+              </div>
+            ` : filteredItems.map(item => `
               <div onclick="${item.soldOut ? '' : `openModal('${cat.category}', '${item.id}')`}" class="bg-white p-3.5 rounded-2xl border shadow-sm flex justify-between items-center ${item.soldOut ? 'opacity-50 bg-gray-100 cursor-not-allowed' : 'cursor-pointer hover:border-[#213c64] active:scale-[0.99] transition'}">
                 <div class="space-y-1 pr-3">
                   <h3 class="font-extrabold text-xs text-gray-900">${item.name}</h3>
-                  ${isPourOver ? renderFlavorBadges(item.desc) : (item.desc ? `<p class="text-[11px] text-gray-500 leading-relaxed">${item.desc}</p>` : '')}
+                  ${isPourOver ? renderFlavorBadges(item) : (item.desc ? `<p class="text-[11px] text-gray-500 leading-relaxed">${item.desc}</p>` : '')}
                   <p class="font-extrabold text-xs text-[#213c64] pt-0.5">NT$${item.price}</p>
                 </div>
                 <div class="shrink-0">
@@ -812,7 +865,12 @@
     }
 
     window.scrollToCat = function(catName) {
-      document.getElementById(`cat-${catName}`).scrollIntoView({ behavior: 'smooth' });
+      if (currentPourOverFilter !== 'all') {
+        currentPourOverFilter = 'all';
+        renderMenu();
+      }
+      const targetEl = document.getElementById(`cat-${catName}`);
+      if (targetEl) targetEl.scrollIntoView({ behavior: 'smooth' });
     };
 
     // ==================== 7. 熟客「我的專屬口味」記憶功能 ====================
@@ -1006,7 +1064,17 @@
       const note = document.getElementById('modal-note').value.trim();
       const cupLabel = document.getElementById('modal-cup-label').value.trim();
 
-      cart.push({ id: activeItem.id, name: activeItem.name, price: finalUnitPrice, qty: currentQty, modifiers, note, cupLabel });
+      cart.push({
+        id: activeItem.id,
+        name: activeItem.name,
+        price: finalUnitPrice,
+        unitPrice: finalUnitPrice,
+        qty: currentQty,
+        modifiers,
+        note,
+        cupLabel: cupLabel,
+        cupName: cupLabel
+      });
       updateCartBadge();
       closeModal();
       showToast(`✅ 已加入：${cupLabel ? `[${cupLabel}] ` : ''}${activeItem.name} x${currentQty}`);
@@ -1021,7 +1089,6 @@
           if (!i.soldOut) allItems.push(i);
         });
       });
-      // 優先取後台設定 isUpsell 的商品，若無則自動挑選甜點/周邊或價格 <= 165 的精選單品
       let upsells = allItems.filter(i => i.isUpsell);
       if (upsells.length === 0) {
         upsells = allItems.filter(i => i.name.includes('可麗露') || i.name.includes('濾紙') || i.name.includes('燕麥奶') || i.price <= 90).slice(0, 5);
@@ -1049,7 +1116,17 @@
         if (hit) found = hit;
       });
       if (!found) return;
-      cart.push({ id: found.id, name: found.name, price: Number(found.price), qty: 1, modifiers: ['順手加購'], note: '', cupLabel: '' });
+      cart.push({
+        id: found.id,
+        name: found.name,
+        price: Number(found.price),
+        unitPrice: Number(found.price),
+        qty: 1,
+        modifiers: ['順手加購'],
+        note: '',
+        cupLabel: '',
+        cupName: ''
+      });
       updateCartBadge();
       openCart();
       showToast(`🛍️ 已順手加購：${found.name}`);
@@ -1057,7 +1134,9 @@
 
     window.editCartItemCupLabel = function(idx, val) {
       if (cart[idx]) {
-        cart[idx].cupLabel = val.trim();
+        const cleanVal = val.trim();
+        cart[idx].cupLabel = cleanVal;
+        cart[idx].cupName = cleanVal;
       }
     };
 
@@ -1135,7 +1214,7 @@
               </div>
               <div class="flex items-center gap-1.5 pt-1 border-t border-gray-200/70">
                 <span class="text-[10px] font-extrabold text-[#213c64] shrink-0">🏷️ 杯貼姓名：</span>
-                <input type="text" value="${item.cupLabel || ''}" oninput="editCartItemCupLabel(${idx}, this.value)" placeholder="填寫名字直接印在杯貼上（例：陳老師）" class="w-full bg-white border rounded-lg px-2 py-1 text-[11px] font-bold">
+                <input type="text" value="${item.cupLabel || item.cupName || ''}" oninput="editCartItemCupLabel(${idx}, this.value)" placeholder="填寫名字直接印在杯貼上（例：陳老師）" class="w-full bg-white border rounded-lg px-2 py-1 text-[11px] font-bold">
               </div>
             </div>
           `;
@@ -1401,6 +1480,7 @@
           orderNumber: orderNumber,
           orderType: isPreorderTomorrow ? "明日預訂" : "外帶自取",
           isPreorderTomorrow: isPreorderTomorrow,
+          isPreorder: isPreorderTomorrow,
           pickupTime: finalPickupTime,
           customerName: customerName,
           customerPhone: cleanPhone,
