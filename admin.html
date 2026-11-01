@@ -30,7 +30,7 @@
           <span id="header-store-badge" class="text-xs bg-emerald-500 text-white px-2.5 py-0.5 rounded-full font-bold">載入中</span>
           <span id="header-preorder-badge" class="hidden text-xs bg-amber-500 text-white px-2.5 py-0.5 rounded-full font-bold">🌅 明日預訂開放中</span>
         </h1>
-        <p class="text-xs text-gray-200 mt-0.5">高分貝循環鈴聲 ＆ LINE 推播 ＆ 杯貼列印 ＆ 明日預訂/優惠碼管理</p>
+        <p class="text-xs text-gray-200 mt-0.5">高分貝循環鈴聲 ＆ LINE 推播 ＆ 杯貼列印 ＆ 單品烘焙度/明日預訂管理</p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
         <button onclick="togglePause15Mins()" id="pause-15-btn" class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-xl text-xs font-extrabold shadow transition">
@@ -261,12 +261,12 @@
       </div>
     </section>
 
-    <!-- 3. 雲端菜單、單品手沖風味小卡預覽、結帳順手加購勾選與細項管理 -->
+    <!-- 3. 雲端菜單、單品手沖烘焙度編輯、結帳順手加購勾選與細項管理 -->
     <section class="bg-white p-5 rounded-2xl shadow-sm border">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
         <div>
-          <h2 class="text-base font-extrabold text-gray-900">🛠️ 雲端菜單、單品風味小卡、順手加購推薦 ＆ 細項加價設定</h2>
-          <p class="text-xs text-gray-500 mt-0.5">可一鍵標記「🛍️ 順手加購推薦」商品（於客人購物車底部曝光），單品手沖自動轉換為焙度與風味小卡。</p>
+          <h2 class="text-base font-extrabold text-gray-900">🛠️ 雲端菜單、單品手沖烘焙度設定（淺焙/中淺焙/中烘焙/中深烘焙）＆ 細項加價管理</h2>
+          <p class="text-xs text-gray-500 mt-0.5">單品手沖可直接於列表下拉切換「淺焙 / 中淺焙 / 中烘焙 / 中深烘焙」，且嚴格隔離非手沖品項，避免前台篩選時跳出拿鐵。</p>
         </div>
       </div>
       <div id="admin-menu-list" class="space-y-5">
@@ -288,7 +288,7 @@
 
       <div>
         <label class="text-xs font-bold text-gray-600">所屬分類</label>
-        <select id="edit-cat-name" class="w-full border rounded-xl p-2.5 text-sm mt-1 bg-white focus:outline-none focus:border-[#213c64]">
+        <select id="edit-cat-name" onchange="handleCategoryChangeInModal()" class="w-full border rounded-xl p-2.5 text-sm mt-1 bg-white focus:outline-none focus:border-[#213c64]">
           <option value="美式系列 Americano">美式系列 Americano</option>
           <option value="單品手沖 PourOver">單品手沖 PourOver</option>
           <option value="拿鐵系列 Cafe Latte">拿鐵系列 Cafe Latte</option>
@@ -302,24 +302,47 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label class="text-xs font-bold text-gray-600">品項名稱</label>
-          <input type="text" id="edit-name" placeholder="例如：美式咖啡" class="w-full border rounded-xl p-2.5 text-sm mt-1 focus:outline-none focus:border-[#213c64]">
+          <input type="text" id="edit-name" placeholder="例如：衣索比亞西達馬..." class="w-full border rounded-xl p-2.5 text-sm mt-1 focus:outline-none focus:border-[#213c64]">
         </div>
         <div>
           <label class="text-xs font-bold text-gray-600">基本價格 (NT$)</label>
-          <input type="number" id="edit-price" placeholder="80" class="w-full border rounded-xl p-2.5 text-sm mt-1 focus:outline-none focus:border-[#213c64]">
+          <input type="number" id="edit-price" placeholder="130" class="w-full border rounded-xl p-2.5 text-sm mt-1 focus:outline-none focus:border-[#213c64]">
         </div>
       </div>
 
-      <div>
-        <div class="flex flex-wrap justify-between items-center gap-1">
-          <label class="text-xs font-bold text-gray-600">品項描述 (單品手沖建議格式：焙度｜風味1、風味2，系統將自動生成風味小卡)</label>
-          <div class="flex gap-1 text-[10px]">
-            <button type="button" onclick="insertRoastPrefix('淺焙｜')" class="bg-amber-100 hover:bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded font-bold">＋淺焙｜</button>
-            <button type="button" onclick="insertRoastPrefix('中淺焙｜')" class="bg-amber-100 hover:bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded font-bold">＋中淺焙｜</button>
-            <button type="button" onclick="insertRoastPrefix('中深焙｜')" class="bg-amber-100 hover:bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded font-bold">＋中深焙｜</button>
-          </div>
+      <!-- 🫘 單品手沖專屬烘焙度欄位 (淺焙 / 中淺焙 / 中烘焙 / 中深烘焙) -->
+      <div id="pourover-roast-box" class="border-2 border-amber-400 rounded-xl p-3.5 bg-amber-50/70 space-y-2">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-extrabold text-amber-950 block">🫘 單品手沖專屬「烘焙度欄位」（僅單品手沖會套用前台篩選）：</label>
         </div>
-        <input type="text" id="edit-desc" placeholder="例：中淺焙｜水果軟糖、白桃、烏龍茶 或 16oz｜經典配方" class="w-full border rounded-xl p-2.5 text-sm mt-1 focus:outline-none focus:border-[#213c64]">
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-1.5 text-xs">
+          <label class="cursor-pointer">
+            <input type="radio" name="edit-roast-level" value="" class="peer hidden" onchange="syncRoastToDescInput()">
+            <div class="border rounded-lg p-2 text-center font-bold bg-white peer-checked:bg-gray-700 peer-checked:text-white transition">無 / 一般飲品</div>
+          </label>
+          <label class="cursor-pointer">
+            <input type="radio" name="edit-roast-level" value="淺焙" class="peer hidden" onchange="syncRoastToDescInput()">
+            <div class="border rounded-lg p-2 text-center font-extrabold bg-white peer-checked:bg-amber-600 peer-checked:text-white peer-checked:border-amber-600 transition">淺焙</div>
+          </label>
+          <label class="cursor-pointer">
+            <input type="radio" name="edit-roast-level" value="中淺焙" class="peer hidden" onchange="syncRoastToDescInput()">
+            <div class="border rounded-lg p-2 text-center font-extrabold bg-white peer-checked:bg-amber-700 peer-checked:text-white peer-checked:border-amber-700 transition">中淺焙</div>
+          </label>
+          <label class="cursor-pointer">
+            <input type="radio" name="edit-roast-level" value="中烘焙" class="peer hidden" onchange="syncRoastToDescInput()">
+            <div class="border rounded-lg p-2 text-center font-extrabold bg-white peer-checked:bg-amber-800 peer-checked:text-white peer-checked:border-amber-800 transition">中烘焙</div>
+          </label>
+          <label class="cursor-pointer">
+            <input type="radio" name="edit-roast-level" value="中深烘焙" class="peer hidden" onchange="syncRoastToDescInput()">
+            <div class="border rounded-lg p-2 text-center font-extrabold bg-white peer-checked:bg-stone-800 peer-checked:text-white peer-checked:border-stone-800 transition">中深烘焙</div>
+          </label>
+        </div>
+        <p class="text-[11px] text-amber-800">💡 選擇上方烘焙度後，會自動同步寫入商品的 `roastLevel` 屬性與描述前綴；非「單品手沖」分類會自動設為「無」，確保前台篩選絕不跳出拿鐵。</p>
+      </div>
+
+      <div>
+        <label class="text-xs font-bold text-gray-600">品項描述 / 風味小卡標籤（單品手沖請用「、」分隔風味，例：水果軟糖、白桃、烏龍茶）</label>
+        <input type="text" id="edit-desc" placeholder="例：中淺焙｜水果軟糖、白桃、烏龍茶 或 16oz" class="w-full border rounded-xl p-2.5 text-sm mt-1 focus:outline-none focus:border-[#213c64]">
       </div>
 
       <!-- 🛍️ 結帳前「一鍵順手加購」推薦開關 -->
@@ -354,7 +377,7 @@
 
       <!-- 2. 配方豆設定（統一為「5號 中焙 / 1號 淺焙」） -->
       <div class="border rounded-xl p-3.5 bg-gray-50 space-y-2">
-        <label class="text-xs font-extrabold text-[#213c64] block">🫘 配方豆設定（可單獨打勾與調整價錢）：</label>
+        <label class="text-xs font-extrabold text-[#213c64] block">🫘 義式配方豆設定（美式/拿鐵選豆用，不會影響單品手沖分類）：</label>
         <div class="space-y-2 text-xs">
           <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border shadow-sm">
             <label class="flex items-center gap-2 cursor-pointer font-bold">
@@ -938,6 +961,42 @@
       alert("✅ 店家公告、明日預訂、營業時間與優惠碼設定已儲存並同步至前台！");
     };
 
+    // ==================== 單品手沖烘焙度標準化（淺焙 / 中淺焙 / 中烘焙 / 中深烘焙） ====================
+    const VALID_ROAST_LEVELS = ["淺焙", "中淺焙", "中烘焙", "中深烘焙"];
+
+    function normalizeRoastLevelName(raw = "") {
+      const s = String(raw || "").trim().replace(/培/g, "焙");
+      if (!s) return "";
+      if (s === "中淺焙" || s === "淺中焙") return "中淺焙";
+      if (s === "中深焙" || s === "中深烘焙" || s === "深焙" || s === "深烘焙") return "中深烘焙";
+      if (s === "中焙" || s === "中烘焙") return "中烘焙";
+      if (s === "淺焙" || s === "淺烘焙") return "淺焙";
+      return "";
+    }
+
+    // 僅針對「單品手沖」解析烘焙度與風味標籤，非單品手沖一律回傳空烘焙度
+    function getPourOverRoastAndTags(item, isPourOverCategory = true) {
+      if (!isPourOverCategory) return { roast: "", tags: [] };
+      const desc = item.desc || "";
+      const parts = desc.split(/[｜┃|]/);
+      let roastFromDesc = "";
+      let notesStr = desc;
+      if (parts.length > 1) {
+        roastFromDesc = normalizeRoastLevelName(parts[0]);
+        notesStr = parts.slice(1).join("、");
+      }
+      const finalRoast = normalizeRoastLevelName(item.roastLevel) || roastFromDesc || "";
+      const tags = notesStr.split(/[、,，/]/).map(s => s.trim()).filter(Boolean);
+      return { roast: finalRoast, tags };
+    }
+
+    function applyRoastToDescString(desc = "", roastLevel = "") {
+      const cleanDesc = String(desc || "").trim().replace(/^(淺焙|淺烘焙|中淺焙|中淺培|中焙|中培|中烘焙|中深焙|中深培|中深烘焙|深焙)[｜┃|]\s*/, "");
+      const normRoast = normalizeRoastLevelName(roastLevel);
+      if (!normRoast) return cleanDesc;
+      return cleanDesc ? `${normRoast}｜${cleanDesc}` : `${normRoast}｜`;
+    }
+
     // ==================== 菜單管理、單品手沖風味小卡與順手加購設定 ====================
     function buildOpts({
       ice = true, hot = true, iceLevel = true,
@@ -969,92 +1028,92 @@
       {
         order: 1, category: "美式系列 Americano",
         items: [
-          { id: "a1", name: "美式咖啡", price: 80, desc: "16oz｜經典純粹配方", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, shot: true }), soldOut: false, isUpsell: false },
-          { id: "a2", name: "香橙美式", price: 90, desc: "16oz｜清爽果香融合濃縮咖啡", options: buildOpts({ ice: true, hot: false, bean5: true, bean1: true, shot: true }), soldOut: false, isUpsell: false },
-          { id: "a3", name: "荔枝美式", price: 90, desc: "16oz", options: buildOpts({ ice: true, hot: false, bean5: true, bean1: true, shot: true }), soldOut: false, isUpsell: false },
-          { id: "a4", name: "黑嘉麗美式", price: 90, desc: "16oz", options: buildOpts({ ice: true, hot: false, bean5: true, bean1: true, shot: true }), soldOut: false, isUpsell: false },
-          { id: "a5", name: "西西里氣泡美式", price: 110, desc: "16oz｜微氣泡清爽檸檬香", options: buildOpts({ ice: true, hot: false, sugar: true, shot: true }), soldOut: false, isUpsell: false },
-          { id: "a6", name: "西西里百香美式", price: 100, desc: "16oz", options: buildOpts({ ice: true, hot: false, sugar: true, shot: true }), soldOut: false, isUpsell: false }
+          { id: "a1", name: "美式咖啡", price: 80, desc: "16oz｜經典純粹配方", roastLevel: "", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, shot: true }), soldOut: false, isUpsell: false },
+          { id: "a2", name: "香橙美式", price: 90, desc: "16oz｜清爽果香融合濃縮咖啡", roastLevel: "", options: buildOpts({ ice: true, hot: false, bean5: true, bean1: true, shot: true }), soldOut: false, isUpsell: false },
+          { id: "a3", name: "荔枝美式", price: 90, desc: "16oz", roastLevel: "", options: buildOpts({ ice: true, hot: false, bean5: true, bean1: true, shot: true }), soldOut: false, isUpsell: false },
+          { id: "a4", name: "黑嘉麗美式", price: 90, desc: "16oz", roastLevel: "", options: buildOpts({ ice: true, hot: false, bean5: true, bean1: true, shot: true }), soldOut: false, isUpsell: false },
+          { id: "a5", name: "西西里氣泡美式", price: 110, desc: "16oz｜微氣泡清爽檸檬香", roastLevel: "", options: buildOpts({ ice: true, hot: false, sugar: true, shot: true }), soldOut: false, isUpsell: false },
+          { id: "a6", name: "西西里百香美式", price: 100, desc: "16oz", roastLevel: "", options: buildOpts({ ice: true, hot: false, sugar: true, shot: true }), soldOut: false, isUpsell: false }
         ]
       },
       {
         order: 2, category: "單品手沖 PourOver",
         items: [
-          { id: "p1", name: "衣索比亞西達馬桃子甜心水洗", price: 130, desc: "中淺培┃水果軟糖、白桃、烏龍茶", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
-          { id: "p2", name: "中國雲南雲頂莊園荊棘玫瑰日曬", price: 130, desc: "中淺培┃熱帶水果、葡萄、花香尾韻", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
-          { id: "p3", name: "蘇門答臘華漢納黑珍珠批次濕撥法", price: 130, desc: "中培｜雪松、焦糖、榛果巧可力", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
-          { id: "p4", name: "衣索比亞耶加雪菲日曬(非洲式烘培)", price: 130, desc: "中深培｜熱帶水果、黑巧克力、甜奶油", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
-          { id: "p5", name: "衣索比亞西達摩南希寶森林日曬", price: 150, desc: "中淺培┃鳳梨、芒果乾、甜桃、藍莓果醬", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
-          { id: "p6", name: "肯亞吉利尼亞加卡穆旺吉水洗", price: 150, desc: "中淺培┃柑橘、覆盆子、蜂蜜、榛果", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
-          { id: "p7", name: "哥斯大黎加莫扎特葡萄乾蜜處理", price: 150, desc: "中淺培┃葡萄乾、蜜餞、草莓果醬、紫羅蘭", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
-          { id: "p8", name: "衣索比亞古吉歐克羅有機日曬", price: 150, desc: "中淺培┃萊姆、佛手柑、檸檬紅茶", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
-          { id: "p9", name: "哥倫比亞薇拉卡斯提歐厭氧日曬", price: 170, desc: "中淺培｜熱帶水果、香蕉、奇異果、紅糖", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
-          { id: "p10", name: "哥倫比亞凡爾賽葡萄香檳水洗", price: 170, desc: "中淺培┃香檳汽水、葡萄軟糖、雞尾酒", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
-          { id: "p11", name: "哥倫比亞凡爾賽蜜桃果茶水洗", price: 170, desc: "中淺培┃蜜桃、無花果、花果茶", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
-          { id: "p12", name: "秘魯薇拉瑞卡花仙子藝妓水洗", price: 170, desc: "中淺培｜密蘋果、杏桃、雞蛋花", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
-          { id: "p13", name: "巴拿馬巴魯火山拓荒者藝妓熱發酵處理", price: 200, desc: "中淺培｜鳳梨、甜漬櫻桃、茉莉花", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
-          { id: "p14", name: "巴拿馬聖塔克拉拉午夜紫蝶水洗", price: 170, desc: "中淺培｜紫葡萄、紅花香、甜橙", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
-          { id: "p15", name: "哥倫比亞聖徒阿里歐愛情靈藥水洗", price: 130, desc: "", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false }
+          { id: "p1", name: "衣索比亞西達馬桃子甜心水洗", price: 130, roastLevel: "中淺焙", desc: "中淺焙｜水果軟糖、白桃、烏龍茶", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
+          { id: "p2", name: "中國雲南雲頂莊園荊棘玫瑰日曬", price: 130, roastLevel: "中淺焙", desc: "中淺焙｜熱帶水果、葡萄、花香尾韻", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
+          { id: "p3", name: "蘇門答臘華漢納黑珍珠批次濕撥法", price: 130, roastLevel: "中烘焙", desc: "中烘焙｜雪松、焦糖、榛果巧可力", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
+          { id: "p4", name: "衣索比亞耶加雪菲日曬(非洲式烘培)", price: 130, roastLevel: "中深烘焙", desc: "中深烘焙｜熱帶水果、黑巧克力、甜奶油", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
+          { id: "p5", name: "衣索比亞西達摩南希寶森林日曬", price: 150, roastLevel: "中淺焙", desc: "中淺焙｜鳳梨、芒果乾、甜桃、藍莓果醬", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
+          { id: "p6", name: "肯亞吉利尼亞加卡穆旺吉水洗", price: 150, roastLevel: "中淺焙", desc: "中淺焙｜柑橘、覆盆子、蜂蜜、榛果", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
+          { id: "p7", name: "哥斯大黎加莫扎特葡萄乾蜜處理", price: 150, roastLevel: "中淺焙", desc: "中淺焙｜葡萄乾、蜜餞、草莓果醬、紫羅蘭", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
+          { id: "p8", name: "衣索比亞古吉歐克羅有機日曬", price: 150, roastLevel: "淺焙", desc: "淺焙｜萊姆、佛手柑、檸檬紅茶", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
+          { id: "p9", name: "哥倫比亞薇拉卡斯提歐厭氧日曬", price: 170, roastLevel: "中淺焙", desc: "中淺焙｜熱帶水果、香蕉、奇異果、紅糖", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
+          { id: "p10", name: "哥倫比亞凡爾賽葡萄香檳水洗", price: 170, roastLevel: "淺焙", desc: "淺焙｜香檳汽水、葡萄軟糖、雞尾酒", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
+          { id: "p11", name: "哥倫比亞凡爾賽蜜桃果茶水洗", price: 170, roastLevel: "淺焙", desc: "淺焙｜蜜桃、無花果、花果茶", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
+          { id: "p12", name: "秘魯薇拉瑞卡花仙子藝妓水洗", price: 170, roastLevel: "淺焙", desc: "淺焙｜蜜蘋果、杏桃、雞蛋花", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
+          { id: "p13", name: "巴拿馬巴魯火山拓荒者藝妓熱發酵處理", price: 200, roastLevel: "淺焙", desc: "淺焙｜鳳梨、甜漬櫻桃、茉莉花", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
+          { id: "p14", name: "巴拿馬聖塔克拉拉午夜紫蝶水洗", price: 170, roastLevel: "中淺焙", desc: "中淺焙｜紫葡萄、紅花香、甜橙", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false },
+          { id: "p15", name: "哥倫比亞聖徒阿里歐愛情靈藥水洗", price: 130, roastLevel: "中淺焙", desc: "中淺焙｜甜美果香", options: buildOpts({ ice: true, hot: true, iceLevel: false }), soldOut: false, isUpsell: false }
         ]
       },
       {
         order: 3, category: "拿鐵系列 Cafe Latte",
         items: [
-          { id: "l1", name: "卡布奇諾", price: 120, desc: "16oz", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, shot: true, oat: true, cocoa: true, brownSugar: true, cinnamon: true }), soldOut: false, isUpsell: false },
-          { id: "l2", name: "拿鐵", price: 120, desc: "16oz", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, shot: true, oat: true, cocoa: true, brownSugar: true, cinnamon: true }), soldOut: false, isUpsell: false },
-          { id: "l3", name: "蜂蜜拿鐵", price: 125, desc: "16oz", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false, isUpsell: false },
-          { id: "l4", name: "香草拿鐵", price: 125, desc: "16oz", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false, isUpsell: false },
-          { id: "l5", name: "榛果拿鐵", price: 125, desc: "16oz", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false, isUpsell: false },
-          { id: "l6", name: "焦糖海鹽拿鐵", price: 125, desc: "16oz", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false, isUpsell: false },
-          { id: "l7", name: "玫瑰拿鐵", price: 125, desc: "16oz", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false, isUpsell: false },
-          { id: "l8", name: "半半拿鐵", price: 130, desc: "16oz", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, shot: true, oat: true }), soldOut: false, isUpsell: false },
-          { id: "l9", name: "焦糖瑪其朵", price: 130, desc: "16oz", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false, isUpsell: false },
-          { id: "l10", name: "宇治抹茶拿鐵", price: 135, desc: "16oz", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false, isUpsell: false },
-          { id: "l11", name: "威士忌拿鐵", price: 135, desc: "16oz｜大人系微醺風味", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false, isUpsell: false },
-          { id: "l12", name: "貝里斯奶酒拿鐵", price: 135, desc: "16oz｜大人系微醺風味", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false, isUpsell: false },
-          { id: "l13", name: "君度橙酒拿鐵", price: 135, desc: "16oz｜大人系微醺風味", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false, isUpsell: false }
+          { id: "l1", name: "卡布奇諾", price: 120, desc: "16oz", roastLevel: "", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, shot: true, oat: true, cocoa: true, brownSugar: true, cinnamon: true }), soldOut: false, isUpsell: false },
+          { id: "l2", name: "拿鐵", price: 120, desc: "16oz", roastLevel: "", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, shot: true, oat: true, cocoa: true, brownSugar: true, cinnamon: true }), soldOut: false, isUpsell: false },
+          { id: "l3", name: "蜂蜜拿鐵", price: 125, desc: "16oz", roastLevel: "", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false, isUpsell: false },
+          { id: "l4", name: "香草拿鐵", price: 125, desc: "16oz", roastLevel: "", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false, isUpsell: false },
+          { id: "l5", name: "榛果拿鐵", price: 125, desc: "16oz", roastLevel: "", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false, isUpsell: false },
+          { id: "l6", name: "焦糖海鹽拿鐵", price: 125, desc: "16oz", roastLevel: "", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false, isUpsell: false },
+          { id: "l7", name: "玫瑰拿鐵", price: 125, desc: "16oz", roastLevel: "", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false, isUpsell: false },
+          { id: "l8", name: "半半拿鐵", price: 130, desc: "16oz", roastLevel: "", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, shot: true, oat: true }), soldOut: false, isUpsell: false },
+          { id: "l9", name: "焦糖瑪其朵", price: 130, desc: "16oz", roastLevel: "", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false, isUpsell: false },
+          { id: "l10", name: "宇治抹茶拿鐵", price: 135, desc: "16oz", roastLevel: "", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false, isUpsell: false },
+          { id: "l11", name: "威士忌拿鐵", price: 135, desc: "16oz｜大人系微醺風味", roastLevel: "", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false, isUpsell: false },
+          { id: "l12", name: "貝里斯奶酒拿鐵", price: 135, desc: "16oz｜大人系微醺風味", roastLevel: "", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false, isUpsell: false },
+          { id: "l13", name: "君度橙酒拿鐵", price: 135, desc: "16oz｜大人系微醺風味", roastLevel: "", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, sugar: true, shot: true, oat: true }), soldOut: false, isUpsell: false }
         ]
       },
       {
         order: 4, category: "風味飲品 Beverage",
         items: [
-          { id: "b1", name: "歐式花果茶", price: 90, desc: "無咖啡因", options: buildOpts({ ice: true, hot: true }), soldOut: false, isUpsell: false },
-          { id: "b2", name: "紅茶歐蕾", price: 100, desc: "16oz", options: buildOpts({ ice: true, hot: true, sugar: true, oat: true }), soldOut: false, isUpsell: false },
-          { id: "b3", name: "風味紅茶歐蕾", price: 110, desc: "16oz", options: buildOpts({ ice: true, hot: true, sugar: true, oat: true }), soldOut: false, isUpsell: false },
-          { id: "b4", name: "黑糖歐蕾", price: 120, desc: "16oz", options: buildOpts({ ice: true, hot: true, oat: true, brownSugar: true }), soldOut: false, isUpsell: false },
-          { id: "b5", name: "榛果歐蕾", price: 120, desc: "16oz", options: buildOpts({ ice: true, hot: true, oat: true }), soldOut: false, isUpsell: false },
-          { id: "b6", name: "香草歐蕾", price: 120, desc: "16oz", options: buildOpts({ ice: true, hot: true, oat: true }), soldOut: false, isUpsell: false },
-          { id: "b7", name: "法芙娜可可歐蕾", price: 120, desc: "16oz", options: buildOpts({ ice: true, hot: true, oat: true, cocoa: true }), soldOut: false, isUpsell: false },
-          { id: "b8", name: "焦糖海鹽歐蕾", price: 120, desc: "16oz", options: buildOpts({ ice: true, hot: true, oat: true }), soldOut: false, isUpsell: false },
-          { id: "b9", name: "玫瑰歐蕾", price: 120, desc: "16oz", options: buildOpts({ ice: true, hot: true, oat: true }), soldOut: false, isUpsell: false },
-          { id: "b10", name: "宇治抹茶歐蕾", price: 120, desc: "16oz", options: buildOpts({ ice: true, hot: true, oat: true }), soldOut: false, isUpsell: false },
-          { id: "b11", name: "濃情可可歐蕾", price: 135, desc: "16oz", options: buildOpts({ ice: true, hot: true, oat: true, cocoa: true }), soldOut: false, isUpsell: false }
+          { id: "b1", name: "歐式花果茶", price: 90, desc: "無咖啡因", roastLevel: "", options: buildOpts({ ice: true, hot: true }), soldOut: false, isUpsell: false },
+          { id: "b2", name: "紅茶歐蕾", price: 100, desc: "16oz", roastLevel: "", options: buildOpts({ ice: true, hot: true, sugar: true, oat: true }), soldOut: false, isUpsell: false },
+          { id: "b3", name: "風味紅茶歐蕾", price: 110, desc: "16oz", roastLevel: "", options: buildOpts({ ice: true, hot: true, sugar: true, oat: true }), soldOut: false, isUpsell: false },
+          { id: "b4", name: "黑糖歐蕾", price: 120, desc: "16oz", roastLevel: "", options: buildOpts({ ice: true, hot: true, oat: true, brownSugar: true }), soldOut: false, isUpsell: false },
+          { id: "b5", name: "榛果歐蕾", price: 120, desc: "16oz", roastLevel: "", options: buildOpts({ ice: true, hot: true, oat: true }), soldOut: false, isUpsell: false },
+          { id: "b6", name: "香草歐蕾", price: 120, desc: "16oz", roastLevel: "", options: buildOpts({ ice: true, hot: true, oat: true }), soldOut: false, isUpsell: false },
+          { id: "b7", name: "法芙娜可可歐蕾", price: 120, desc: "16oz", roastLevel: "", options: buildOpts({ ice: true, hot: true, oat: true, cocoa: true }), soldOut: false, isUpsell: false },
+          { id: "b8", name: "焦糖海鹽歐蕾", price: 120, desc: "16oz", roastLevel: "", options: buildOpts({ ice: true, hot: true, oat: true }), soldOut: false, isUpsell: false },
+          { id: "b9", name: "玫瑰歐蕾", price: 120, desc: "16oz", roastLevel: "", options: buildOpts({ ice: true, hot: true, oat: true }), soldOut: false, isUpsell: false },
+          { id: "b10", name: "宇治抹茶歐蕾", price: 120, desc: "16oz", roastLevel: "", options: buildOpts({ ice: true, hot: true, oat: true }), soldOut: false, isUpsell: false },
+          { id: "b11", name: "濃情可可歐蕾", price: 135, desc: "16oz", roastLevel: "", options: buildOpts({ ice: true, hot: true, oat: true, cocoa: true }), soldOut: false, isUpsell: false }
         ]
       },
       {
         order: 5, category: "NODAY 周邊",
         items: [
-          { id: "m1", name: "脆皮可麗露", price: 70, desc: "外脆內Q經典法式甜點", options: buildOpts({ ice: false, hot: false, iceLevel: false }), soldOut: false, isUpsell: true },
-          { id: "m2", name: "OAT燕麥奶", price: 165, desc: "咖啡師專用植物奶", options: buildOpts({ ice: false, hot: false, iceLevel: false }), soldOut: false, isUpsell: true },
-          { id: "m3", name: "酵素漂白濾紙", price: 100, desc: "手沖專用無異味濾紙", options: buildOpts({ ice: false, hot: false, iceLevel: false }), soldOut: false, isUpsell: true }
+          { id: "m1", name: "脆皮可麗露", price: 70, desc: "外脆內Q經典法式甜點", roastLevel: "", options: buildOpts({ ice: false, hot: false, iceLevel: false }), soldOut: false, isUpsell: true },
+          { id: "m2", name: "OAT燕麥奶", price: 165, desc: "咖啡師專用植物奶", roastLevel: "", options: buildOpts({ ice: false, hot: false, iceLevel: false }), soldOut: false, isUpsell: true },
+          { id: "m3", name: "酵素漂白濾紙", price: 100, desc: "手沖專用無異味濾紙", roastLevel: "", options: buildOpts({ ice: false, hot: false, iceLevel: false }), soldOut: false, isUpsell: true }
         ]
       },
       {
         order: 6, category: "微氣泡 Fizzy",
         items: [
-          { id: "f1", name: "蜂蜜檸檬氣泡", price: 110, desc: "", options: buildOpts({ ice: true, hot: false }), soldOut: false, isUpsell: false },
-          { id: "f2", name: "黑嘉麗氣泡", price: 110, desc: "", options: buildOpts({ ice: true, hot: false }), soldOut: false, isUpsell: false },
-          { id: "f3", name: "荔枝氣泡", price: 110, desc: "", options: buildOpts({ ice: true, hot: false }), soldOut: false, isUpsell: false },
-          { id: "f4", name: "香橙氣泡", price: 110, desc: "", options: buildOpts({ ice: true, hot: false }), soldOut: false, isUpsell: false }
+          { id: "f1", name: "蜂蜜檸檬氣泡", price: 110, desc: "", roastLevel: "", options: buildOpts({ ice: true, hot: false }), soldOut: false, isUpsell: false },
+          { id: "f2", name: "黑嘉麗氣泡", price: 110, desc: "", roastLevel: "", options: buildOpts({ ice: true, hot: false }), soldOut: false, isUpsell: false },
+          { id: "f3", name: "荔枝氣泡", price: 110, desc: "", roastLevel: "", options: buildOpts({ ice: true, hot: false }), soldOut: false, isUpsell: false },
+          { id: "f4", name: "香橙氣泡", price: 110, desc: "", roastLevel: "", options: buildOpts({ ice: true, hot: false }), soldOut: false, isUpsell: false }
         ]
       },
       {
         order: 7, category: "季節限定 ＮＥＷ",
         items: [
-          { id: "s1", name: "桂花釀美式", price: 100, desc: "俐落的黑咖啡遇見自帶仙氣的清甜桂花，清爽回甘不苦澀！", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, shot: true }), soldOut: false, isUpsell: false },
-          { id: "s2", name: "桂花釀美式-大人味", price: 115, desc: "黑咖啡遇上大吟釀，靈魂瞬間釋放的微醺小可愛", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, shot: true }), soldOut: false, isUpsell: false },
-          { id: "s3", name: "桂花釀拿鐵", price: 130, desc: "奶香與花香的雙重爆擊！溫柔又濃郁的續命快樂水～", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, shot: true, oat: true }), soldOut: false, isUpsell: false },
-          { id: "s4", name: "桂花釀拿鐵-大人味", price: 145, desc: "溫柔的陷阱｜添加純米大吟釀風味，專屬大人味的浪漫～", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, shot: true, oat: true }), soldOut: false, isUpsell: false }
+          { id: "s1", name: "桂花釀美式", price: 100, desc: "俐落的黑咖啡遇見自帶仙氣的清甜桂花，清爽回甘不苦澀！", roastLevel: "", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, shot: true }), soldOut: false, isUpsell: false },
+          { id: "s2", name: "桂花釀美式-大人味", price: 115, desc: "黑咖啡遇上大吟釀，靈魂瞬間釋放的微醺小可愛", roastLevel: "", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, shot: true }), soldOut: false, isUpsell: false },
+          { id: "s3", name: "桂花釀拿鐵", price: 130, desc: "奶香與花香的雙重爆擊！溫柔又濃郁的續命快樂水～", roastLevel: "", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, shot: true, oat: true }), soldOut: false, isUpsell: false },
+          { id: "s4", name: "桂花釀拿鐵-大人味", price: 145, desc: "溫柔的陷阱｜添加純米大吟釀風味，專屬大人味的浪漫～", roastLevel: "", options: buildOpts({ ice: true, hot: true, bean5: true, bean1: true, shot: true, oat: true }), soldOut: false, isUpsell: false }
         ]
       }
     ];
@@ -1070,38 +1129,37 @@
       } catch (e) { console.error(e); alert("操作失敗"); }
     };
 
-    // 解析單品手沖描述為「焙度＋風味小卡標籤」
-    function parsePourOverFlavorCard(desc = "") {
-      if (!desc) return { roast: "", tags: [] };
-      const parts = desc.split(/[｜┃|]/);
-      let roast = "";
-      let notesStr = desc;
-      if (parts.length > 1) {
-        roast = parts[0].trim().replace(/培/g, "焙");
-        notesStr = parts.slice(1).join("、");
-      }
-      const tags = notesStr.split(/[、,，/]/).map(s => s.trim()).filter(Boolean);
-      return { roast, tags };
-    }
-
     function matchPourOverFilter(item, filterKey) {
       if (filterKey === "all") return true;
-      const text = `${item.name || ""} ${item.desc || ""}`.replace(/培/g, "焙");
-      if (filterKey === "light") {
-        return text.includes("淺焙") || text.includes("花") || text.includes("果") || text.includes("桃") || text.includes("柑橘") || text.includes("莓");
-      }
-      if (filterKey === "med-light") {
-        return text.includes("中淺焙");
-      }
-      if (filterKey === "med-dark") {
-        return text.includes("中焙") || text.includes("中深焙") || text.includes("深焙") || text.includes("巧克") || text.includes("堅果") || text.includes("榛果") || text.includes("焦糖");
-      }
-      return true;
+      const { roast } = getPourOverRoastAndTags(item, true);
+      return roast === filterKey;
     }
 
     window.setPourOverFilter = function(filterKey) {
       currentPourOverFilter = filterKey;
       renderAdminMenuDOM();
+    };
+
+    // 後台列表直接下拉修改單品手沖烘焙度
+    window.quickChangeRoastLevel = async function(categoryName, itemId, newRoastValue) {
+      try {
+        const catObj = cachedCatalog.find(c => c.category === categoryName);
+        if (!catObj) return;
+        const normRoast = normalizeRoastLevelName(newRoastValue);
+        catObj.items = catObj.items.map(i => {
+          if (i.id !== itemId) return i;
+          return {
+            ...i,
+            roastLevel: normRoast,
+            desc: applyRoastToDescString(i.desc || "", normRoast)
+          };
+        });
+        await setDoc(doc(db, "menu", categoryName), catObj);
+        loadAdminMenu();
+      } catch (e) {
+        console.error(e);
+        alert("更新烘焙度失敗");
+      }
     };
 
     function getAddonBadges(item) {
@@ -1148,7 +1206,7 @@
             <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
               <div class="flex items-center gap-2">
                 <h3 class="font-extrabold text-gray-900 text-sm">${cat.category}</h3>
-                ${isPourOver ? `<span class="text-[11px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full font-extrabold">🫘 支援風味小卡與焙度篩選</span>` : ''}
+                ${isPourOver ? `<span class="text-[11px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full font-extrabold">🫘 可直接下拉修改烘焙度（淺焙 / 中淺焙 / 中烘焙 / 中深烘焙）</span>` : ''}
               </div>
               <div class="flex items-center gap-1">
                 <button onclick="moveCategory(${catIdx}, -1)" class="text-xs bg-white border hover:bg-gray-100 px-2 py-1 rounded font-bold">▲ 分類上移</button>
@@ -1159,9 +1217,10 @@
             ${isPourOver ? `
               <div class="flex flex-wrap gap-1.5 mb-3 pb-2 border-b border-gray-200 text-xs">
                 <button onclick="setPourOverFilter('all')" class="px-3 py-1 rounded-full font-extrabold transition ${currentPourOverFilter === 'all' ? 'bg-[#213c64] text-white' : 'bg-white border text-gray-600'}">全部 (${cat.items.length})</button>
-                <button onclick="setPourOverFilter('light')" class="px-3 py-1 rounded-full font-extrabold transition ${currentPourOverFilter === 'light' ? 'bg-amber-600 text-white' : 'bg-white border text-gray-600'}">🌸 淺焙 / 果香花香</button>
-                <button onclick="setPourOverFilter('med-light')" class="px-3 py-1 rounded-full font-extrabold transition ${currentPourOverFilter === 'med-light' ? 'bg-amber-600 text-white' : 'bg-white border text-gray-600'}">🍑 中淺焙</button>
-                <button onclick="setPourOverFilter('med-dark')" class="px-3 py-1 rounded-full font-extrabold transition ${currentPourOverFilter === 'med-dark' ? 'bg-amber-600 text-white' : 'bg-white border text-gray-600'}">🍫 中深焙 / 堅果調</button>
+                <button onclick="setPourOverFilter('淺焙')" class="px-3 py-1 rounded-full font-extrabold transition ${currentPourOverFilter === '淺焙' ? 'bg-amber-600 text-white' : 'bg-white border text-gray-600'}">淺焙</button>
+                <button onclick="setPourOverFilter('中淺焙')" class="px-3 py-1 rounded-full font-extrabold transition ${currentPourOverFilter === '中淺焙' ? 'bg-amber-700 text-white' : 'bg-white border text-gray-600'}">中淺焙</button>
+                <button onclick="setPourOverFilter('中烘焙')" class="px-3 py-1 rounded-full font-extrabold transition ${currentPourOverFilter === '中烘焙' ? 'bg-amber-800 text-white' : 'bg-white border text-gray-600'}">中烘焙</button>
+                <button onclick="setPourOverFilter('中深烘焙')" class="px-3 py-1 rounded-full font-extrabold transition ${currentPourOverFilter === '中深烘焙' ? 'bg-stone-800 text-white' : 'bg-white border text-gray-600'}">中深烘焙</button>
               </div>
             ` : ''}
 
@@ -1171,7 +1230,7 @@
                 const opts = item.options || {};
                 const addonBadges = getAddonBadges(item);
                 const hasSugar = opts.sugarFree || opts.sugarMicro || opts.sugarHalf || opts.sugarNormal;
-                const flavorCard = isPourOver ? parsePourOverFlavorCard(item.desc) : null;
+                const flavorCard = isPourOver ? getPourOverRoastAndTags(item, true) : null;
 
                 return `
                   <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-3.5 rounded-xl border gap-2 shadow-sm">
@@ -1182,9 +1241,18 @@
                         ${item.isUpsell ? `<span class="text-[10px] bg-purple-600 text-white px-2 py-0.5 rounded-full font-extrabold">🛍️ 順手加購推薦</span>` : ''}
                       </div>
 
-                      ${isPourOver && (flavorCard.roast || flavorCard.tags.length > 0) ? `
-                        <div class="flex flex-wrap items-center gap-1 pt-0.5">
-                          ${flavorCard.roast ? `<span class="text-[11px] bg-amber-800 text-white px-2 py-0.5 rounded-md font-extrabold">🫘 ${flavorCard.roast}</span>` : ''}
+                      ${isPourOver ? `
+                        <div class="flex flex-wrap items-center gap-1.5 pt-0.5">
+                          <div class="inline-flex items-center gap-1 bg-amber-100/80 border border-amber-300 px-2 py-0.5 rounded-lg">
+                            <span class="text-[11px] font-extrabold text-amber-950">🫘 烘焙度：</span>
+                            <select onchange="quickChangeRoastLevel('${cat.category}', '${item.id}', this.value)" class="bg-white border border-amber-300 rounded px-1.5 py-0.5 text-xs font-extrabold text-amber-950 focus:outline-none">
+                              <option value="" ${!flavorCard.roast ? 'selected' : ''}>未設定</option>
+                              <option value="淺焙" ${flavorCard.roast === '淺焙' ? 'selected' : ''}>淺焙</option>
+                              <option value="中淺焙" ${flavorCard.roast === '中淺焙' ? 'selected' : ''}>中淺焙</option>
+                              <option value="中烘焙" ${flavorCard.roast === '中烘焙' ? 'selected' : ''}>中烘焙</option>
+                              <option value="中深烘焙" ${flavorCard.roast === '中深烘焙' ? 'selected' : ''}>中深烘焙</option>
+                            </select>
+                          </div>
                           ${flavorCard.tags.map(t => `<span class="text-[11px] bg-amber-50 text-amber-900 border border-amber-200 px-2 py-0.5 rounded-md font-bold">✨ ${t}</span>`).join('')}
                         </div>
                       ` : (item.desc ? `<p class="text-xs text-gray-500">${item.desc}</p>` : '')}
@@ -1220,11 +1288,26 @@
       }).join('');
     }
 
-    window.insertRoastPrefix = function(prefix) {
-      const input = document.getElementById('edit-desc');
-      const val = input.value.trim().replace(/^(淺焙|中淺焙|中焙|中深焙|深焙)[｜┃|]\s*/, '');
-      input.value = prefix + val;
-      input.focus();
+    // 當在 Modal 內切換分類時，若不是「單品手沖」，自動將單品烘焙度歸零為「無」
+    window.handleCategoryChangeInModal = function() {
+      const catName = document.getElementById('edit-cat-name').value;
+      const roastBox = document.getElementById('pourover-roast-box');
+      if (catName.includes('單品手沖')) {
+        roastBox.classList.remove('opacity-50');
+      } else {
+        const noneRadio = document.querySelector('input[name="edit-roast-level"][value=""]');
+        if (noneRadio) noneRadio.checked = true;
+      }
+    };
+
+    // 當在 Modal 內點選「淺焙 / 中淺焙 / 中烘焙 / 中深烘焙」時，自動同步更新描述欄位前綴
+    window.syncRoastToDescInput = function() {
+      const catName = document.getElementById('edit-cat-name').value;
+      const selectedRoast = document.querySelector('input[name="edit-roast-level"]:checked')?.value || "";
+      const descInput = document.getElementById('edit-desc');
+      if (catName.includes('單品手沖')) {
+        descInput.value = applyRoastToDescString(descInput.value, selectedRoast);
+      }
     };
 
     window.toggleUpsell = async function(categoryName, itemId, newUpsellStatus) {
@@ -1292,6 +1375,10 @@
         document.getElementById('edit-desc').value = '';
         document.getElementById('opt-is-upsell').checked = false;
 
+        const defaultRoast = categoryName.includes('單品手沖') ? '中淺焙' : '';
+        const rRadio = document.querySelector(`input[name="edit-roast-level"][value="${defaultRoast}"]`);
+        if (rRadio) rRadio.checked = true;
+
         document.getElementById('opt-ice').checked = true;
         document.getElementById('opt-hot').checked = true;
         document.getElementById('opt-ice-level').checked = true;
@@ -1333,6 +1420,11 @@
         document.getElementById('edit-desc').value = targetItem.desc || '';
         document.getElementById('opt-is-upsell').checked = !!targetItem.isUpsell;
 
+        const isPourOver = categoryName.includes('單品手沖');
+        const detectedRoast = isPourOver ? getPourOverRoastAndTags(targetItem, true).roast : "";
+        const rRadio = document.querySelector(`input[name="edit-roast-level"][value="${detectedRoast}"]`) || document.querySelector('input[name="edit-roast-level"][value=""]');
+        if (rRadio) rRadio.checked = true;
+
         const opts = targetItem.options || {};
         document.getElementById('opt-ice').checked = !!opts.ice;
         document.getElementById('opt-hot').checked = !!opts.hot;
@@ -1367,6 +1459,7 @@
         }
       }
 
+      handleCategoryChangeInModal();
       document.getElementById('item-modal').classList.remove('hidden');
       document.body.classList.add('modal-open');
     };
@@ -1382,10 +1475,19 @@
       const itemId = document.getElementById('edit-item-id').value;
       const newName = document.getElementById('edit-name').value.trim();
       const newPrice = Number(document.getElementById('edit-price').value);
-      const newDesc = document.getElementById('edit-desc').value.trim();
+      let newDesc = document.getElementById('edit-desc').value.trim();
       const isUpsell = document.getElementById('opt-is-upsell').checked;
 
       if (!newName || !newPrice) { alert('請填寫品項名稱與基本價格！'); return; }
+
+      const isPourOver = catName.includes('單品手沖');
+      const selectedRoast = isPourOver
+        ? normalizeRoastLevelName(document.querySelector('input[name="edit-roast-level"]:checked')?.value || "")
+        : "";
+
+      if (isPourOver && selectedRoast) {
+        newDesc = applyRoastToDescString(newDesc, selectedRoast);
+      }
 
       const extraAddons = [];
       document.querySelectorAll('.extra-addon-row').forEach(row => {
@@ -1430,9 +1532,9 @@
           catObj = { order: cachedCatalog.length + 1, category: catName, items: [] };
         }
         if (mode === 'add') {
-          catObj.items.push({ id: itemId, name: newName, price: newPrice, desc: newDesc, isUpsell, options: newOptions, soldOut: false });
+          catObj.items.push({ id: itemId, name: newName, price: newPrice, desc: newDesc, roastLevel: selectedRoast, isUpsell, options: newOptions, soldOut: false });
         } else {
-          catObj.items = catObj.items.map(i => i.id === itemId ? { ...i, name: newName, price: newPrice, desc: newDesc, isUpsell, options: newOptions } : i);
+          catObj.items = catObj.items.map(i => i.id === itemId ? { ...i, name: newName, price: newPrice, desc: newDesc, roastLevel: selectedRoast, isUpsell, options: newOptions } : i);
         }
         await setDoc(doc(db, "menu", catName), catObj);
         closeItemModal();
@@ -1662,7 +1764,6 @@
       }
     });
 
-    // 修改單杯杯貼姓名
     window.editOrderItemCupName = async function(orderId, itemIdx) {
       const order = activeOrdersCache[orderId];
       if (!order || !order.items || !order.items[itemIdx]) return;
@@ -1674,7 +1775,6 @@
       await updateDoc(doc(db, "orders", orderId), { items: updatedItems });
     };
 
-    // 吧台標籤機列印功能（支援整單列印或單杯列印）
     window.printOrderLabels = function(orderId, targetItemIdx = null) {
       const order = activeOrdersCache[orderId];
       if (!order) return;
@@ -1760,7 +1860,6 @@
       printWin.document.close();
     };
 
-    // 複製辦公室/學校揪團分帳明細
     window.copyGroupSplitText = function(orderId) {
       const order = activeOrdersCache[orderId];
       if (!order) return;
