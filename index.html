@@ -198,7 +198,7 @@
     </div>
   </div>
 
-  <!-- 飲品客製與加購彈跳視窗（含專屬口味記憶 + 杯貼姓名） -->
+  <!-- 飲品客製與加購彈跳視窗（含專屬口味記憶） -->
   <div id="customize-modal" class="fixed inset-0 bg-black/60 hidden z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 space-y-3.5 max-h-[90vh] overflow-y-auto shadow-2xl">
       <div class="flex justify-between items-start border-b pb-2.5">
@@ -227,16 +227,10 @@
 
       <div id="modal-options-container" class="space-y-4 text-xs"></div>
 
-      <!-- 單杯杯貼姓名 + 特別備註 -->
-      <div class="grid grid-cols-2 gap-2.5 pt-1 border-t">
-        <div>
-          <label class="text-[11px] font-extrabold text-[#213c64] block mb-1">🏷️ 杯貼姓名 / 分袋 (印於貼紙)</label>
-          <input type="text" id="modal-cup-label" maxlength="10" placeholder="例：陳老師、A袋" class="w-full border border-blue-200 rounded-xl p-2.5 text-xs bg-blue-50/30 font-extrabold focus:outline-none focus:border-[#213c64]">
-        </div>
-        <div>
-          <label class="text-[11px] font-bold text-gray-600 block mb-1">📝 特別備註 (選填)</label>
-          <input type="text" id="modal-note" placeholder="例：粉放旁邊、加厚" class="w-full border rounded-xl p-2.5 text-xs bg-gray-50 focus:outline-none focus:border-[#213c64]">
-        </div>
+      <!-- 特別備註 -->
+      <div class="pt-1 border-t">
+        <label class="text-[11px] font-bold text-gray-600 block mb-1">📝 特別備註 (選填)</label>
+        <input type="text" id="modal-note" placeholder="例：粉放旁邊、加厚" class="w-full border rounded-xl p-2.5 text-xs bg-gray-50 focus:outline-none focus:border-[#213c64]">
       </div>
 
       <div class="flex items-center justify-between pt-2 border-t">
@@ -518,10 +512,8 @@
       const lines = list.map((i, idx) => {
         const sub = i.price * i.qty;
         total += sub;
-        const labelVal = i.cupLabel || i.cupName || '';
-        const labelStr = labelVal ? `【${labelVal}】` : `第${idx + 1}杯`;
         const mods = (i.modifiers && i.modifiers.length > 0) ? i.modifiers.join('/') : '標準';
-        return `${labelStr} ${i.name} x${i.qty} ($${sub}) - ${mods}${i.note ? ` [${i.note}]` : ''}`;
+        return `${idx + 1}. ${i.name} x${i.qty} ($${sub}) - ${mods}${i.note ? ` [${i.note}]` : ''}`;
       }).join('\n');
 
       const discount = orderObj ? (orderObj.discountAmount || 0) : (appliedPromo ? appliedPromo.discountAmount : 0);
@@ -560,11 +552,9 @@
 
     function buildOrderTextMessage(o) {
       const itemLines = (o.items || []).map(i => {
-        const labelVal = i.cupLabel || i.cupName || '';
-        const labelTag = labelVal ? `【🏷️${labelVal}】` : '';
         const mods = (i.modifiers && i.modifiers.length > 0) ? i.modifiers.join('/') : '標準';
         const noteStr = i.note ? ` (備註:${i.note})` : '';
-        return `• ${labelTag}${i.name} x${i.qty} ($${i.price * i.qty})\n  [${mods}]${noteStr}`;
+        return `• ${i.name} x${i.qty} ($${i.price * i.qty})\n  [${mods}]${noteStr}`;
       }).join('\n');
       const taxLine = o.taxId ? `\n統一編號：${o.taxId}` : '';
       const promoLine = o.discountAmount > 0 ? `\n優惠折抵：-NT$${o.discountAmount} (${o.promoCode})` : '';
@@ -603,7 +593,7 @@
         const lastItems = JSON.parse(localStorage.getItem('noday_last_order') || '[]');
         if (Array.isArray(lastItems) && lastItems.length > 0) {
           document.getElementById('reorder-section').classList.remove('hidden');
-          document.getElementById('reorder-summary').innerText = lastItems.map(i => `${(i.cupLabel || i.cupName) ? `[${i.cupLabel || i.cupName}]` : ''}${i.name} x${i.qty}`).join('、');
+          document.getElementById('reorder-summary').innerText = lastItems.map(i => `${i.name} x${i.qty}`).join('、');
         }
       } catch (e) {}
     };
@@ -613,7 +603,7 @@
       try {
         const lastItems = JSON.parse(localStorage.getItem('noday_last_order') || '[]');
         if (lastItems.length > 0) {
-          lastItems.forEach(i => cart.push({ ...i }));
+          lastItems.forEach(i => cart.push({ ...i, cupLabel: '', cupName: '' }));
           updateCartBadge();
           showToast("✅ 已將上次點的咖啡加入購物車！");
         }
@@ -810,7 +800,6 @@
         </button>
       `).join('');
 
-      // 當使用者點選了單品手沖的特定烘焙度（淺焙 / 中淺焙 / 中烘焙 / 中深烘焙）時，只顯示「單品手沖」分類，不讓拿鐵等其他分類跳出來
       const visibleCategories = currentPourOverFilter === 'all'
         ? catalog
         : catalog.filter(cat => cat.category.includes('手沖') || cat.category.includes('PourOver'));
@@ -963,7 +952,6 @@
       document.getElementById('modal-item-desc').innerText = activeItem.desc || '';
       document.getElementById('modal-qty').innerText = currentQty;
       document.getElementById('modal-note').value = '';
-      document.getElementById('modal-cup-label').value = '';
       refreshTasteMemoryBar();
 
       const opts = activeItem.options || {};
@@ -1062,7 +1050,6 @@
         finalUnitPrice += Number(el.getAttribute('data-price') || 0);
       });
       const note = document.getElementById('modal-note').value.trim();
-      const cupLabel = document.getElementById('modal-cup-label').value.trim();
 
       cart.push({
         id: activeItem.id,
@@ -1071,16 +1058,14 @@
         unitPrice: finalUnitPrice,
         qty: currentQty,
         modifiers,
-        note,
-        cupLabel: cupLabel,
-        cupName: cupLabel
+        note
       });
       updateCartBadge();
       closeModal();
-      showToast(`✅ 已加入：${cupLabel ? `[${cupLabel}] ` : ''}${activeItem.name} x${currentQty}`);
+      showToast(`✅ 已加入：${activeItem.name} x${currentQty}`);
     };
 
-    // ==================== 8. 購物車、一鍵順手加購、杯貼姓名編輯、優惠碼 ====================
+    // ==================== 8. 購物車、一鍵順手加購、優惠碼 ====================
     function renderUpsellItems() {
       const box = document.getElementById('upsell-items-list');
       const allItems = [];
@@ -1123,21 +1108,11 @@
         unitPrice: Number(found.price),
         qty: 1,
         modifiers: ['順手加購'],
-        note: '',
-        cupLabel: '',
-        cupName: ''
+        note: ''
       });
       updateCartBadge();
       openCart();
       showToast(`🛍️ 已順手加購：${found.name}`);
-    };
-
-    window.editCartItemCupLabel = function(idx, val) {
-      if (cart[idx]) {
-        const cleanVal = val.trim();
-        cart[idx].cupLabel = cleanVal;
-        cart[idx].cupName = cleanVal;
-      }
     };
 
     function calculateTotals() {
@@ -1201,7 +1176,7 @@
         listEl.innerHTML = cart.map((item, idx) => {
           const itemTotal = item.price * item.qty;
           return `
-            <div class="border rounded-xl p-2.5 bg-gray-50/60 space-y-1.5 text-xs">
+            <div class="border rounded-xl p-2.5 bg-gray-50/60 space-y-1 text-xs">
               <div class="flex justify-between items-start">
                 <div class="pr-2">
                   <p class="font-extrabold text-gray-900">${item.name} x${item.qty}</p>
@@ -1211,10 +1186,6 @@
                   <span class="font-extrabold text-[#213c64]">NT$${itemTotal}</span>
                   <button onclick="removeFromCart(${idx})" class="text-red-500 font-bold px-2 py-0.5 rounded-lg bg-red-50 text-[11px]">刪除</button>
                 </div>
-              </div>
-              <div class="flex items-center gap-1.5 pt-1 border-t border-gray-200/70">
-                <span class="text-[10px] font-extrabold text-[#213c64] shrink-0">🏷️ 杯貼姓名：</span>
-                <input type="text" value="${item.cupLabel || item.cupName || ''}" oninput="editCartItemCupLabel(${idx}, this.value)" placeholder="填寫名字直接印在杯貼上（例：陳老師）" class="w-full bg-white border rounded-lg px-2 py-1 text-[11px] font-bold">
               </div>
             </div>
           `;
