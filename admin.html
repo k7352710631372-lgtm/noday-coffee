@@ -11,6 +11,18 @@
       50% { background-color: #fee2e2; border-color: #b91c1c; box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
     }
     .alarm-card { animation: alarmPulse 1s infinite; }
+    @media print {
+      body * { visibility: hidden !important; }
+      #print-area, #print-area * { visibility: visible !important; }
+      #print-area {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        display: block !important;
+      }
+      @page { margin: 0; }
+    }
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen text-gray-800 pb-20">
@@ -31,6 +43,9 @@
         <p class="text-xs text-gray-200 mt-0.5">高分貝循環鈴聲 ＆ LINE 自動推播 ＆ 雲端菜單管理</p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
+        <button onclick="togglePauseStore()" id="pause-store-btn" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-xl text-xs font-extrabold shadow transition">
+          ⏸️ 暫停接單 15分
+        </button>
         <button onclick="toggleMembersPanel()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-xl text-xs font-bold shadow transition">
           👥 會員與黑名單管理
         </button>
@@ -98,16 +113,24 @@
       <div id="top-selling-list" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs"></div>
     </section>
 
-    <!-- 1. 即時外帶訂單看板 -->
+    <!-- 1. 即時外帶訂單看板（含過濾按鈕與印杯貼） -->
     <section class="bg-white p-5 rounded-2xl shadow-sm border">
       <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
         <h2 class="text-base font-extrabold text-gray-900 flex items-center gap-2">
           <span>🔔 即時外帶訂單看板</span>
           <span class="text-xs bg-red-100 text-red-600 px-2.5 py-0.5 rounded-full font-bold animate-pulse">即時連線中</span>
         </h2>
-        <button onclick="toggleHistory()" class="text-xs text-[#213c64] font-bold hover:underline">
-          查看今日已完成訂單紀錄 ▾
-        </button>
+        
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="flex gap-1 text-xs">
+            <button onclick="filterOrders('all')" id="filter-all" class="px-3 py-1.5 rounded-xl bg-[#213c64] text-white font-extrabold">全部</button>
+            <button onclick="filterOrders('active')" id="filter-active" class="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-700 font-bold">待接單/製作中</button>
+            <button onclick="filterOrders('tomorrow')" id="filter-tomorrow" class="px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 font-extrabold">🌅 明日預訂</button>
+          </div>
+          <button onclick="toggleHistory()" class="text-xs text-[#213c64] font-bold hover:underline">
+            查看已完成紀錄 ▾
+          </button>
+        </div>
       </div>
 
       <div id="orders-container" class="space-y-3">
@@ -126,7 +149,7 @@
       <div class="flex flex-wrap justify-between items-center gap-2 border-b pb-3">
         <div>
           <h2 class="text-base font-extrabold text-gray-900">🏪 營業狀態、每週營業時間、預約休假 ＆ 店家公告管理</h2>
-          <p class="text-xs text-gray-500 mt-0.5">非營業時間或休假期間，客人端將自動切換為「僅供瀏覽菜單、無法點餐」。</p>
+          <p class="text-xs text-gray-500 mt-0.5">非營業時間或休假期間，客人端將自動切換為「僅供瀏覽菜單、無法點餐（或開放明日預訂）」。</p>
         </div>
         <button onclick="saveStoreSettings()" class="bg-[#213c64] hover:bg-[#192e4d] text-white px-5 py-2.5 rounded-xl text-xs font-extrabold shadow transition">
           💾 儲存公告與營業設定
@@ -152,7 +175,7 @@
                 <div class="border rounded-xl p-2.5 text-center font-extrabold bg-white peer-checked:bg-red-600 peer-checked:text-white peer-checked:border-red-600 transition">🔴 強制暫停接單</div>
               </label>
             </div>
-            <p class="text-[11px] text-gray-500">提示：平常建議選「依營業時間自動」，臨時爆單或提早打烊可點「強制暫停接單」。</p>
+            <p class="text-[11px] text-gray-500">提示：平常建議選「依營業時間自動」，臨時爆單可點頂部的「暫停接單 15分」。</p>
           </div>
 
           <!-- 店家公告編輯 -->
@@ -214,6 +237,9 @@
       </div>
     </section>
   </main>
+
+  <!-- 隱藏的列印標籤專用區 -->
+  <div id="print-area" class="hidden"></div>
 
   <!-- 新增/修改品項 共用 Modal -->
   <div id="item-modal" class="fixed inset-0 bg-black/60 hidden z-50 flex items-center justify-center p-3 sm:p-4">
@@ -416,6 +442,7 @@
     let membersMap = {};
     let soundEnabled = true;
     let hasUnacceptedOrders = false;
+    let currentOrderFilter = 'all';
     let audioCtx = null;
 
     function ensureAudioContext() {
@@ -483,6 +510,33 @@
       document.getElementById('members-panel').classList.toggle('hidden');
     };
 
+    // ==================== 吧台「暫停接單 15分」功能 ====================
+    window.togglePauseStore = async function() {
+      const pauseUntil = Number(currentStoreSettings.pauseUntil || 0);
+      if (pauseUntil > Date.now()) {
+        await setDoc(doc(db, "settings", "store"), { pauseUntil: 0 }, { merge: true });
+        alert("🟢 已立即恢復正常線上接單！");
+      } else {
+        const targetTime = Date.now() + 15 * 60 * 1000;
+        await setDoc(doc(db, "settings", "store"), { pauseUntil: targetTime }, { merge: true });
+        alert("⏸️ 已啟動「暫停即時接單 15 分鐘」！\n期間客人端將顯示吧台忙碌中（僅開放明日預訂），15分鐘後自動恢復。");
+      }
+    };
+
+    setInterval(() => {
+      const btn = document.getElementById('pause-store-btn');
+      if (!btn) return;
+      const pauseUntil = Number(currentStoreSettings.pauseUntil || 0);
+      if (pauseUntil > Date.now()) {
+        const remainMin = Math.ceil((pauseUntil - Date.now()) / 60000);
+        btn.className = "bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-xl text-xs font-extrabold shadow animate-pulse transition";
+        btn.innerText = `▶️ 忙碌暫停中 (剩${remainMin}分・點擊恢復)`;
+      } else {
+        btn.className = "bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-xl text-xs font-extrabold shadow transition";
+        btn.innerText = "⏸️ 暫停接單 15分";
+      }
+    }, 1000);
+
     async function sendLinePushMessage(lineUserId, textMessage) {
       if (!lineUserId || !GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes("example")) return;
       try {
@@ -492,9 +546,7 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ lineUserId: lineUserId, message: textMessage })
         });
-      } catch (e) {
-        console.warn("LINE Push 推播失敗:", e);
-      }
+      } catch (e) {}
     }
 
     onSnapshot(collection(db, "members"), (snap) => {
@@ -623,6 +675,11 @@
     }
 
     function checkStoreOpenStatus(settings) {
+      const pauseUntil = Number(settings.pauseUntil || 0);
+      if (pauseUntil > Date.now()) {
+        return { isOpen: false, label: '⏸️ 吧台暫停接單中' };
+      }
+
       const mode = settings.storeMode || 'auto';
       if (mode === 'open') return { isOpen: true, label: '🟢 強制營業中' };
       if (mode === 'closed') return { isOpen: false, label: '🔴 強制暫停接單' };
@@ -809,9 +866,9 @@
       {
         order: 5, category: "NODAY 周邊",
         items: [
-          { id: "m1", name: "脆皮可麗露", price: 70, desc: "", options: buildOpts({ ice: false, hot: false, iceLevel: false }), soldOut: false },
-          { id: "m2", name: "OAT燕麥奶", price: 165, desc: "", options: buildOpts({ ice: false, hot: false, iceLevel: false }), soldOut: false },
-          { id: "m3", name: "酵素漂白濾紙", price: 100, desc: "", options: buildOpts({ ice: false, hot: false, iceLevel: false }), soldOut: false }
+          { id: "m1", name: "脆皮可麗露", price: 70, desc: "", options: buildOpts({ ice: false, hot: false, iceLevel: false }), soldOut: false, isUpsell: true },
+          { id: "m2", name: "OAT燕麥奶", price: 165, desc: "", options: buildOpts({ ice: false, hot: false, iceLevel: false }), soldOut: false, isUpsell: true },
+          { id: "m3", name: "酵素漂白濾紙", price: 100, desc: "", options: buildOpts({ ice: false, hot: false, iceLevel: false }), soldOut: false, isUpsell: true }
         ]
       },
       {
@@ -893,14 +950,15 @@
                       <p class="font-extrabold text-sm text-gray-900">
                         ${item.name}
                         <span class="text-xs text-[#213c64] ml-1.5">NT$${item.price}</span>
+                        ${item.isUpsell ? '<span class="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded font-extrabold ml-1.5">🛍️ 加購推薦</span>' : ''}
                       </p>
                       ${item.desc ? `<p class="text-xs text-gray-500">${item.desc}</p>` : ''}
                       <div class="flex flex-wrap gap-1 pt-0.5">
                         <span class="text-[10px] ${opts.ice ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-400'} px-1.5 py-0.5 rounded font-bold">${opts.ice ? '冰✓' : '冰✕'}</span>
                         <span class="text-[10px] ${opts.hot ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-400'} px-1.5 py-0.5 rounded font-bold">${opts.hot ? '熱✓' : '熱✕'}</span>
                         ${opts.ice && opts.iceLevel !== false ? `<span class="text-[10px] bg-sky-50 text-sky-700 px-1.5 py-0.5 rounded font-bold">冰量可調✓</span>` : ''}
-                        ${opts.bean5 ? `<span class="text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded font-bold">5號豆(+$${opts.priceBean5 || 0})</span>` : ''}
-                        ${opts.bean1 ? `<span class="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded font-bold">1號豆(+$${opts.priceBean1 || 0})</span>` : ''}
+                        ${opts.bean5 ? `<span class="text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded font-bold">5號中焙(+$${opts.priceBean5 || 0})</span>` : ''}
+                        ${opts.bean1 ? `<span class="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded font-bold">1號淺焙(+$${opts.priceBean1 || 0})</span>` : ''}
                         ${hasSugar ? `<span class="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded font-bold">甜度可調✓</span>` : ''}
                         ${addonBadges.map(b => `<span class="text-[10px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded font-bold">🎁 ${b}</span>`).join('')}
                       </div>
@@ -1140,18 +1198,180 @@
       } catch (e) { console.error(e); alert("更新失敗"); }
     };
 
-    // ==================== 即時訂單監聽、會員信用標籤與防棄單操作 ====================
-    const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
-    onSnapshot(q, (snapshot) => {
+    // ==================== 即時訂單監聽、篩選、印杯貼與棄單防呆 ====================
+    window.filterOrders = function(filterType) {
+      currentOrderFilter = filterType;
+      ['all', 'active', 'tomorrow'].forEach(f => {
+        const btn = document.getElementById(`filter-${f}`);
+        if (!btn) return;
+        if (f === filterType) {
+          btn.className = "px-3 py-1.5 rounded-xl bg-[#213c64] text-white font-extrabold";
+        } else {
+          btn.className = "px-3 py-1.5 rounded-xl bg-gray-100 text-gray-700 font-bold";
+        }
+      });
+      renderActiveOrdersUI();
+    };
+
+    function renderActiveOrdersUI() {
       const container = document.getElementById("orders-container");
-      const completedContainer = document.getElementById("completed-orders-container");
-      const activeOrders = [];
+      let list = todayAllOrders.filter(o => o.status === "pending" || o.status === "accepted");
+
+      if (currentOrderFilter === 'active') {
+        list = list.filter(o => !o.isPreorderTomorrow && !String(o.pickupTime || '').includes('明日預訂'));
+      } else if (currentOrderFilter === 'tomorrow') {
+        list = list.filter(o => o.isPreorderTomorrow || String(o.pickupTime || '').includes('明日預訂'));
+      }
+
+      if (list.length === 0) {
+        container.innerHTML = `<p class="text-gray-400 text-sm py-6 text-center">目前沒有符合條件的訂單...</p>`;
+        return;
+      }
+
+      container.innerHTML = list.map(order => {
+        const isPending = order.status === "pending";
+        const timeStr = order.time.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+        const phoneMatch = order.customerPhone || (order.customerInfo && order.customerInfo.match(/\d{8,10}/)?.[0]) || '';
+        const orderNum = order.orderNumber || '#---';
+        const pickupTime = order.pickupTime || '現場立即製作';
+
+        const mDoc = (order.lineUserId && membersMap[order.lineUserId]) || {};
+        const completedCnt = Number(mDoc.completedCount ?? order.memberCompletedCount ?? 0);
+        const abandonedCnt = Number(mDoc.abandonedCount ?? order.memberAbandonedCount ?? 0);
+
+        let trustBadgeHtml = '';
+        if (abandonedCnt > 0) {
+          trustBadgeHtml = `<span class="bg-red-100 text-red-700 border border-red-300 text-xs font-extrabold px-2.5 py-0.5 rounded-full">🔴 ⚠️ 曾有棄單紀錄 (${abandonedCnt}次)</span>`;
+        } else if (completedCnt > 0) {
+          trustBadgeHtml = `<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-extrabold px-2.5 py-0.5 rounded-full">🟢 認證熟客 (已取餐 ${completedCnt} 次)</span>`;
+        } else {
+          trustBadgeHtml = `<span class="bg-amber-100 text-amber-900 border border-amber-300 text-xs font-extrabold px-2.5 py-0.5 rounded-full">🟡 🆕 首次點餐新客</span>`;
+        }
+
+        const taxBadge = order.taxId ? `<span class="bg-purple-100 text-purple-800 border border-purple-300 px-2.5 py-0.5 rounded text-[11px] font-extrabold">🧾 統編：${order.taxId}</span>` : '';
+        const promoBadge = Number(order.discountAmount || 0) > 0 ? `<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-0.5 rounded text-[11px] font-extrabold">🎟️ 優惠碼 ${order.promoCode || ''} (-$${order.discountAmount})</span>` : '';
+
+        return `
+          <div class="border-2 ${isPending ? 'alarm-card' : 'border-blue-500 bg-blue-50/30'} p-4 rounded-2xl shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div class="space-y-1.5 w-full">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="bg-[#213c64] text-white text-sm font-extrabold px-3 py-1 rounded-xl shadow">${orderNum}</span>
+                <span class="${isPending ? 'bg-red-600' : 'bg-blue-600'} text-white text-xs font-extrabold px-2.5 py-1 rounded-full">
+                  ${isPending ? '🚨 新單未接收' : '⏳ 已接單製作中'}
+                </span>
+                <span class="bg-amber-100 text-amber-900 text-xs font-extrabold px-2.5 py-1 rounded-full border border-amber-300">
+                  ⏰ ${pickupTime}
+                </span>
+                ${trustBadgeHtml}
+                <span class="text-xs text-gray-500 font-bold">下單時間 ${timeStr}</span>
+              </div>
+              
+              ${(taxBadge || promoBadge) ? `<div class="flex flex-wrap gap-1 pt-0.5">${taxBadge}${promoBadge}</div>` : ''}
+
+              <div class="flex flex-wrap items-center gap-2.5 pt-1">
+                <h3 class="font-extrabold text-base text-gray-900">${order.customerInfo}</h3>
+                ${order.lineDisplayName ? `<span class="text-xs text-gray-500 font-bold">(LINE: ${order.lineDisplayName})</span>` : ''}
+                ${phoneMatch ? `<a href="tel:${phoneMatch}" class="inline-flex items-center gap-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-2.5 py-1 rounded-lg text-xs font-extrabold transition">📞 一鍵撥號 (${phoneMatch})</a>` : ''}
+              </div>
+              <div class="mt-2 space-y-1 text-sm text-gray-800 bg-white/80 p-3 rounded-xl border">
+                ${order.items.map(i => `
+                  <div class="flex justify-between items-start">
+                    <div>
+                      • <b>${i.name}</b> x${i.qty} 
+                      ${i.cupLabel ? `<span class="bg-blue-600 text-white px-1.5 py-0.5 rounded text-[10px] font-extrabold ml-1">🏷️ ${i.cupLabel}</span>` : ''}
+                      <span class="text-xs text-[#213c64] font-bold">(${i.modifiers.join(' / ') || '無客製'})</span> 
+                      ${i.note ? `<span class="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">備註: ${i.note}</span>` : ''}
+                    </div>
+                    <span class="font-mono font-bold text-gray-700 text-xs shrink-0">NT$${i.price * i.qty}</span>
+                  </div>
+                `).join('')}
+              </div>
+              <p class="font-extrabold text-amber-900 pt-1 text-sm">應收總計：NT$${order.totalAmount}</p>
+            </div>
+            
+            <div class="flex flex-col gap-2 w-full md:w-52 shrink-0">
+              ${isPending ? `
+                <button onclick="acceptOrder('${order.id}', '${order.lineUserId || ''}', '${order.orderNumber || ''}')" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-extrabold text-xs shadow-lg transition animate-bounce">
+                  🔔 接收訂單 (通知已接單)
+                </button>
+              ` : `
+                <button onclick="completeOrder('${order.id}', '${order.lineUserId || ''}', '${order.orderNumber || ''}')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-extrabold text-xs shadow-lg transition">
+                  ✓ 完成製作 (通知取餐)
+                </button>
+              `}
+              <button onclick="printOrderCupLabels('${order.id}')" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 border py-2 rounded-xl text-xs font-extrabold transition">
+                🖨️ 列印杯貼 (含姓名/統編)
+              </button>
+              <div class="flex gap-1.5 w-full">
+                <button onclick="cancelOrder('${order.id}')" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-1.5 rounded-lg font-bold text-[11px] transition">
+                  一般取消
+                </button>
+                <button onclick="markOrderAbandoned('${order.id}', '${order.lineUserId || ''}', '${phoneMatch}', '${order.customerInfo}')" class="flex-1 bg-red-100 hover:bg-red-600 hover:text-white text-red-700 py-1.5 rounded-lg font-extrabold text-[11px] transition">
+                  🚫 棄單封鎖
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 🖨️ 熱感應標籤機列印函式
+    window.printOrderCupLabels = function(orderId) {
+      const order = todayAllOrders.find(o => o.id === orderId);
+      if (!order) return;
+      const printArea = document.getElementById('print-area');
+      let cupsHtml = '';
+      const totalCups = (order.items || []).reduce((s, i) => s + Number(i.qty || 1), 0);
+      let cupCounter = 1;
+
+      (order.items || []).forEach(item => {
+        const qty = Number(item.qty || 1);
+        for (let q = 0; q < qty; q++) {
+          const cupNameHtml = item.cupLabel
+            ? `<div style="font-size: 13px; font-weight: 900; border: 1.5px solid #000; padding: 1px 4px; display: inline-block; margin-bottom: 2px;">🏷️ ${item.cupLabel}</div>`
+            : '';
+          const modsStr = (item.modifiers && item.modifiers.length > 0) ? item.modifiers.join(' / ') : '標準配方';
+          const noteHtml = item.note ? `<div style="font-size: 10px; font-weight: bold;">備註: ${item.note}</div>` : '';
+          const taxHtml = order.taxId ? `<div style="font-size: 9px; font-weight: bold;">統編: ${order.taxId}</div>` : '';
+
+          cupsHtml += `
+            <div style="width: 48mm; min-height: 33mm; padding: 2mm; margin: 0 auto 3mm auto; font-family: sans-serif; page-break-after: always; box-sizing: border-box; background: #fff; color: #000; border-bottom: 1px dotted #999;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; font-weight: 900; border-bottom: 1.5px solid #000; padding-bottom: 1mm; margin-bottom: 1.5mm;">
+                <span>${order.orderNumber || '#001'}</span>
+                <span style="font-size: 11px;">(${cupCounter}/${totalCups})</span>
+              </div>
+              ${cupNameHtml}
+              <div style="font-size: 15px; font-weight: 900; line-height: 1.2; margin-bottom: 1mm;">${item.name}</div>
+              <div style="font-size: 11px; font-weight: bold; line-height: 1.25; margin-bottom: 1mm;">${modsStr}</div>
+              ${noteHtml}
+              <div style="font-size: 9px; margin-top: 1.5mm; border-top: 1px dashed #666; padding-top: 1mm; display: flex; justify-content: space-between;">
+                <span>${order.customerName || ''}</span>
+                <span>NODAY</span>
+              </div>
+              ${taxHtml}
+            </div>
+          `;
+          cupCounter++;
+        }
+      });
+
+      printArea.innerHTML = cupsHtml;
+      printArea.classList.remove('hidden');
+      setTimeout(() => {
+        window.print();
+        setTimeout(() => { printArea.classList.add('hidden'); }, 800);
+      }, 150);
+    };
+
+    const qOrders = query(collection(db, "orders"), orderBy("createdAt", "desc"));
+    onSnapshot(qOrders, (snapshot) => {
+      const completedContainer = document.getElementById('completed-orders-container');
       const completedOrders = [];
       todayAllOrders = [];
       let todayRevenue = 0;
       let unacceptedCount = 0;
       const itemSalesMap = {};
-
       const todayStr = new Date().toLocaleDateString('zh-TW');
 
       snapshot.forEach(d => {
@@ -1164,7 +1384,6 @@
         }
 
         if (data.status === "pending" || data.status === "accepted") {
-          activeOrders.push({ id: d.id, time: orderDate, ...data });
           if (data.status === "pending") unacceptedCount++;
         } else if (data.status === "completed" && isToday) {
           completedOrders.push({ id: d.id, time: orderDate, ...data });
@@ -1185,7 +1404,8 @@
         alarmBar.classList.add('hidden');
       }
 
-      document.getElementById('stat-pending').innerText = `${activeOrders.length} 筆`;
+      const activeCount = todayAllOrders.filter(o => o.status === "pending" || o.status === "accepted").length;
+      document.getElementById('stat-pending').innerText = `${activeCount} 筆`;
       document.getElementById('stat-completed').innerText = `${completedOrders.length} 筆`;
       document.getElementById('stat-revenue').innerText = `NT$${todayRevenue}`;
 
@@ -1202,76 +1422,7 @@
         `).join('');
       }
 
-      if (activeOrders.length === 0) {
-        container.innerHTML = `<p class="text-gray-400 text-sm py-6 text-center">目前沒有待處理的新訂單...</p>`;
-      } else {
-        container.innerHTML = activeOrders.map(order => {
-          const isPending = order.status === "pending";
-          const timeStr = order.time.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
-          const phoneMatch = order.customerPhone || (order.customerInfo && order.customerInfo.match(/\d{8,10}/)?.[0]) || '';
-          const orderNum = order.orderNumber || '#---';
-          const pickupTime = order.pickupTime || '現場立即製作';
-
-          const mDoc = (order.lineUserId && membersMap[order.lineUserId]) || {};
-          const completedCnt = Number(mDoc.completedCount ?? order.memberCompletedCount ?? 0);
-          const abandonedCnt = Number(mDoc.abandonedCount ?? order.memberAbandonedCount ?? 0);
-
-          let trustBadgeHtml = '';
-          if (abandonedCnt > 0) {
-            trustBadgeHtml = `<span class="bg-red-100 text-red-700 border border-red-300 text-xs font-extrabold px-2.5 py-0.5 rounded-full">🔴 ⚠️ 曾有棄單紀錄 (${abandonedCnt}次)</span>`;
-          } else if (completedCnt > 0) {
-            trustBadgeHtml = `<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-extrabold px-2.5 py-0.5 rounded-full">🟢 認證熟客 (已取餐 ${completedCnt} 次)</span>`;
-          } else {
-            trustBadgeHtml = `<span class="bg-amber-100 text-amber-900 border border-amber-300 text-xs font-extrabold px-2.5 py-0.5 rounded-full">🟡 🆕 首次點餐新客</span>`;
-          }
-
-          return `
-            <div class="border-2 ${isPending ? 'alarm-card' : 'border-blue-500 bg-blue-50/30'} p-4 rounded-2xl shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div class="space-y-1.5 w-full">
-                <div class="flex flex-wrap items-center gap-2">
-                  <span class="bg-[#213c64] text-white text-sm font-extrabold px-3 py-1 rounded-xl shadow">${orderNum}</span>
-                  <span class="${isPending ? 'bg-red-600' : 'bg-blue-600'} text-white text-xs font-extrabold px-2.5 py-1 rounded-full">
-                    ${isPending ? '🚨 新單未接收' : '⏳ 已接單製作中'}
-                  </span>
-                  <span class="bg-amber-100 text-amber-900 text-xs font-extrabold px-2.5 py-1 rounded-full border border-amber-300">
-                    ⏰ ${pickupTime}
-                  </span>
-                  ${trustBadgeHtml}
-                  <span class="text-xs text-gray-500 font-bold">下單時間 ${timeStr}</span>
-                </div>
-                <div class="flex flex-wrap items-center gap-2.5 pt-1">
-                  <h3 class="font-extrabold text-base text-gray-900">${order.customerInfo}</h3>
-                  ${order.lineDisplayName ? `<span class="text-xs text-gray-500 font-bold">(LINE: ${order.lineDisplayName})</span>` : ''}
-                  ${phoneMatch ? `<a href="tel:${phoneMatch}" class="inline-flex items-center gap-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-2.5 py-1 rounded-lg text-xs font-extrabold transition">📞 一鍵撥號 (${phoneMatch})</a>` : ''}
-                </div>
-                <div class="mt-2 space-y-1 text-sm text-gray-800 bg-white/80 p-3 rounded-xl border">
-                  ${order.items.map(i => `<p>• <b>${i.name}</b> x${i.qty} <span class="text-xs text-[#213c64] font-bold">(${i.modifiers.join(' / ') || '無客製'})</span> ${i.note ? `<span class="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">備註: ${i.note}</span>` : ''}</p>`).join('')}
-                </div>
-                <p class="font-extrabold text-amber-900 pt-1 text-sm">應收總計：NT$${order.totalAmount}</p>
-              </div>
-              <div class="flex flex-wrap md:flex-col gap-2 w-full md:w-auto shrink-0">
-                ${isPending ? `
-                  <button onclick="acceptOrder('${order.id}', '${order.lineUserId || ''}', '${order.orderNumber || ''}')" class="flex-1 bg-red-600 hover:bg-red-700 text-white px-6 py-3.5 rounded-xl font-extrabold text-sm shadow-lg transition animate-bounce">
-                    🔔 接收訂單 (通知已接單)
-                  </button>
-                ` : `
-                  <button onclick="completeOrder('${order.id}', '${order.lineUserId || ''}', '${order.orderNumber || ''}')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3.5 rounded-xl font-extrabold text-sm shadow-lg transition">
-                    ✓ 完成製作 (通知取餐)
-                  </button>
-                `}
-                <div class="flex gap-1.5 w-full">
-                  <button onclick="cancelOrder('${order.id}')" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-xl font-bold text-xs transition">
-                    一般取消
-                  </button>
-                  <button onclick="markOrderAbandoned('${order.id}', '${order.lineUserId || ''}', '${phoneMatch}', '${order.customerInfo}')" class="flex-1 bg-red-100 hover:bg-red-600 hover:text-white text-red-700 px-3 py-2 rounded-xl font-extrabold text-xs transition">
-                    🚫 棄單封鎖
-                  </button>
-                </div>
-              </div>
-            </div>
-          `;
-        }).join('');
-      }
+      renderActiveOrdersUI();
 
       if (completedOrders.length === 0) {
         completedContainer.innerHTML = `<p class="text-xs text-gray-400">尚無今日已完成訂單</p>`;
