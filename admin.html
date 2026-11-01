@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NODAY Coffee Roasters | 吧台接單與管理後台</title>
+  <title>NODAY Coffee Roasters | 吧台接單與完整管理後台</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @media print {
@@ -20,21 +20,21 @@
     }
   </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen pb-24">
+<body class="bg-gray-100 text-gray-800 min-h-screen pb-24">
 
-  <!-- 頂部導覽列 -->
-  <header class="bg-slate-800 border-b border-slate-700 p-4 sticky top-0 z-30 shadow-md">
+  <!-- 頂部品牌與快速控制列 -->
+  <header class="bg-[#213c64] text-white p-4 sticky top-0 z-30 shadow-md">
     <div class="max-w-6xl mx-auto flex flex-wrap justify-between items-center gap-3">
       <div class="flex items-center gap-3">
-        <h1 class="text-base font-extrabold tracking-wide text-white">☕ NODAY 吧台管理後台</h1>
-        <span id="system-clock" class="text-xs font-mono text-amber-300 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-700">--:--:--</span>
-        <span id="conn-badge" class="text-[11px] bg-emerald-950 text-emerald-300 border border-emerald-700 px-2.5 py-0.5 rounded-full font-extrabold">🟢 系統啟動中...</span>
+        <h1 class="text-base sm:text-lg font-extrabold tracking-wide">☕ NODAY Coffee 吧台接單與管理後台</h1>
+        <span id="system-clock" class="text-xs font-mono text-amber-300 bg-black/30 px-2.5 py-1 rounded-lg">--:--:--</span>
+        <span id="conn-badge" class="text-[11px] bg-emerald-500/20 text-emerald-200 border border-emerald-400/40 px-2.5 py-0.5 rounded-full font-extrabold">🟢 系統連線中</span>
       </div>
       <div class="flex items-center gap-2">
-        <button type="button" id="voice-toggle-btn" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold transition">
+        <button type="button" id="voice-toggle-btn" class="bg-white/15 hover:bg-white/25 text-white px-3 py-1.5 rounded-xl text-xs font-extrabold transition">
           🔊 語音播報：已關閉 (點擊開啟)
         </button>
-        <button type="button" id="pause-store-btn" class="bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-extrabold shadow transition">
+        <button type="button" id="pause-store-btn" class="bg-amber-500 hover:bg-amber-600 text-white px-3.5 py-1.5 rounded-xl text-xs font-extrabold shadow transition">
           ⏸️ 暫停接單 15分
         </button>
       </div>
@@ -43,157 +43,375 @@
 
   <main class="max-w-6xl mx-auto p-4 space-y-6">
 
-    <!-- 錯誤診斷提示框 (預設隱藏) -->
-    <div id="global-error-box" class="hidden bg-red-950 border-2 border-red-500 text-red-200 p-4 rounded-2xl text-xs space-y-1"></div>
+    <!-- 錯誤提示框 -->
+    <div id="global-error-box" class="hidden bg-red-50 border-2 border-red-500 text-red-700 p-4 rounded-2xl text-xs font-bold"></div>
 
-    <!-- 頂部今日數據統計列 -->
+    <!-- 今日營運數據統計 -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      <div class="bg-slate-800 border border-slate-700 p-3.5 rounded-2xl">
-        <p class="text-[11px] text-slate-400 font-bold">⏳ 待接單筆數</p>
-        <p id="stat-pending" class="text-xl font-extrabold text-red-400 mt-0.5">0</p>
+      <div class="bg-white border p-3.5 rounded-2xl shadow-sm">
+        <p class="text-[11px] text-gray-500 font-bold">⏳ 待接單筆數</p>
+        <p id="stat-pending" class="text-2xl font-extrabold text-red-600 mt-0.5">0</p>
       </div>
-      <div class="bg-slate-800 border border-slate-700 p-3.5 rounded-2xl">
-        <p class="text-[11px] text-slate-400 font-bold">🔥 製作中筆數</p>
-        <p id="stat-accepted" class="text-xl font-extrabold text-blue-400 mt-0.5">0</p>
+      <div class="bg-white border p-3.5 rounded-2xl shadow-sm">
+        <p class="text-[11px] text-gray-500 font-bold">🔥 製作中筆數</p>
+        <p id="stat-accepted" class="text-2xl font-extrabold text-blue-600 mt-0.5">0</p>
       </div>
-      <div class="bg-slate-800 border border-slate-700 p-3.5 rounded-2xl">
-        <p class="text-[11px] text-slate-400 font-bold">☕ 今日累積杯數</p>
-        <p id="stat-today-cups" class="text-xl font-extrabold text-emerald-400 mt-0.5">0 杯</p>
+      <div class="bg-white border p-3.5 rounded-2xl shadow-sm">
+        <p class="text-[11px] text-gray-500 font-bold">☕ 今日累積杯數</p>
+        <p id="stat-today-cups" class="text-2xl font-extrabold text-[#213c64] mt-0.5">0 杯</p>
       </div>
-      <div class="bg-slate-800 border border-slate-700 p-3.5 rounded-2xl">
-        <p class="text-[11px] text-slate-400 font-bold">💰 今日累積營收</p>
-        <p id="stat-today-rev" class="text-xl font-extrabold text-amber-400 mt-0.5">NT$0</p>
+      <div class="bg-white border p-3.5 rounded-2xl shadow-sm">
+        <p class="text-[11px] text-gray-500 font-bold">💰 今日累積營收</p>
+        <p id="stat-today-rev" class="text-2xl font-extrabold text-amber-700 mt-0.5">NT$0</p>
       </div>
     </div>
 
-    <!-- 標籤頁切換 -->
-    <div class="flex flex-wrap gap-2 border-b border-slate-800 pb-2">
-      <button type="button" data-tab="orders" id="tab-btn-orders" class="tab-switch-btn px-4 py-2 rounded-xl text-xs font-extrabold bg-[#213c64] text-white shadow">
-        📦 即時訂單看板 <span id="pending-count-badge" class="bg-red-500 text-white px-1.5 py-0.5 rounded-full text-[10px] ml-1">0</span>
+    <!-- 主功能分頁切換 -->
+    <div class="flex flex-wrap gap-2 border-b border-gray-300 pb-2.5">
+      <button type="button" data-tab="orders" id="tab-btn-orders" class="tab-switch-btn px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#213c64] text-white shadow">
+        📦 即時接單看板 <span id="pending-count-badge" class="bg-red-500 text-white px-2 py-0.5 rounded-full text-[10px] ml-1">0</span>
       </button>
-      <button type="button" data-tab="menu" id="tab-btn-menu" class="tab-switch-btn px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300">
-        📋 雲端菜單與加購管理
+      <button type="button" data-tab="menu" id="tab-btn-menu" class="tab-switch-btn px-4 py-2.5 rounded-xl text-xs font-extrabold bg-white text-gray-700 border">
+        📋 菜單與品項細項管理 (冰量/甜度/配方豆/加購)
       </button>
-      <button type="button" data-tab="settings" id="tab-btn-settings" class="tab-switch-btn px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300">
-        ⚙️ 營業、優惠碼與黑名單
+      <button type="button" data-tab="schedule" id="tab-btn-schedule" class="tab-switch-btn px-4 py-2.5 rounded-xl text-xs font-extrabold bg-white text-gray-700 border">
+        🕒 營業時間、店休與公告設定
+      </button>
+      <button type="button" data-tab="promo" id="tab-btn-promo" class="tab-switch-btn px-4 py-2.5 rounded-xl text-xs font-extrabold bg-white text-gray-700 border">
+        🎟️ 優惠碼與黑名單管理
       </button>
     </div>
 
-    <!-- ==================== 1. 即時訂單看板 ==================== -->
+    <!-- ==================== 分頁 1：即時訂單看板 ==================== -->
     <section id="tab-orders" class="space-y-4">
       <div class="flex flex-wrap justify-between items-center gap-2">
-        <h2 class="text-sm font-extrabold text-slate-200">🔥 即時外帶訂單串流（自動同步）</h2>
-        <div class="flex gap-1.5 text-xs">
-          <button type="button" data-filter="all" id="filter-all" class="filter-order-btn px-3 py-1.5 rounded-xl bg-slate-700 font-extrabold border border-slate-500 text-white">全部訂單</button>
-          <button type="button" data-filter="pending" id="filter-pending" class="filter-order-btn px-3 py-1.5 rounded-xl bg-slate-800 font-bold border border-slate-700 text-slate-400">⏳ 待接單</button>
-          <button type="button" data-filter="active" id="filter-active" class="filter-order-btn px-3 py-1.5 rounded-xl bg-slate-800 font-bold border border-slate-700 text-slate-400">🔥 製作中</button>
-          <button type="button" data-filter="tomorrow" id="filter-tomorrow" class="filter-order-btn px-3 py-1.5 rounded-xl bg-slate-800 font-bold border border-slate-700 text-amber-300">🌅 明日預訂</button>
+        <h2 class="text-sm font-extrabold text-[#213c64]">🔥 即時外帶訂單串流（自動同步）</h2>
+        <div class="flex flex-wrap gap-1.5 text-xs">
+          <button type="button" data-filter="all" class="filter-order-btn px-3 py-1.5 rounded-xl bg-[#213c64] text-white font-extrabold">全部訂單</button>
+          <button type="button" data-filter="pending" class="filter-order-btn px-3 py-1.5 rounded-xl bg-white border text-gray-700 font-bold">⏳ 待接單</button>
+          <button type="button" data-filter="active" class="filter-order-btn px-3 py-1.5 rounded-xl bg-white border text-gray-700 font-bold">🔥 製作中</button>
+          <button type="button" data-filter="tomorrow" class="filter-order-btn px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 font-extrabold">🌅 明日預訂</button>
         </div>
       </div>
 
       <div id="orders-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <p class="text-slate-400 text-xs col-span-2 py-10 text-center">⏳ 正在連線至雲端訂單資料庫...</p>
+        <p class="text-gray-400 text-xs col-span-2 py-12 text-center font-bold">⏳ 正在載入雲端訂單...</p>
       </div>
     </section>
 
-    <!-- ==================== 2. 雲端菜單與加購管理 ==================== -->
+    <!-- ==================== 分頁 2：完整菜單與品項細項管理 ==================== -->
     <section id="tab-menu" class="hidden space-y-4">
-      <div class="flex flex-wrap justify-between items-center gap-2 bg-slate-800 p-4 rounded-2xl border border-slate-700">
+      <div class="bg-white p-4 rounded-2xl border shadow-sm flex flex-wrap justify-between items-center gap-3">
         <div>
-          <h2 class="text-sm font-extrabold text-slate-200">📋 飲品狀態、售價 ＆ 購物車順手加購設定</h2>
-          <p class="text-[11px] text-slate-400 mt-0.5">點擊「🛍️ 設為加購」可讓商品顯示於購物車推薦區；點擊「供應中 / 已售完」可即時切換前台狀態。</p>
+          <h2 class="text-sm font-extrabold text-[#213c64]">📋 雲端菜單、冰塊甜度、配方豆與加購設定</h2>
+          <p class="text-[11px] text-gray-500 font-bold mt-0.5">點擊品項右側「⚙️ 編輯選項」即可設定冰熱、冰量、5號中焙/1號淺焙、甜度、燕麥奶/濃縮加價與自訂加購。</p>
         </div>
-        <button type="button" id="reload-menu-btn" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold">
-          🔄 重新整理菜單
+        <div class="flex gap-2">
+          <button type="button" id="add-category-btn" class="bg-[#213c64] hover:bg-[#192e4d] text-white px-3.5 py-2 rounded-xl text-xs font-extrabold shadow">
+            ＋ 新增菜單分類
+          </button>
+          <button type="button" id="reload-menu-btn" class="bg-gray-100 hover:bg-gray-200 text-gray-700 border px-3 py-2 rounded-xl text-xs font-extrabold">
+            🔄 重新整理
+          </button>
+        </div>
+      </div>
+
+      <div id="admin-menu-container" class="space-y-5">
+        <p class="text-gray-400 text-xs py-10 text-center">正在載入菜單資料...</p>
+      </div>
+    </section>
+
+    <!-- ==================== 分頁 3：營業時間、排班與店休設定 ==================== -->
+    <section id="tab-schedule" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6">
+      
+      <!-- 左側：營業模式與每週時間表 -->
+      <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-4">
+        <h2 class="text-sm font-extrabold text-[#213c64] border-b pb-2">🕒 營業狀態與每週營業時間設定</h2>
+        
+        <div>
+          <label class="text-xs font-extrabold text-gray-700 block mb-1">營業模式切換：</label>
+          <select id="set-store-mode" class="w-full border rounded-xl p-2.5 text-xs font-extrabold bg-gray-50 text-[#213c64]">
+            <option value="auto">🕒 自動模式（依下方每週時間與店休日自動開關店）</option>
+            <option value="open">🟢 強制開店（無條件開放即時點餐）</option>
+            <option value="closed">🌙 強制休息（暫停即時單，僅開放明日預訂）</option>
+          </select>
+        </div>
+
+        <div class="space-y-2 pt-2 border-t">
+          <p class="text-xs font-extrabold text-gray-700">📅 每週固定營業時間：</p>
+          <div id="weekly-hours-list" class="space-y-2 text-xs"></div>
+        </div>
+
+        <button type="button" id="save-schedule-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl text-xs font-extrabold shadow-lg">
+          💾 儲存營業模式與每週時間
         </button>
       </div>
-      <div id="admin-menu-container" class="space-y-4">
-        <p class="text-slate-400 text-xs py-10 text-center">正在載入雲端菜單...</p>
-      </div>
-    </section>
 
-    <!-- ==================== 3. 營業時間、優惠碼與黑名單設定 ==================== -->
-    <section id="tab-settings" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6">
-      
-      <!-- 左欄：營業狀態與公告 -->
-      <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 space-y-4 shadow-lg h-fit">
-        <h2 class="text-sm font-extrabold text-slate-200 border-b border-slate-700 pb-2">🕒 營業狀態與店休公告</h2>
-        <div class="space-y-3">
-          <div>
-            <label class="text-xs font-bold text-slate-400 block mb-1">營業模式切換</label>
-            <select id="set-store-mode" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs font-bold text-white">
-              <option value="auto">🕒 自動依每週時段營業</option>
-              <option value="open">🟢 強制持續營業（手動開店）</option>
-              <option value="closed">🌙 強制打烊休息（僅開放明日預訂）</option>
-            </select>
-          </div>
-          <div>
-            <label class="text-xs font-bold text-slate-400 block mb-1">店家公告標題</label>
-            <input type="text" id="set-ann-title" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs font-bold text-white" placeholder="例如：📢 外帶取餐提醒">
-          </div>
-          <div>
-            <label class="text-xs font-bold text-slate-400 block mb-1">公告內文</label>
-            <textarea id="set-ann-text" rows="3" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs font-bold text-white" placeholder="輸入公告內容..."></textarea>
-          </div>
-          <button type="button" id="save-store-settings-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-extrabold shadow">
-            💾 儲存營業與公告設定
-          </button>
-        </div>
-      </div>
-
-      <!-- 右欄：優惠碼管理 + 封鎖電話管理 -->
+      <!-- 右側：店家公告與特別店休日期 -->
       <div class="space-y-6">
-        <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 space-y-4 shadow-lg">
-          <div class="flex justify-between items-center border-b border-slate-700 pb-2">
-            <div>
-              <h2 class="text-sm font-extrabold text-slate-200">🎟️ 優惠碼折扣管理</h2>
-              <p class="text-[11px] text-slate-400">打折請填折數（如 90 代表 9 折；85 代表 85 折）</p>
-            </div>
-            <button type="button" id="add-promo-row-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl text-xs font-extrabold">＋ 新增優惠碼</button>
+        <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-3">
+          <h2 class="text-sm font-extrabold text-[#213c64] border-b pb-2">📢 前台店家公告設定</h2>
+          <div>
+            <label class="text-xs font-bold text-gray-600 block mb-1">公告標題</label>
+            <input type="text" id="set-ann-title" class="w-full border rounded-xl p-2.5 text-xs font-bold bg-gray-50" placeholder="例如：📢 外帶取餐提醒">
           </div>
-          <div id="promo-codes-list" class="space-y-2.5"></div>
-          <button type="button" id="save-promo-codes-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-extrabold shadow">
-            💾 儲存優惠碼設定
+          <div>
+            <label class="text-xs font-bold text-gray-600 block mb-1">公告內文</label>
+            <textarea id="set-ann-text" rows="3" class="w-full border rounded-xl p-2.5 text-xs font-bold bg-gray-50" placeholder="輸入公告內容..."></textarea>
+          </div>
+          <button type="button" id="save-ann-btn" class="w-full bg-[#213c64] hover:bg-[#192e4d] text-white py-2.5 rounded-xl text-xs font-extrabold shadow">
+            💾 儲存店家公告
           </button>
         </div>
 
-        <!-- 手動封鎖/解封電話 -->
-        <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 space-y-3 shadow-lg">
-          <h2 class="text-sm font-extrabold text-red-400 border-b border-slate-700 pb-2">🚫 棄單黑名單電話管理</h2>
-          <div class="flex gap-2">
-            <input type="tel" id="block-phone-input" maxlength="10" placeholder="輸入手機號碼 (09xxxxxxxx)" class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white">
-            <button type="button" id="btn-block-phone" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-xl text-xs font-extrabold shrink-0">封鎖</button>
-            <button type="button" id="btn-unblock-phone" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-xl text-xs font-extrabold shrink-0">解封</button>
+        <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-3">
+          <div class="flex justify-between items-center border-b pb-2">
+            <div>
+              <h2 class="text-sm font-extrabold text-red-700">🏖️ 臨時店休 / 連假日期設定</h2>
+              <p class="text-[11px] text-gray-500">設定期間內前台將自動顯示店休，並引導客人預訂其他時段</p>
+            </div>
+            <button type="button" id="add-holiday-btn" class="bg-red-50 text-red-700 border border-red-200 px-3 py-1.5 rounded-xl text-xs font-extrabold">＋ 新增店休</button>
           </div>
+          <div id="holidays-list" class="space-y-2 text-xs"></div>
+          <button type="button" id="save-holidays-btn" class="w-full bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl text-xs font-extrabold shadow">
+            💾 儲存店休日期設定
+          </button>
         </div>
       </div>
 
     </section>
+
+    <!-- ==================== 分頁 4：優惠碼與黑名單管理 ==================== -->
+    <section id="tab-promo" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-4">
+        <div class="flex justify-between items-center border-b pb-2">
+          <div>
+            <h2 class="text-sm font-extrabold text-[#213c64]">🎟️ 優惠碼折扣管理</h2>
+            <p class="text-[11px] text-gray-500">打折請填折數（如 90 代表 9 折；85 代表 85 折）</p>
+          </div>
+          <button type="button" id="add-promo-row-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl text-xs font-extrabold">＋ 新增優惠碼</button>
+        </div>
+        <div id="promo-codes-list" class="space-y-2.5"></div>
+        <button type="button" id="save-promo-codes-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-extrabold shadow">
+          💾 儲存優惠碼設定
+        </button>
+      </div>
+
+      <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-3 h-fit">
+        <h2 class="text-sm font-extrabold text-red-600 border-b pb-2">🚫 棄單黑名單電話管理</h2>
+        <p class="text-xs text-gray-600 font-bold">輸入手機號碼即可手動封鎖或解除封鎖：</p>
+        <div class="flex gap-2">
+          <input type="tel" id="block-phone-input" maxlength="10" placeholder="09xxxxxxxx" class="flex-1 border rounded-xl px-3 py-2 text-xs font-bold bg-gray-50">
+          <button type="button" id="btn-block-phone" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs font-extrabold">封鎖</button>
+          <button type="button" id="btn-unblock-phone" class="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-xl text-xs font-extrabold">解封</button>
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <!-- 隱藏的列印標籤專用區 -->
   <div id="print-area" class="hidden"></div>
 
-  <!-- 訊息回傳彈跳視窗 -->
-  <div id="reply-modal" class="fixed inset-0 bg-black/75 hidden z-50 flex items-center justify-center p-4">
-    <div class="bg-slate-800 w-full max-w-sm rounded-2xl p-5 space-y-4 border border-slate-600 shadow-2xl">
-      <div class="flex justify-between items-center border-b border-slate-700 pb-2">
-        <h3 class="font-extrabold text-sm text-white">💬 一鍵傳送通知給客人</h3>
-        <button type="button" id="close-reply-modal-x" class="text-slate-400 font-bold text-base">✕</button>
+  <!-- ==================== 彈窗 1：完整單品編輯器 (冰塊/甜度/配方豆/加購) ==================== -->
+  <div id="item-editor-modal" class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white w-full max-w-xl rounded-2xl p-5 space-y-4 max-h-[92vh] overflow-y-auto shadow-2xl border-2 border-[#213c64]">
+      <div class="flex justify-between items-center border-b pb-2.5">
+        <h3 id="editor-modal-title" class="font-extrabold text-base text-[#213c64]">⚙️ 編輯飲品品項與客製選項</h3>
+        <button type="button" id="close-item-editor-x" class="text-gray-400 hover:text-gray-700 font-bold text-lg">✕</button>
+      </div>
+
+      <!-- 基本資料 -->
+      <div class="grid grid-cols-3 gap-2.5 text-xs">
+        <div class="col-span-2">
+          <label class="font-extrabold text-gray-700 block mb-1">品項名稱 *</label>
+          <input type="text" id="ed-name" class="w-full border rounded-xl p-2.5 font-extrabold bg-gray-50" placeholder="例如：拿鐵 Latte">
+        </div>
+        <div>
+          <label class="font-extrabold text-gray-700 block mb-1">基本售價 (NT$) *</label>
+          <input type="number" id="ed-price" class="w-full border rounded-xl p-2.5 font-extrabold bg-gray-50 text-[#213c64]" placeholder="110">
+        </div>
+      </div>
+
+      <div class="text-xs">
+        <label class="font-extrabold text-gray-700 block mb-1">風味描述 / 副標題 (手沖可用「淺焙｜花香、柑橘」格式自動變風味小卡)</label>
+        <input type="text" id="ed-desc" class="w-full border rounded-xl p-2.5 font-bold bg-gray-50" placeholder="例如：淺焙｜白桃、茉莉花、佛手柑">
+      </div>
+
+      <!-- 狀態與加購推薦勾選 -->
+      <div class="flex flex-wrap gap-4 bg-amber-50/70 border border-amber-200 p-3 rounded-xl text-xs">
+        <label class="flex items-center gap-2 font-extrabold text-amber-900 cursor-pointer">
+          <input type="checkbox" id="ed-upsell" class="w-4 h-4 accent-amber-600">
+          🛍️ 設為「購物車順手加購」推薦商品
+        </label>
+        <label class="flex items-center gap-2 font-extrabold text-red-700 cursor-pointer">
+          <input type="checkbox" id="ed-soldout" class="w-4 h-4 accent-red-600">
+          🚫 目前暫時售完 (Sold Out)
+        </label>
+      </div>
+
+      <!-- 1. 溫度與冰塊選項 -->
+      <div class="border rounded-xl p-3.5 space-y-2.5 bg-gray-50/60 text-xs">
+        <div class="flex justify-between items-center">
+          <p class="font-extrabold text-[#213c64]">🌡️ 溫度與冰塊設定</p>
+          <button type="button" id="ed-clear-drink-opts" class="text-[11px] text-gray-500 underline font-bold">甜點/周邊免選溫度甜度(一鍵全取消)</button>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <label class="flex items-center gap-2 bg-white border p-2.5 rounded-xl font-bold cursor-pointer">
+            <input type="checkbox" id="ed-opt-ice" class="w-4 h-4 accent-[#213c64]"> 🧊 可做冰飲
+          </label>
+          <label class="flex items-center gap-2 bg-white border p-2.5 rounded-xl font-bold cursor-pointer">
+            <input type="checkbox" id="ed-opt-hot" class="w-4 h-4 accent-[#213c64]"> 🔥 可做熱飲
+          </label>
+          <label class="flex items-center gap-2 bg-white border p-2.5 rounded-xl font-bold cursor-pointer">
+            <input type="checkbox" id="ed-opt-ice-level" class="w-4 h-4 accent-[#213c64]"> 開放調整冰量 (正常/少/微/去冰)
+          </label>
+        </div>
+      </div>
+
+      <!-- 2. 配方豆選項與加價 -->
+      <div class="border rounded-xl p-3.5 space-y-2.5 bg-gray-50/60 text-xs">
+        <p class="font-extrabold text-[#213c64]">🫘 配方豆選擇與加價設定 (0 代表不加價)</p>
+        <div class="grid grid-cols-2 gap-2.5">
+          <div class="bg-white border p-2.5 rounded-xl flex items-center justify-between">
+            <label class="flex items-center gap-2 font-extrabold cursor-pointer">
+              <input type="checkbox" id="ed-opt-bean5" class="w-4 h-4 accent-[#213c64]"> 5號 中焙
+            </label>
+            <div class="flex items-center gap-1">
+              <span class="text-[11px] text-gray-500">+NT$</span>
+              <input type="number" id="ed-price-bean5" value="0" class="w-14 border rounded-lg p-1 text-center font-extrabold">
+            </div>
+          </div>
+          <div class="bg-white border p-2.5 rounded-xl flex items-center justify-between">
+            <label class="flex items-center gap-2 font-extrabold cursor-pointer">
+              <input type="checkbox" id="ed-opt-bean1" class="w-4 h-4 accent-[#213c64]"> 1號 淺焙
+            </label>
+            <div class="flex items-center gap-1">
+              <span class="text-[11px] text-gray-500">+NT$</span>
+              <input type="number" id="ed-price-bean1" value="0" class="w-14 border rounded-lg p-1 text-center font-extrabold">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. 甜度選項與加價 -->
+      <div class="border rounded-xl p-3.5 space-y-2.5 bg-gray-50/60 text-xs">
+        <div class="flex justify-between items-center">
+          <p class="font-extrabold text-[#213c64]">🍯 甜度選擇與加價設定</p>
+          <button type="button" id="ed-check-all-sugars" class="text-[11px] text-[#213c64] underline font-bold">全選四段甜度</button>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div class="bg-white border p-2 rounded-xl flex items-center justify-between">
+            <label class="flex items-center gap-1.5 font-bold cursor-pointer">
+              <input type="checkbox" id="ed-opt-sugar-free" class="w-4 h-4 accent-[#213c64]"> 無糖
+            </label>
+            <div class="flex items-center gap-1">
+              <span class="text-[10px] text-gray-400">+$</span>
+              <input type="number" id="ed-price-sugar-free" value="0" class="w-12 border rounded p-1 text-center font-bold">
+            </div>
+          </div>
+          <div class="bg-white border p-2 rounded-xl flex items-center justify-between">
+            <label class="flex items-center gap-1.5 font-bold cursor-pointer">
+              <input type="checkbox" id="ed-opt-sugar-micro" class="w-4 h-4 accent-[#213c64]"> 微糖
+            </label>
+            <div class="flex items-center gap-1">
+              <span class="text-[10px] text-gray-400">+$</span>
+              <input type="number" id="ed-price-sugar-micro" value="0" class="w-12 border rounded p-1 text-center font-bold">
+            </div>
+          </div>
+          <div class="bg-white border p-2 rounded-xl flex items-center justify-between">
+            <label class="flex items-center gap-1.5 font-bold cursor-pointer">
+              <input type="checkbox" id="ed-opt-sugar-half" class="w-4 h-4 accent-[#213c64]"> 半糖
+            </label>
+            <div class="flex items-center gap-1">
+              <span class="text-[10px] text-gray-400">+$</span>
+              <input type="number" id="ed-price-sugar-half" value="0" class="w-12 border rounded p-1 text-center font-bold">
+            </div>
+          </div>
+          <div class="bg-white border p-2 rounded-xl flex items-center justify-between">
+            <label class="flex items-center gap-1.5 font-bold cursor-pointer">
+              <input type="checkbox" id="ed-opt-sugar-normal" class="w-4 h-4 accent-[#213c64]"> 正常甜
+            </label>
+            <div class="flex items-center gap-1">
+              <span class="text-[10px] text-gray-400">+$</span>
+              <input type="number" id="ed-price-sugar-normal" value="0" class="w-12 border rounded p-1 text-center font-bold">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. 單杯加購細項設定 (濃縮/燕麥奶/粉類/自訂加購) -->
+      <div class="border rounded-xl p-3.5 space-y-2.5 bg-gray-50/60 text-xs">
+        <div class="flex justify-between items-center">
+          <p class="font-extrabold text-[#213c64]">🎁 單杯客製加購項目 (如換燕麥奶、加濃縮、灑粉)</p>
+          <button type="button" id="ed-add-extra-addon-btn" class="bg-[#213c64] text-white px-2.5 py-1 rounded-lg text-[11px] font-extrabold">＋ 新增自訂加購</button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div class="bg-white border p-2 rounded-xl flex items-center justify-between">
+            <label class="flex items-center gap-1.5 font-bold cursor-pointer">
+              <input type="checkbox" id="ed-addon-shot" class="w-4 h-4 accent-[#213c64]"> 加一份濃縮
+            </label>
+            <div class="flex items-center gap-1"><span class="text-[10px] text-gray-400">+$</span><input type="number" id="ed-price-shot" value="20" class="w-14 border rounded p-1 text-center font-bold"></div>
+          </div>
+          <div class="bg-white border p-2 rounded-xl flex items-center justify-between">
+            <label class="flex items-center gap-1.5 font-bold cursor-pointer">
+              <input type="checkbox" id="ed-addon-oat" class="w-4 h-4 accent-[#213c64]"> 更換燕麥奶
+            </label>
+            <div class="flex items-center gap-1"><span class="text-[10px] text-gray-400">+$</span><input type="number" id="ed-price-oat" value="20" class="w-14 border rounded p-1 text-center font-bold"></div>
+          </div>
+          <div class="bg-white border p-2 rounded-xl flex items-center justify-between">
+            <label class="flex items-center gap-1.5 font-bold cursor-pointer">
+              <input type="checkbox" id="ed-addon-cocoa" class="w-4 h-4 accent-[#213c64]"> 可可粉
+            </label>
+            <div class="flex items-center gap-1"><span class="text-[10px] text-gray-400">+$</span><input type="number" id="ed-price-cocoa" value="0" class="w-14 border rounded p-1 text-center font-bold"></div>
+          </div>
+          <div class="bg-white border p-2 rounded-xl flex items-center justify-between">
+            <label class="flex items-center gap-1.5 font-bold cursor-pointer">
+              <input type="checkbox" id="ed-addon-brownsugar" class="w-4 h-4 accent-[#213c64]"> 黑糖粉
+            </label>
+            <div class="flex items-center gap-1"><span class="text-[10px] text-gray-400">+$</span><input type="number" id="ed-price-brownsugar" value="0" class="w-14 border rounded p-1 text-center font-bold"></div>
+          </div>
+          <div class="bg-white border p-2 rounded-xl flex items-center justify-between">
+            <label class="flex items-center gap-1.5 font-bold cursor-pointer">
+              <input type="checkbox" id="ed-addon-cinnamon" class="w-4 h-4 accent-[#213c64]"> 肉桂粉
+            </label>
+            <div class="flex items-center gap-1"><span class="text-[10px] text-gray-400">+$</span><input type="number" id="ed-price-cinnamon" value="0" class="w-14 border rounded p-1 text-center font-bold"></div>
+          </div>
+        </div>
+
+        <!-- 自訂額外加購清單 -->
+        <div id="ed-extra-addons-list" class="space-y-2 pt-1"></div>
+      </div>
+
+      <div class="flex gap-2.5 pt-2 border-t">
+        <button type="button" id="delete-item-btn" class="bg-red-50 text-red-600 border border-red-200 px-4 py-3 rounded-xl font-extrabold text-xs">🗑️ 刪除此品項</button>
+        <button type="button" id="cancel-item-editor-btn" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-extrabold text-xs">取消</button>
+        <button type="button" id="save-item-editor-btn" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-extrabold text-xs shadow-lg">💾 儲存品項設定</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 彈窗 2：一鍵傳送提醒給客人 ==================== -->
+  <div id="reply-modal" class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-sm rounded-2xl p-5 space-y-4 border-2 border-[#213c64] shadow-2xl">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-extrabold text-sm text-[#213c64]">💬 一鍵傳送通知給客人</h3>
+        <button type="button" id="close-reply-modal-x" class="text-gray-400 font-bold text-base">✕</button>
       </div>
       <input type="hidden" id="reply-order-id">
       <div class="space-y-2 text-xs">
-        <p class="text-[11px] text-slate-400 font-bold">點擊快速套用罐頭訊息：</p>
-        <button type="button" data-preset="目前現場訂單較多，您的餐點預計將順延 10~15 分鐘完成，感謝耐心等候！" class="reply-preset-btn w-full text-left bg-slate-900 hover:bg-slate-700 p-2.5 rounded-xl border border-slate-700 font-bold text-slate-200">⏱️ 現場訂單較多・順延 10~15 分鐘</button>
-        <button type="button" data-preset="抱歉，您點的單品手沖豆剛好最後一杯沖完了！請電洽吧台 04-7237933 為您換購其他豆款。" class="reply-preset-btn w-full text-left bg-slate-900 hover:bg-slate-700 p-2.5 rounded-xl border border-slate-700 font-bold text-slate-200">☕ 手沖豆剛好售完・請電洽換購</button>
-        <button type="button" data-preset="您的明日預訂訂單吧台已確認收悉，將於明日指定時間前為您現磨沖煮！" class="reply-preset-btn w-full text-left bg-slate-900 hover:bg-slate-700 p-2.5 rounded-xl border border-slate-700 font-bold text-slate-200">🌅 明日預訂已確認收悉</button>
+        <p class="text-[11px] text-gray-500 font-bold">點擊快速套用常用通知：</p>
+        <button type="button" data-preset="目前現場訂單較多，您的餐點預計將順延 10~15 分鐘完成，感謝耐心等候！" class="reply-preset-btn w-full text-left bg-gray-50 hover:bg-blue-50 p-2.5 rounded-xl border font-bold text-gray-800">⏱️ 現場訂單較多・順延 10~15 分鐘</button>
+        <button type="button" data-preset="抱歉，您點的單品手沖豆剛好最後一杯沖完了！請電洽吧台 04-7237933 為您換購其他豆款。" class="reply-preset-btn w-full text-left bg-gray-50 hover:bg-blue-50 p-2.5 rounded-xl border font-bold text-gray-800">☕ 手沖豆剛好售完・請電洽換購</button>
+        <button type="button" data-preset="您的明日預訂訂單吧台已確認收悉，將於明日指定時間前為您現磨沖煮！" class="reply-preset-btn w-full text-left bg-gray-50 hover:bg-blue-50 p-2.5 rounded-xl border font-bold text-gray-800">🌅 明日預訂已確認收悉</button>
       </div>
       <div>
-        <label class="text-[11px] font-bold text-slate-400 block mb-1">或輸入自訂提醒內容：</label>
-        <textarea id="reply-custom-text" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white font-bold" placeholder="輸入要顯示在客人手機與 LINE 的訊息..."></textarea>
+        <label class="text-[11px] font-bold text-gray-600 block mb-1">或輸入自訂提醒內容：</label>
+        <textarea id="reply-custom-text" rows="2" class="w-full border rounded-xl p-2.5 text-xs font-bold bg-gray-50" placeholder="輸入要顯示在客人手機與 LINE 的訊息..."></textarea>
       </div>
       <div class="flex gap-2 pt-1">
-        <button type="button" id="cancel-reply-btn" class="flex-1 bg-slate-700 text-slate-300 py-2.5 rounded-xl font-extrabold text-xs">取消</button>
+        <button type="button" id="cancel-reply-btn" class="flex-1 bg-gray-200 text-gray-700 py-2.5 rounded-xl font-extrabold text-xs">取消</button>
         <button type="button" id="send-reply-btn" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl font-extrabold text-xs shadow">確認發送通知</button>
       </div>
     </div>
@@ -201,7 +419,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, getDocs, setDoc, doc, updateDoc, deleteDoc, onSnapshot, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, setDoc, addDoc, doc, updateDoc, deleteDoc, onSnapshot, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBMdycidtvbE7JmQtvXn-lCqUwod5RxR44",
@@ -224,12 +442,9 @@
     let isFirstLoad = true;
     let audioCtx = null;
 
-    function showGlobalError(msg) {
-      const box = document.getElementById("global-error-box");
-      if (!box) return;
-      box.classList.remove("hidden");
-      box.innerText = "⚠️ 系統提示：" + msg;
-    }
+    // 單品編輯器目前指向的分類與品項索引
+    let editingCatIdx = null;
+    let editingItemIdx = null; // 若為 -1 代表新增品項
 
     function escapeHtml(str) {
       return String(str || "")
@@ -244,19 +459,18 @@
       const app = initializeApp(firebaseConfig);
       db = getFirestore(app);
     } catch (err) {
-      showGlobalError("Firebase 初始化失敗：" + err.message);
+      const box = document.getElementById("global-error-box");
+      box.classList.remove("hidden");
+      box.innerText = "Firebase 初始化失敗：" + err.message;
     }
 
     // 時鐘與暫停接單狀態更新
     setInterval(() => {
       const now = new Date();
-      const clockEl = document.getElementById("system-clock");
-      if (clockEl) {
-        clockEl.innerText =
-          String(now.getHours()).padStart(2, "0") + ":" +
-          String(now.getMinutes()).padStart(2, "0") + ":" +
-          String(now.getSeconds()).padStart(2, "0");
-      }
+      document.getElementById("system-clock").innerText =
+        String(now.getHours()).padStart(2, "0") + ":" +
+        String(now.getMinutes()).padStart(2, "0") + ":" +
+        String(now.getSeconds()).padStart(2, "0");
       updatePauseButtonUI();
     }, 1000);
 
@@ -269,12 +483,11 @@
         btn.className = "bg-red-600 hover:bg-red-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-extrabold shadow animate-pulse";
         btn.innerText = "▶️ 忙碌暫停中 (剩" + remainMin + "分・點擊恢復)";
       } else {
-        btn.className = "bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-extrabold shadow transition";
+        btn.className = "bg-amber-500 hover:bg-amber-600 text-white px-3.5 py-1.5 rounded-xl text-xs font-extrabold shadow transition";
         btn.innerText = "⏸️ 暫停接單 15分";
       }
     }
 
-    // 語音與音效
     function speakText(text) {
       if (!isVoiceEnabled) return;
       try {
@@ -313,7 +526,6 @@
       return new Date(o.createdAt).getTime() || 0;
     }
 
-    // 推播 LINE 訊息給客人
     async function pushLineMessageToCustomer(orderObj, messageText) {
       if (!orderObj || !orderObj.lineUserId || String(orderObj.lineUserId).startsWith("web_")) return;
       try {
@@ -330,14 +542,11 @@
       } catch (e) {}
     }
 
-    // ==================== 1. 即時監聽訂單 ====================
+    // ==================== 1. 即時訂單監聽與渲染 ====================
     if (db) {
       onSnapshot(collection(db, "orders"), (snapshot) => {
         const badge = document.getElementById("conn-badge");
-        if (badge) {
-          badge.innerText = "🟢 雲端已連線";
-          badge.className = "text-[11px] bg-emerald-950 text-emerald-300 border border-emerald-700 px-2.5 py-0.5 rounded-full font-extrabold";
-        }
+        badge.innerText = "🟢 雲端已連線";
 
         const temp = [];
         let pendingCount = 0;
@@ -390,32 +599,29 @@
           const itemSummary = (newlyArrivedOrder.items || []).map((i) => i.name + i.qty + "杯").join("、");
           speakText("新訂單 " + (newlyArrivedOrder.orderNumber || "") + "，" + (newlyArrivedOrder.customerName || "") + "，" + itemSummary + "，" + (newlyArrivedOrder.pickupTime || ""));
         }
-      }, (error) => {
-        const badge = document.getElementById("conn-badge");
-        if (badge) {
-          badge.innerText = "🔴 讀取失敗";
-          badge.className = "text-[11px] bg-red-950 text-red-300 border border-red-700 px-2.5 py-0.5 rounded-full font-extrabold";
-        }
-        showGlobalError("讀取訂單失敗：" + error.message);
       });
 
-      // 監聽商店設定
+      // 監聽商店營業與排班設定
       onSnapshot(doc(db, "settings", "store"), (snap) => {
         if (snap.exists()) {
           latestStoreSettings = snap.data();
           if (latestStoreSettings.storeMode) document.getElementById("set-store-mode").value = latestStoreSettings.storeMode;
           if (latestStoreSettings.announcementTitle) document.getElementById("set-ann-title").value = latestStoreSettings.announcementTitle;
           if (latestStoreSettings.announcementText) document.getElementById("set-ann-text").value = latestStoreSettings.announcementText;
+          renderWeeklyHoursEditor(latestStoreSettings.weeklyHours || {});
+          renderHolidaysEditor(latestStoreSettings.holidays || []);
           renderPromoCodesList(latestStoreSettings.promoCodes || []);
           updatePauseButtonUI();
+        } else {
+          renderWeeklyHoursEditor({});
+          renderHolidaysEditor([]);
+          renderPromoCodesList([]);
         }
       });
     }
 
     function renderOrders() {
       const container = document.getElementById("orders-container");
-      if (!container) return;
-
       let list = allOrders;
       if (currentFilter === "pending") {
         list = allOrders.filter((o) => o.status === "pending");
@@ -426,7 +632,7 @@
       }
 
       if (list.length === 0) {
-        container.innerHTML = '<p class="text-slate-500 text-xs col-span-2 py-12 text-center font-bold">目前沒有符合此篩選條件的訂單</p>';
+        container.innerHTML = '<p class="text-gray-400 text-xs col-span-2 py-12 text-center font-bold bg-white rounded-2xl border">目前沒有符合此篩選條件的訂單</p>';
         return;
       }
 
@@ -437,32 +643,32 @@
         const isCompleted = o.status === "completed";
         const isAbandoned = o.status === "abandoned";
 
-        let badgeHtml = '<span class="bg-red-950 text-red-300 border border-red-700 px-2.5 py-1 rounded-full text-xs font-extrabold">⏳ 待接單</span>';
-        if (isAccepted) badgeHtml = '<span class="bg-blue-950 text-blue-300 border border-blue-700 px-2.5 py-1 rounded-full text-xs font-extrabold">🔥 製作中</span>';
-        if (isCompleted) badgeHtml = '<span class="bg-emerald-950 text-emerald-300 border border-emerald-700 px-2.5 py-1 rounded-full text-xs font-extrabold">🎉 已完成取餐</span>';
-        if (isAbandoned) badgeHtml = '<span class="bg-gray-800 text-gray-400 border border-gray-600 px-2.5 py-1 rounded-full text-xs font-extrabold">🚫 棄單未取</span>';
+        let badgeHtml = '<span class="bg-red-100 text-red-700 border border-red-300 px-2.5 py-1 rounded-full text-xs font-extrabold">⏳ 待接單</span>';
+        if (isAccepted) badgeHtml = '<span class="bg-blue-100 text-blue-700 border border-blue-300 px-2.5 py-1 rounded-full text-xs font-extrabold">🔥 製作中</span>';
+        if (isCompleted) badgeHtml = '<span class="bg-emerald-100 text-emerald-700 border border-emerald-300 px-2.5 py-1 rounded-full text-xs font-extrabold">🎉 已完成取餐</span>';
+        if (isAbandoned) badgeHtml = '<span class="bg-gray-200 text-gray-600 px-2.5 py-1 rounded-full text-xs font-extrabold">🚫 棄單未取</span>';
 
         const memberTag = Number(o.memberCompletedCount || 0) > 0
-          ? '<span class="bg-emerald-900/70 text-emerald-300 px-1.5 py-0.5 rounded text-[10px] font-extrabold">熟客(' + Number(o.memberCompletedCount) + '次)</span>'
-          : '<span class="bg-amber-900/70 text-amber-300 px-1.5 py-0.5 rounded text-[10px] font-extrabold">🆕 首單新客</span>';
+          ? '<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-extrabold">🟢 熟客(' + Number(o.memberCompletedCount) + '次)</span>'
+          : '<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-extrabold">🆕 首單新客</span>';
 
         const itemsHtml = (o.items || []).map((i) => {
-          const cupTag = i.cupLabel ? '<span class="bg-blue-900 text-blue-200 px-1.5 py-0.5 rounded text-[10px] font-extrabold ml-1">🏷️ ' + escapeHtml(i.cupLabel) + '</span>' : '';
+          const cupTag = i.cupLabel ? '<span class="bg-blue-600 text-white px-1.5 py-0.5 rounded text-[10px] font-extrabold ml-1">🏷️ ' + escapeHtml(i.cupLabel) + '</span>' : '';
           const modsStr = (i.modifiers && i.modifiers.length > 0) ? escapeHtml(i.modifiers.join(" / ")) : "標準";
-          const noteStr = i.note ? ' <span class="text-amber-300 font-extrabold">[備註: ' + escapeHtml(i.note) + ']</span>' : '';
-          return '<div class="flex justify-between items-start text-xs py-1.5 border-b border-slate-700/60">' +
+          const noteStr = i.note ? ' <span class="text-red-600 font-extrabold">[備註: ' + escapeHtml(i.note) + ']</span>' : '';
+          return '<div class="flex justify-between items-start text-xs py-1.5 border-b border-gray-100">' +
             '<div class="pr-2">' +
-              '<span class="font-extrabold text-amber-300 text-sm">' + Number(i.qty || 1) + 'x</span> ' +
-              '<span class="font-extrabold text-white text-sm">' + escapeHtml(i.name) + '</span>' + cupTag +
-              '<p class="text-[11px] text-slate-300 font-bold mt-0.5">' + modsStr + noteStr + '</p>' +
+              '<span class="font-extrabold text-[#213c64] text-sm">' + Number(i.qty || 1) + 'x</span> ' +
+              '<span class="font-extrabold text-gray-900 text-sm">' + escapeHtml(i.name) + '</span>' + cupTag +
+              '<p class="text-[11px] text-gray-600 font-bold mt-0.5">' + modsStr + noteStr + '</p>' +
             '</div>' +
-            '<span class="font-mono font-extrabold text-slate-200 shrink-0">NT$' + (Number(i.price || 0) * Number(i.qty || 1)) + '</span>' +
+            '<span class="font-mono font-extrabold text-gray-800 shrink-0">NT$' + (Number(i.price || 0) * Number(i.qty || 1)) + '</span>' +
           '</div>';
         }).join("");
 
-        const taxBadge = o.taxId ? '<span class="bg-purple-900/80 text-purple-200 border border-purple-600 px-2 py-0.5 rounded text-[11px] font-extrabold">🧾 統編：' + escapeHtml(o.taxId) + '</span>' : '';
-        const promoBadge = Number(o.discountAmount || 0) > 0 ? '<span class="bg-emerald-900/80 text-emerald-200 px-2 py-0.5 rounded text-[11px] font-extrabold">🎟️ 優惠碼 ' + escapeHtml(o.promoCode || "") + ' (-$' + Number(o.discountAmount) + ')</span>' : '';
-        const replyHistory = o.baristaMessage ? '<div class="bg-indigo-950/70 border border-indigo-700/70 p-2 rounded-xl text-[11px] text-indigo-200 font-bold">💬 已發送提醒：' + escapeHtml(o.baristaMessage) + '</div>' : '';
+        const taxBadge = o.taxId ? '<span class="bg-purple-100 text-purple-800 border border-purple-300 px-2 py-0.5 rounded text-[11px] font-extrabold">🧾 統編：' + escapeHtml(o.taxId) + '</span>' : '';
+        const promoBadge = Number(o.discountAmount || 0) > 0 ? '<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[11px] font-extrabold">🎟️ 優惠碼 ' + escapeHtml(o.promoCode || "") + ' (-$' + Number(o.discountAmount) + ')</span>' : '';
+        const replyHistory = o.baristaMessage ? '<div class="bg-blue-50 border border-blue-200 p-2 rounded-xl text-[11px] text-[#213c64] font-extrabold">💬 已發送提醒：' + escapeHtml(o.baristaMessage) + '</div>' : '';
 
         const ms = getOrderMillis(o);
         const timeFormatted = ms > 0 ? new Date(ms).toLocaleString("zh-TW", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "剛剛";
@@ -473,19 +679,19 @@
         } else if (isAccepted) {
           mainActionBtn = '<button type="button" data-action="complete" data-id="' + oid + '" class="order-action-btn bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-extrabold shadow col-span-4">🎉 製作完成・通知客人取餐 (熟客次數+1)</button>';
         } else {
-          mainActionBtn = '<button type="button" data-action="delete" data-id="' + oid + '" class="order-action-btn bg-slate-700 hover:bg-red-900/70 text-slate-300 py-2 rounded-xl text-xs font-bold col-span-4">🗑️ 刪除此筆歷史紀錄</button>';
+          mainActionBtn = '<button type="button" data-action="delete" data-id="' + oid + '" class="order-action-btn bg-gray-100 hover:bg-red-50 text-gray-500 hover:text-red-600 py-2 rounded-xl text-xs font-bold col-span-4">🗑️ 刪除此筆歷史紀錄</button>';
         }
 
-        return '<div class="bg-slate-800 border-2 ' + (isPending ? 'border-red-500 shadow-lg' : 'border-slate-700') + ' rounded-2xl p-4 space-y-3 flex flex-col justify-between">' +
+        return '<div class="bg-white border-2 ' + (isPending ? 'border-red-500 shadow-lg' : 'border-gray-200 shadow-sm') + ' rounded-2xl p-4 space-y-3 flex flex-col justify-between">' +
           '<div class="space-y-2.5">' +
-            '<div class="flex justify-between items-start border-b border-slate-700 pb-2.5">' +
+            '<div class="flex justify-between items-start border-b pb-2.5">' +
               '<div class="space-y-1">' +
                 '<div class="flex items-center gap-2 flex-wrap">' +
                   '<span class="bg-[#213c64] text-white font-extrabold text-sm px-3 py-1 rounded-xl">' + escapeHtml(o.orderNumber || "#001") + '</span>' +
-                  '<span class="text-xs font-extrabold text-white">' + escapeHtml(o.customerInfo || o.customerName || "客人") + '</span>' +
+                  '<span class="text-xs font-extrabold text-gray-900">' + escapeHtml(o.customerInfo || o.customerName || "客人") + '</span>' +
                   memberTag +
                 '</div>' +
-                '<p class="text-[11px] text-amber-400 font-extrabold">⏰ ' + escapeHtml(o.pickupTime || "現場立即製作") + '</p>' +
+                '<p class="text-[11px] text-amber-700 font-extrabold">⏰ ' + escapeHtml(o.pickupTime || "現場立即製作") + '</p>' +
               '</div>' +
               badgeHtml +
             '</div>' +
@@ -494,15 +700,15 @@
             replyHistory +
           '</div>' +
           '<div class="space-y-2.5 pt-2">' +
-            '<div class="flex justify-between items-center text-xs font-extrabold text-slate-300">' +
-              '<span>應收總計：<span class="text-amber-400 text-base">NT$' + Number(o.totalAmount || 0) + '</span></span>' +
-              '<span class="text-[10px] text-slate-400 font-mono">下單：' + timeFormatted + '</span>' +
+            '<div class="flex justify-between items-center text-xs font-extrabold text-gray-700">' +
+              '<span>應收總計：<span class="text-amber-700 text-base">NT$' + Number(o.totalAmount || 0) + '</span></span>' +
+              '<span class="text-[10px] text-gray-400 font-mono">下單：' + timeFormatted + '</span>' +
             '</div>' +
-            '<div class="grid grid-cols-4 gap-1.5 pt-2 border-t border-slate-700">' +
-              '<button type="button" data-action="print" data-id="' + oid + '" class="order-action-btn bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-xl text-[11px] font-extrabold">🖨️ 印杯貼</button>' +
-              '<button type="button" data-action="reply" data-id="' + oid + '" class="order-action-btn bg-indigo-900/70 hover:bg-indigo-800 text-indigo-200 border border-indigo-700 py-2 rounded-xl text-[11px] font-extrabold">💬 傳提醒</button>' +
-              '<a href="tel:' + escapeHtml(o.customerPhone || "") + '" class="bg-slate-700 hover:bg-slate-600 text-slate-200 py-2 rounded-xl text-[11px] font-extrabold text-center">📞 撥電話</a>' +
-              '<button type="button" data-action="abandon" data-id="' + oid + '" class="order-action-btn bg-red-950/70 hover:bg-red-900 text-red-300 border border-red-800/70 py-2 rounded-xl text-[11px] font-extrabold">🚫 棄單封鎖</button>' +
+            '<div class="grid grid-cols-4 gap-1.5 pt-2 border-t">' +
+              '<button type="button" data-action="print" data-id="' + oid + '" class="order-action-btn bg-gray-100 hover:bg-gray-200 text-gray-800 border py-2 rounded-xl text-[11px] font-extrabold">🖨️ 印杯貼</button>' +
+              '<button type="button" data-action="reply" data-id="' + oid + '" class="order-action-btn bg-blue-50 hover:bg-blue-100 text-[#213c64] border border-blue-200 py-2 rounded-xl text-[11px] font-extrabold">💬 傳提醒</button>' +
+              '<a href="tel:' + escapeHtml(o.customerPhone || "") + '" class="bg-gray-100 hover:bg-gray-200 text-gray-800 border py-2 rounded-xl text-[11px] font-extrabold text-center">📞 撥電話</a>' +
+              '<button type="button" data-action="abandon" data-id="' + oid + '" class="order-action-btn bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 py-2 rounded-xl text-[11px] font-extrabold">🚫 棄單封鎖</button>' +
               mainActionBtn +
             '</div>' +
           '</div>' +
@@ -510,7 +716,6 @@
       }).join("");
     }
 
-    // ==================== 2. 訂單操作處理函式 ====================
     async function handleOrderAction(action, orderId) {
       const order = allOrders.find((o) => o.id === orderId);
       if (!order) return;
@@ -526,53 +731,36 @@
         return;
       }
       if (action === "accept") {
-        try {
-          await updateDoc(doc(db, "orders", orderId), { status: "accepted" });
-          await pushLineMessageToCustomer(order, "🔥 【NODAY Coffee】吧台已接收您的訂單 " + (order.orderNumber || "") + "（" + (order.pickupTime || "") + "），正在為您現磨沖煮中！");
-        } catch (e) {
-          alert("更新失敗：" + e.message);
-        }
+        await updateDoc(doc(db, "orders", orderId), { status: "accepted" });
+        await pushLineMessageToCustomer(order, "🔥 【NODAY Coffee】吧台已接收您的訂單 " + (order.orderNumber || "") + "（" + (order.pickupTime || "") + "），正在為您現磨沖煮中！");
         return;
       }
       if (action === "complete") {
-        try {
-          await updateDoc(doc(db, "orders", orderId), { status: "completed" });
-          if (order.lineUserId) {
-            await setDoc(doc(db, "members", order.lineUserId), { completedCount: increment(1) }, { merge: true });
-          }
-          await pushLineMessageToCustomer(order, "🎉 【NODAY Coffee】親愛的 " + (order.customerName || "") + "，您的外帶餐點 " + (order.orderNumber || "") + " 已經製作完成囉！請至吧台取餐，謝謝您！");
-        } catch (e) {
-          alert("更新失敗：" + e.message);
+        await updateDoc(doc(db, "orders", orderId), { status: "completed" });
+        if (order.lineUserId) {
+          await setDoc(doc(db, "members", order.lineUserId), { completedCount: increment(1) }, { merge: true });
         }
+        await pushLineMessageToCustomer(order, "🎉 【NODAY Coffee】親愛的 " + (order.customerName || "") + "，您的外帶餐點 " + (order.orderNumber || "") + " 已經製作完成囉！請至吧台取餐，謝謝您！");
         return;
       }
       if (action === "abandon") {
-        if (!confirm("⚠️ 確定要將【" + (order.customerInfo || "") + "】標記為「未取餐棄單」並直接封鎖帳號與電話嗎？")) return;
-        try {
-          await updateDoc(doc(db, "orders", orderId), { status: "abandoned" });
-          if (order.lineUserId) {
-            await setDoc(doc(db, "members", order.lineUserId), { isBlocked: true, abandonedCount: increment(1) }, { merge: true });
-          }
-          if (order.customerPhone) {
-            await setDoc(doc(db, "blocked_phones", order.customerPhone), { isBlocked: true, customerName: order.customerName || "" }, { merge: true });
-          }
-          alert("🚫 已將該筆訂單標記為棄單，並封鎖其帳號與手機號碼！");
-        } catch (e) {
-          alert("操作失敗：" + e.message);
+        if (!confirm("⚠️ 確定要將【" + (order.customerInfo || "") + "】標記為「未取餐棄單」並封鎖帳號與電話嗎？")) return;
+        await updateDoc(doc(db, "orders", orderId), { status: "abandoned" });
+        if (order.lineUserId) {
+          await setDoc(doc(db, "members", order.lineUserId), { isBlocked: true, abandonedCount: increment(1) }, { merge: true });
         }
+        if (order.customerPhone) {
+          await setDoc(doc(db, "blocked_phones", order.customerPhone), { isBlocked: true, customerName: order.customerName || "" }, { merge: true });
+        }
+        alert("🚫 已標記為棄單並封鎖該電話！");
         return;
       }
       if (action === "delete") {
-        if (!confirm("確定要永久刪除此筆訂單紀錄嗎？")) return;
-        try {
-          await deleteDoc(doc(db, "orders", orderId));
-        } catch (e) {
-          alert("刪除失敗：" + e.message);
-        }
+        if (!confirm("確定要刪除此筆歷史訂單嗎？")) return;
+        await deleteDoc(doc(db, "orders", orderId));
       }
     }
 
-    // 🖨️ 列印杯貼
     function printOrderCupLabels(order) {
       const printArea = document.getElementById("print-area");
       let cupsHtml = "";
@@ -617,13 +805,13 @@
       }, 150);
     }
 
-    // ==================== 3. 雲端菜單與加購管理 ====================
+    // ==================== 2. 完整菜單與單品細項編輯器 (冰量/甜度/豆單/加購) ====================
     async function loadAdminMenu() {
       const container = document.getElementById("admin-menu-container");
       try {
         const snap = await getDocs(collection(db, "menu"));
         if (snap.empty) {
-          container.innerHTML = '<p class="text-xs text-slate-400">目前雲端尚無菜單資料</p>';
+          container.innerHTML = '<p class="text-xs text-gray-500 bg-white p-6 rounded-2xl border text-center">目前雲端尚無菜單資料，請點擊右上角「＋ 新增菜單分類」。</p>';
           return;
         }
         adminCatalog = [];
@@ -633,108 +821,268 @@
         adminCatalog.sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
         renderAdminMenu();
       } catch (e) {
-        container.innerHTML = '<p class="text-xs text-red-400">載入菜單失敗：' + escapeHtml(e.message) + '</p>';
+        container.innerHTML = '<p class="text-xs text-red-600">載入菜單失敗：' + escapeHtml(e.message) + '</p>';
       }
+    }
+
+    function summarizeItemOptions(item) {
+      const opts = item.options || {};
+      const tags = [];
+      if (opts.ice) tags.push(opts.iceLevel === false ? "🧊冰(固定冰)" : "🧊冰(可調冰量)");
+      if (opts.hot) tags.push("🔥熱");
+      if (opts.bean5) tags.push("🫘5號中焙" + (opts.priceBean5 > 0 ? "(+$" + opts.priceBean5 + ")" : ""));
+      if (opts.bean1) tags.push("🫘1號淺焙" + (opts.priceBean1 > 0 ? "(+$" + opts.priceBean1 + ")" : ""));
+      const sList = [];
+      if (opts.sugarFree) sList.push("無糖");
+      if (opts.sugarMicro) sList.push("微糖");
+      if (opts.sugarHalf) sList.push("半糖");
+      if (opts.sugarNormal) sList.push("正常");
+      if (sList.length > 0) tags.push("🍯" + sList.join("/"));
+      if (opts.addonShot) tags.push("+濃縮($" + (opts.priceAddonShot || 0) + ")");
+      if (opts.addonOat) tags.push("+燕麥奶($" + (opts.priceAddonOat || 0) + ")");
+      if (opts.addonCocoa) tags.push("+可可粉");
+      if (opts.addonBrownSugar) tags.push("+黑糖粉");
+      if (opts.addonCinnamon) tags.push("+肉桂粉");
+      if (Array.isArray(opts.extraAddons)) {
+        opts.extraAddons.forEach((a) => {
+          if (a.enabled && a.name) tags.push("+" + a.name + "($" + (a.price || 0) + ")");
+        });
+      }
+      return tags;
     }
 
     function renderAdminMenu() {
       const container = document.getElementById("admin-menu-container");
       container.innerHTML = adminCatalog.map((cat, cIdx) => {
         const rows = (cat.items || []).map((item, iIdx) => {
-          const soldBtnClass = item.soldOut ? "bg-red-600 text-white" : "bg-emerald-600 text-white";
-          const upsellBtnClass = item.isUpsell ? "bg-amber-500 text-slate-950 font-extrabold" : "bg-slate-700 text-slate-300";
+          const optTags = summarizeItemOptions(item);
+          const optHtml = optTags.length > 0
+            ? optTags.map((t) => '<span class="bg-blue-50 text-[#213c64] border border-blue-200 px-1.5 py-0.5 rounded text-[10px] font-bold">' + escapeHtml(t) + '</span>').join("")
+            : '<span class="text-[10px] text-gray-400 font-bold">無須客製選項 (直接加入購物車)</span>';
 
-          return '<div class="flex flex-wrap justify-between items-center gap-2 bg-slate-900 p-3 rounded-xl border border-slate-700 text-xs">' +
-            '<div class="space-y-0.5">' +
-              '<span class="font-extrabold text-white text-sm">' + escapeHtml(item.name) + '</span>' +
-              (item.desc ? '<p class="text-[11px] text-slate-400">' + escapeHtml(item.desc) + '</p>' : '') +
-            '</div>' +
-            '<div class="flex items-center gap-2">' +
-              '<div class="flex items-center gap-1 bg-slate-800 border border-slate-600 rounded-lg px-2 py-1">' +
-                '<span class="text-slate-400 text-[11px]">NT$</span>' +
-                '<input type="number" data-cidx="' + cIdx + '" data-iidx="' + iIdx + '" value="' + Number(item.price || 0) + '" class="menu-price-input w-14 bg-transparent text-amber-300 font-extrabold text-xs focus:outline-none">' +
+          return '<div class="flex flex-wrap justify-between items-center gap-3 bg-gray-50 p-3.5 rounded-2xl border hover:border-[#213c64] transition text-xs">' +
+            '<div class="space-y-1 flex-1 min-w-[220px]">' +
+              '<div class="flex items-center gap-2 flex-wrap">' +
+                '<span class="font-extrabold text-gray-900 text-sm">' + escapeHtml(item.name) + '</span>' +
+                '<span class="font-extrabold text-[#213c64] text-sm">NT$' + Number(item.price || 0) + '</span>' +
+                (item.isUpsell ? '<span class="bg-amber-100 text-amber-800 border border-amber-300 px-2 py-0.5 rounded-full text-[10px] font-extrabold">🛍️ 順手加購推薦</span>' : '') +
+                (item.soldOut ? '<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-[10px] font-extrabold">🚫 已售完</span>' : '') +
               '</div>' +
-              '<button type="button" data-menu-action="upsell" data-cidx="' + cIdx + '" data-iidx="' + iIdx + '" class="menu-item-btn px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition ' + upsellBtnClass + '">' +
-                (item.isUpsell ? '🛍️ 已設加購' : '設為加購') +
+              (item.desc ? '<p class="text-[11px] text-gray-500 font-bold">' + escapeHtml(item.desc) + '</p>' : '') +
+              '<div class="flex flex-wrap gap-1 pt-0.5">' + optHtml + '</div>' +
+            '</div>' +
+            '<div class="flex items-center gap-2 shrink-0">' +
+              '<button type="button" data-menu-action="edit-item" data-cidx="' + cIdx + '" data-iidx="' + iIdx + '" class="menu-item-btn bg-[#213c64] hover:bg-[#192e4d] text-white px-3.5 py-2 rounded-xl text-xs font-extrabold shadow">' +
+                '⚙️ 編輯品項 / 冰塊甜度配方' +
               '</button>' +
-              '<button type="button" data-menu-action="soldout" data-cidx="' + cIdx + '" data-iidx="' + iIdx + '" class="menu-item-btn px-3 py-1.5 rounded-lg text-[11px] font-extrabold transition ' + soldBtnClass + '">' +
+              '<button type="button" data-menu-action="soldout" data-cidx="' + cIdx + '" data-iidx="' + iIdx + '" class="menu-item-btn px-3 py-2 rounded-xl text-xs font-extrabold border ' + (item.soldOut ? 'bg-red-600 text-white border-red-600' : 'bg-white text-emerald-700 border-emerald-300') + '">' +
                 (item.soldOut ? '🚫 已售完' : '🟢 供應中') +
               '</button>' +
             '</div>' +
           '</div>';
         }).join("");
 
-        return '<div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 space-y-3">' +
-          '<h3 class="font-extrabold text-sm text-amber-300 border-b border-slate-700 pb-2">' + escapeHtml(cat.category) + '</h3>' +
-          '<div class="space-y-2">' + rows + '</div>' +
+        return '<div class="bg-white p-4 rounded-2xl border shadow-sm space-y-3">' +
+          '<div class="flex flex-wrap justify-between items-center gap-2 border-b pb-2.5">' +
+            '<div class="flex items-center gap-2">' +
+              '<span class="bg-[#213c64] text-white text-xs font-extrabold px-2.5 py-1 rounded-lg">排序 ' + Number(cat.order || cIdx + 1) + '</span>' +
+              '<h3 class="font-extrabold text-base text-[#213c64]">' + escapeHtml(cat.category) + '</h3>' +
+            '</div>' +
+            '<div class="flex gap-2">' +
+              '<button type="button" data-menu-action="add-item" data-cidx="' + cIdx + '" class="menu-item-btn bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl text-xs font-extrabold shadow">' +
+                '＋ 在此分類新增品項' +
+              '</button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="space-y-2.5">' + (rows || '<p class="text-xs text-gray-400 py-4 text-center">此分類尚無品項</p>') + '</div>' +
         '</div>';
       }).join("");
     }
 
-    // ==================== 4. 優惠碼渲染 ====================
-    function renderPromoCodesList(promos) {
-      const container = document.getElementById("promo-codes-list");
-      if (!promos || promos.length === 0) {
-        container.innerHTML = '<p class="text-xs text-slate-400">目前尚無優惠碼，可點擊右上角「＋ 新增優惠碼」。</p>';
+    function openItemEditorModal(cIdx, iIdx) {
+      editingCatIdx = cIdx;
+      editingItemIdx = iIdx;
+      const cat = adminCatalog[cIdx];
+      const isNew = (iIdx === -1);
+      const item = isNew ? {
+        id: "item_" + Date.now(),
+        name: "",
+        price: 100,
+        desc: "",
+        soldOut: false,
+        isUpsell: false,
+        options: {
+          ice: true, hot: true, iceLevel: true,
+          bean5: true, priceBean5: 0, bean1: true, priceBean1: 0,
+          sugarFree: false, priceSugarFree: 0, sugarMicro: false, priceSugarMicro: 0, sugarHalf: false, priceSugarHalf: 0, sugarNormal: false, priceSugarNormal: 0,
+          addonShot: true, priceAddonShot: 20, addonOat: true, priceAddonOat: 20,
+          addonCocoa: false, priceAddonCocoa: 0, addonBrownSugar: false, priceAddonBrownSugar: 0, addonCinnamon: false, priceAddonCinnamon: 0,
+          extraAddons: []
+        }
+      } : cat.items[iIdx];
+
+      document.getElementById("editor-modal-title").innerText = (isNew ? "＋ 新增品項至【" : "⚙️ 編輯品項【") + cat.category + "】";
+      document.getElementById("delete-item-btn").classList.toggle("hidden", isNew);
+
+      document.getElementById("ed-name").value = item.name || "";
+      document.getElementById("ed-price").value = Number(item.price || 0);
+      document.getElementById("ed-desc").value = item.desc || "";
+      document.getElementById("ed-upsell").checked = !!item.isUpsell;
+      document.getElementById("ed-soldout").checked = !!item.soldOut;
+
+      const opts = item.options || {};
+      document.getElementById("ed-opt-ice").checked = !!opts.ice;
+      document.getElementById("ed-opt-hot").checked = !!opts.hot;
+      document.getElementById("ed-opt-ice-level").checked = (opts.iceLevel !== false);
+
+      document.getElementById("ed-opt-bean5").checked = !!opts.bean5;
+      document.getElementById("ed-price-bean5").value = Number(opts.priceBean5 || 0);
+      document.getElementById("ed-opt-bean1").checked = !!opts.bean1;
+      document.getElementById("ed-price-bean1").value = Number(opts.priceBean1 || 0);
+
+      document.getElementById("ed-opt-sugar-free").checked = !!opts.sugarFree;
+      document.getElementById("ed-price-sugar-free").value = Number(opts.priceSugarFree || 0);
+      document.getElementById("ed-opt-sugar-micro").checked = !!opts.sugarMicro;
+      document.getElementById("ed-price-sugar-micro").value = Number(opts.priceSugarMicro || 0);
+      document.getElementById("ed-opt-sugar-half").checked = !!opts.sugarHalf;
+      document.getElementById("ed-price-sugar-half").value = Number(opts.priceSugarHalf || 0);
+      document.getElementById("ed-opt-sugar-normal").checked = !!opts.sugarNormal;
+      document.getElementById("ed-price-sugar-normal").value = Number(opts.priceSugarNormal || 0);
+
+      document.getElementById("ed-addon-shot").checked = !!opts.addonShot;
+      document.getElementById("ed-price-shot").value = Number(opts.priceAddonShot || 0);
+      document.getElementById("ed-addon-oat").checked = !!opts.addonOat;
+      document.getElementById("ed-price-oat").value = Number(opts.priceAddonOat || 0);
+      document.getElementById("ed-addon-cocoa").checked = !!opts.addonCocoa;
+      document.getElementById("ed-price-cocoa").value = Number(opts.priceAddonCocoa || 0);
+      document.getElementById("ed-addon-brownsugar").checked = !!opts.addonBrownSugar;
+      document.getElementById("ed-price-brownsugar").value = Number(opts.priceAddonBrownSugar || 0);
+      document.getElementById("ed-addon-cinnamon").checked = !!opts.addonCinnamon;
+      document.getElementById("ed-price-cinnamon").value = Number(opts.priceAddonCinnamon || 0);
+
+      renderExtraAddonsInModal(opts.extraAddons || []);
+      document.getElementById("item-editor-modal").classList.remove("hidden");
+    }
+
+    function renderExtraAddonsInModal(extraArr) {
+      const container = document.getElementById("ed-extra-addons-list");
+      container.innerHTML = extraArr.map((a) =>
+        '<div class="flex items-center gap-2 bg-white border p-2 rounded-xl extra-addon-row">' +
+          '<input type="checkbox" ' + (a.enabled !== false ? "checked" : "") + ' class="w-4 h-4 accent-[#213c64] extra-addon-enabled">' +
+          '<input type="text" value="' + escapeHtml(a.name || "") + '" placeholder="自訂加購名稱 (例：加珍珠、換低脂奶)" class="flex-1 border rounded-lg px-2 py-1 font-bold extra-addon-name">' +
+          '<span class="text-[10px] text-gray-400">+NT$</span>' +
+          '<input type="number" value="' + Number(a.price || 0) + '" class="w-16 border rounded-lg p-1 text-center font-bold extra-addon-price">' +
+          '<button type="button" class="remove-extra-addon-btn text-red-500 font-extrabold px-2">✕</button>' +
+        '</div>'
+      ).join("");
+    }
+
+    // ==================== 3. 每週營業時間與特別店休設定 ====================
+    const dayLabels = [
+      { key: "1", name: "週一" },
+      { key: "2", name: "週二" },
+      { key: "3", name: "週三" },
+      { key: "4", name: "週四" },
+      { key: "5", name: "週五" },
+      { key: "6", name: "週六" },
+      { key: "0", name: "週日" }
+    ];
+
+    function renderWeeklyHoursEditor(wh) {
+      const container = document.getElementById("weekly-hours-list");
+      container.innerHTML = dayLabels.map((d) => {
+        const cfg = wh[d.key] || { open: true, start: "07:00", end: "17:30" };
+        return '<div class="flex items-center justify-between bg-gray-50 p-2.5 rounded-xl border weekly-day-row" data-day="' + d.key + '">' +
+          '<label class="flex items-center gap-2 font-extrabold text-gray-800 cursor-pointer">' +
+            '<input type="checkbox" ' + (cfg.open ? "checked" : "") + ' class="w-4 h-4 accent-[#213c64] day-open-chk">' +
+            '<span>' + d.name + '</span>' +
+          '</label>' +
+          '<div class="flex items-center gap-1.5">' +
+            '<input type="time" value="' + escapeHtml(cfg.start || "07:00") + '" class="border rounded-lg px-2 py-1 font-bold bg-white day-start-val">' +
+            '<span>至</span>' +
+            '<input type="time" value="' + escapeHtml(cfg.end || "17:30") + '" class="border rounded-lg px-2 py-1 font-bold bg-white day-end-val">' +
+          '</div>' +
+        '</div>';
+      }).join("");
+    }
+
+    function renderHolidaysEditor(holidays) {
+      const container = document.getElementById("holidays-list");
+      if (!holidays || holidays.length === 0) {
+        container.innerHTML = '<p class="text-xs text-gray-400">目前尚無設定臨時店休日期。</p>';
         return;
       }
-      container.innerHTML = promos.map((p) =>
-        '<div class="grid grid-cols-4 gap-2 bg-slate-900 p-2.5 rounded-xl border border-slate-700 text-xs items-center promo-row">' +
-          '<input type="text" value="' + escapeHtml(p.code || "") + '" placeholder="代碼(如VIP90)" class="bg-slate-800 border border-slate-700 rounded-lg p-1.5 font-extrabold uppercase text-white promo-code-val">' +
-          '<select class="bg-slate-800 border border-slate-700 rounded-lg p-1.5 font-bold text-white promo-type-val">' +
-            '<option value="fixed" ' + (p.type === "fixed" ? "selected" : "") + '>折現($)</option>' +
-            '<option value="percent" ' + (p.type === "percent" ? "selected" : "") + '>打折(%)</option>' +
-          '</select>' +
-          '<input type="number" value="' + Number(p.value || 0) + '" placeholder="數值" class="bg-slate-800 border border-slate-700 rounded-lg p-1.5 font-bold text-white promo-val-val">' +
+      container.innerHTML = holidays.map((h) =>
+        '<div class="grid grid-cols-3 gap-1.5 items-center bg-red-50/50 p-2 rounded-xl border border-red-200 holiday-row">' +
+          '<input type="date" value="' + escapeHtml(h.startDate || "") + '" class="border rounded-lg p-1.5 text-[11px] font-bold bg-white hol-start">' +
+          '<input type="date" value="' + escapeHtml(h.endDate || "") + '" class="border rounded-lg p-1.5 text-[11px] font-bold bg-white hol-end">' +
           '<div class="flex gap-1">' +
-            '<input type="number" value="' + Number(p.minSpend || 0) + '" placeholder="低消" class="bg-slate-800 border border-slate-700 rounded-lg p-1.5 font-bold text-white w-full promo-min-val">' +
-            '<button type="button" class="remove-promo-btn bg-red-900/70 text-red-200 px-2.5 py-1 rounded-lg font-extrabold shrink-0">✕</button>' +
+            '<input type="text" value="' + escapeHtml(h.note || "") + '" placeholder="原因(如烘豆公休)" class="border rounded-lg p-1.5 text-[11px] font-bold bg-white w-full hol-note">' +
+            '<button type="button" class="remove-holiday-btn bg-red-100 text-red-600 px-2 rounded-lg font-extrabold">✕</button>' +
           '</div>' +
         '</div>'
       ).join("");
     }
 
-    // ==================== 5. 綁定所有按鈕事件委派 (零引號衝突) ====================
+    function renderPromoCodesList(promos) {
+      const container = document.getElementById("promo-codes-list");
+      if (!promos || promos.length === 0) {
+        container.innerHTML = '<p class="text-xs text-gray-400">目前尚無優惠碼，可點擊右上角「＋ 新增優惠碼」。</p>';
+        return;
+      }
+      container.innerHTML = promos.map((p) =>
+        '<div class="grid grid-cols-4 gap-2 bg-gray-50 p-2.5 rounded-xl border text-xs items-center promo-row">' +
+          '<input type="text" value="' + escapeHtml(p.code || "") + '" placeholder="代碼(如VIP90)" class="border rounded-lg p-1.5 font-extrabold uppercase bg-white promo-code-val">' +
+          '<select class="border rounded-lg p-1.5 font-bold bg-white promo-type-val">' +
+            '<option value="fixed" ' + (p.type === "fixed" ? "selected" : "") + '>折現($)</option>' +
+            '<option value="percent" ' + (p.type === "percent" ? "selected" : "") + '>打折(%)</option>' +
+          '</select>' +
+          '<input type="number" value="' + Number(p.value || 0) + '" placeholder="數值" class="border rounded-lg p-1.5 font-bold bg-white promo-val-val">' +
+          '<div class="flex gap-1">' +
+            '<input type="number" value="' + Number(p.minSpend || 0) + '" placeholder="低消" class="border rounded-lg p-1.5 font-bold bg-white w-full promo-min-val">' +
+            '<button type="button" class="remove-promo-btn bg-red-100 text-red-600 px-2.5 py-1 rounded-lg font-extrabold shrink-0">✕</button>' +
+          '</div>' +
+        '</div>'
+      ).join("");
+    }
+
+    // ==================== 4. 所有按鈕事件綁定 ====================
     document.getElementById("voice-toggle-btn").addEventListener("click", () => {
       const btn = document.getElementById("voice-toggle-btn");
       isVoiceEnabled = !isVoiceEnabled;
       if (isVoiceEnabled) {
-        btn.className = "bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-extrabold shadow transition";
+        btn.className = "bg-emerald-500 text-white px-3 py-1.5 rounded-xl text-xs font-extrabold shadow transition";
         btn.innerText = "🔊 語音播報：已開啟";
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         if (audioCtx.state === "suspended") audioCtx.resume();
         speakText("吧台語音播報已開啟");
       } else {
-        btn.className = "bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold transition";
+        btn.className = "bg-white/15 hover:bg-white/25 text-white px-3 py-1.5 rounded-xl text-xs font-extrabold transition";
         btn.innerText = "🔊 語音播報：已關閉 (點擊開啟)";
       }
     });
 
     document.getElementById("pause-store-btn").addEventListener("click", async () => {
-      try {
-        const pauseUntil = Number(latestStoreSettings.pauseUntil || 0);
-        if (pauseUntil > Date.now()) {
-          await setDoc(doc(db, "settings", "store"), { pauseUntil: 0 }, { merge: true });
-          alert("🟢 已立即恢復正常線上接單！");
-        } else {
-          const targetTime = Date.now() + 15 * 60 * 1000;
-          await setDoc(doc(db, "settings", "store"), { pauseUntil: targetTime }, { merge: true });
-          alert("⏸️ 已啟動「暫停即時接單 15 分鐘」！\n期間客人仍可預訂明日取餐，15 分鐘後將自動恢復。");
-        }
-      } catch (e) {
-        alert("設定失敗：" + e.message);
+      const pauseUntil = Number(latestStoreSettings.pauseUntil || 0);
+      if (pauseUntil > Date.now()) {
+        await setDoc(doc(db, "settings", "store"), { pauseUntil: 0 }, { merge: true });
+        alert("🟢 已立即恢復正常線上接單！");
+      } else {
+        const targetTime = Date.now() + 15 * 60 * 1000;
+        await setDoc(doc(db, "settings", "store"), { pauseUntil: targetTime }, { merge: true });
+        alert("⏸️ 已啟動「暫停即時接單 15 分鐘」！期間客人仍可預訂明日取餐。");
       }
     });
 
     document.querySelectorAll(".tab-switch-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         const tabName = btn.getAttribute("data-tab");
-        ["orders", "menu", "settings"].forEach((t) => {
+        ["orders", "menu", "schedule", "promo"].forEach((t) => {
           document.getElementById("tab-" + t).classList.toggle("hidden", t !== tabName);
           const b = document.getElementById("tab-btn-" + t);
           b.className = (t === tabName)
-            ? "tab-switch-btn px-4 py-2 rounded-xl text-xs font-extrabold bg-[#213c64] text-white shadow"
-            : "tab-switch-btn px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300";
+            ? "tab-switch-btn px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#213c64] text-white shadow"
+            : "tab-switch-btn px-4 py-2.5 rounded-xl text-xs font-extrabold bg-white text-gray-700 border";
         });
         if (tabName === "menu") loadAdminMenu();
       });
@@ -745,8 +1093,8 @@
         currentFilter = btn.getAttribute("data-filter");
         document.querySelectorAll(".filter-order-btn").forEach((b) => {
           b.className = (b.getAttribute("data-filter") === currentFilter)
-            ? "filter-order-btn px-3 py-1.5 rounded-xl bg-slate-700 font-extrabold border border-slate-500 text-white"
-            : "filter-order-btn px-3 py-1.5 rounded-xl bg-slate-800 font-bold border border-slate-700 text-slate-400";
+            ? "filter-order-btn px-3 py-1.5 rounded-xl bg-[#213c64] text-white font-extrabold"
+            : "filter-order-btn px-3 py-1.5 rounded-xl bg-white border text-gray-700 font-bold";
         });
         renderOrders();
       });
@@ -755,12 +1103,22 @@
     document.getElementById("orders-container").addEventListener("click", (e) => {
       const btn = e.target.closest(".order-action-btn");
       if (!btn) return;
-      const action = btn.getAttribute("data-action");
-      const id = btn.getAttribute("data-id");
-      handleOrderAction(action, id);
+      handleOrderAction(btn.getAttribute("data-action"), btn.getAttribute("data-id"));
     });
 
     document.getElementById("reload-menu-btn").addEventListener("click", loadAdminMenu);
+
+    document.getElementById("add-category-btn").addEventListener("click", async () => {
+      const catName = prompt("請輸入新分類名稱（例如：季節限定、手作甜點）：");
+      if (!catName || !catName.trim()) return;
+      const newOrder = adminCatalog.length + 1;
+      await addDoc(collection(db, "menu"), {
+        category: catName.trim(),
+        order: newOrder,
+        items: []
+      });
+      await loadAdminMenu();
+    });
 
     document.getElementById("admin-menu-container").addEventListener("click", async (e) => {
       const btn = e.target.closest(".menu-item-btn");
@@ -769,26 +1127,240 @@
       const cIdx = Number(btn.getAttribute("data-cidx"));
       const iIdx = Number(btn.getAttribute("data-iidx"));
       const cat = adminCatalog[cIdx];
-      if (!cat || !cat.items[iIdx]) return;
+      if (!cat) return;
 
-      if (act === "soldout") cat.items[iIdx].soldOut = !cat.items[iIdx].soldOut;
-      if (act === "upsell") cat.items[iIdx].isUpsell = !cat.items[iIdx].isUpsell;
+      if (act === "add-item") {
+        openItemEditorModal(cIdx, -1);
+      } else if (act === "edit-item") {
+        openItemEditorModal(cIdx, iIdx);
+      } else if (act === "soldout") {
+        cat.items[iIdx].soldOut = !cat.items[iIdx].soldOut;
+        renderAdminMenu();
+        await setDoc(doc(db, "menu", cat.docId), { items: cat.items }, { merge: true });
+      }
+    });
+
+    // 單品編輯器內部事件
+    document.getElementById("close-item-editor-x").addEventListener("click", () => {
+      document.getElementById("item-editor-modal").classList.add("hidden");
+    });
+    document.getElementById("cancel-item-editor-btn").addEventListener("click", () => {
+      document.getElementById("item-editor-modal").classList.add("hidden");
+    });
+
+    document.getElementById("ed-clear-drink-opts").addEventListener("click", () => {
+      ["ed-opt-ice", "ed-opt-hot", "ed-opt-ice-level", "ed-opt-bean5", "ed-opt-bean1",
+       "ed-opt-sugar-free", "ed-opt-sugar-micro", "ed-opt-sugar-half", "ed-opt-sugar-normal",
+       "ed-addon-shot", "ed-addon-oat", "ed-addon-cocoa", "ed-addon-brownsugar", "ed-addon-cinnamon"].forEach((id) => {
+        document.getElementById(id).checked = false;
+      });
+    });
+
+    document.getElementById("ed-check-all-sugars").addEventListener("click", () => {
+      ["ed-opt-sugar-free", "ed-opt-sugar-micro", "ed-opt-sugar-half", "ed-opt-sugar-normal"].forEach((id) => {
+        document.getElementById(id).checked = true;
+      });
+    });
+
+    document.getElementById("ed-add-extra-addon-btn").addEventListener("click", () => {
+      const container = document.getElementById("ed-extra-addons-list");
+      const div = document.createElement("div");
+      div.className = "flex items-center gap-2 bg-white border p-2 rounded-xl extra-addon-row";
+      div.innerHTML =
+        '<input type="checkbox" checked class="w-4 h-4 accent-[#213c64] extra-addon-enabled">' +
+        '<input type="text" placeholder="自訂加購名稱 (例：加濃縮、換鮮奶)" class="flex-1 border rounded-lg px-2 py-1 font-bold extra-addon-name">' +
+        '<span class="text-[10px] text-gray-400">+NT$</span>' +
+        '<input type="number" value="0" class="w-16 border rounded-lg p-1 text-center font-bold extra-addon-price">' +
+        '<button type="button" class="remove-extra-addon-btn text-red-500 font-extrabold px-2">✕</button>';
+      container.appendChild(div);
+    });
+
+    document.getElementById("ed-extra-addons-list").addEventListener("click", (e) => {
+      const btn = e.target.closest(".remove-extra-addon-btn");
+      if (btn) btn.closest(".extra-addon-row").remove();
+    });
+
+    document.getElementById("save-item-editor-btn").addEventListener("click", async () => {
+      const name = document.getElementById("ed-name").value.trim();
+      const price = Number(document.getElementById("ed-price").value || 0);
+      if (!name) { alert("請輸入品項名稱！"); return; }
+
+      const extraAddons = [];
+      document.querySelectorAll(".extra-addon-row").forEach((r) => {
+        const aName = r.querySelector(".extra-addon-name").value.trim();
+        const aPrice = Number(r.querySelector(".extra-addon-price").value || 0);
+        const aEnabled = r.querySelector(".extra-addon-enabled").checked;
+        if (aName) extraAddons.push({ name: aName, price: aPrice, enabled: aEnabled });
+      });
+
+      const cat = adminCatalog[editingCatIdx];
+      const existingId = (editingItemIdx >= 0 && cat.items[editingItemIdx]) ? cat.items[editingItemIdx].id : ("item_" + Date.now());
+
+      const updatedItem = {
+        id: existingId,
+        name: name,
+        price: price,
+        desc: document.getElementById("ed-desc").value.trim(),
+        isUpsell: document.getElementById("ed-upsell").checked,
+        soldOut: document.getElementById("ed-soldout").checked,
+        options: {
+          ice: document.getElementById("ed-opt-ice").checked,
+          hot: document.getElementById("ed-opt-hot").checked,
+          iceLevel: document.getElementById("ed-opt-ice-level").checked,
+          bean5: document.getElementById("ed-opt-bean5").checked,
+          priceBean5: Number(document.getElementById("ed-price-bean5").value || 0),
+          bean1: document.getElementById("ed-opt-bean1").checked,
+          priceBean1: Number(document.getElementById("ed-price-bean1").value || 0),
+          sugarFree: document.getElementById("ed-opt-sugar-free").checked,
+          priceSugarFree: Number(document.getElementById("ed-price-sugar-free").value || 0),
+          sugarMicro: document.getElementById("ed-opt-sugar-micro").checked,
+          priceSugarMicro: Number(document.getElementById("ed-price-sugar-micro").value || 0),
+          sugarHalf: document.getElementById("ed-opt-sugar-half").checked,
+          priceSugarHalf: Number(document.getElementById("ed-price-sugar-half").value || 0),
+          sugarNormal: document.getElementById("ed-opt-sugar-normal").checked,
+          priceSugarNormal: Number(document.getElementById("ed-price-sugar-normal").value || 0),
+          addonShot: document.getElementById("ed-addon-shot").checked,
+          priceAddonShot: Number(document.getElementById("ed-price-shot").value || 0),
+          addonOat: document.getElementById("ed-addon-oat").checked,
+          priceAddonOat: Number(document.getElementById("ed-price-oat").value || 0),
+          addonCocoa: document.getElementById("ed-addon-cocoa").checked,
+          priceAddonCocoa: Number(document.getElementById("ed-price-cocoa").value || 0),
+          addonBrownSugar: document.getElementById("ed-addon-brownsugar").checked,
+          priceAddonBrownSugar: Number(document.getElementById("ed-price-brownsugar").value || 0),
+          addonCinnamon: document.getElementById("ed-addon-cinnamon").checked,
+          priceAddonCinnamon: Number(document.getElementById("ed-price-cinnamon").value || 0),
+          extraAddons: extraAddons
+        }
+      };
+
+      if (!Array.isArray(cat.items)) cat.items = [];
+      if (editingItemIdx === -1) {
+        cat.items.push(updatedItem);
+      } else {
+        cat.items[editingItemIdx] = updatedItem;
+      }
+
+      await setDoc(doc(db, "menu", cat.docId), { items: cat.items }, { merge: true });
+      document.getElementById("item-editor-modal").classList.add("hidden");
       renderAdminMenu();
-      await setDoc(doc(db, "menu", cat.docId), { items: cat.items }, { merge: true });
     });
 
-    document.getElementById("admin-menu-container").addEventListener("change", async (e) => {
-      const input = e.target.closest(".menu-price-input");
-      if (!input) return;
-      const cIdx = Number(input.getAttribute("data-cidx"));
-      const iIdx = Number(input.getAttribute("data-iidx"));
-      const cat = adminCatalog[cIdx];
-      if (!cat || !cat.items[iIdx]) return;
-      cat.items[iIdx].price = Number(input.value || 0);
+    document.getElementById("delete-item-btn").addEventListener("click", async () => {
+      if (editingCatIdx === null || editingItemIdx === -1) return;
+      const cat = adminCatalog[editingCatIdx];
+      if (!confirm("確定要永久刪除「" + cat.items[editingItemIdx].name + "」嗎？")) return;
+      cat.items.splice(editingItemIdx, 1);
       await setDoc(doc(db, "menu", cat.docId), { items: cat.items }, { merge: true });
+      document.getElementById("item-editor-modal").classList.add("hidden");
+      renderAdminMenu();
     });
 
-    // 訊息回傳視窗事件
+    // 營業時間、公告、店休事件
+    document.getElementById("save-schedule-btn").addEventListener("click", async () => {
+      const storeMode = document.getElementById("set-store-mode").value;
+      const weeklyHours = {};
+      document.querySelectorAll(".weekly-day-row").forEach((r) => {
+        const dKey = r.getAttribute("data-day");
+        weeklyHours[dKey] = {
+          open: r.querySelector(".day-open-chk").checked,
+          start: r.querySelector(".day-start-val").value || "07:00",
+          end: r.querySelector(".day-end-val").value || "17:30"
+        };
+      });
+      await setDoc(doc(db, "settings", "store"), { storeMode, weeklyHours }, { merge: true });
+      alert("✅ 營業模式與每週營業時間已儲存！");
+    });
+
+    document.getElementById("save-ann-btn").addEventListener("click", async () => {
+      const announcementTitle = document.getElementById("set-ann-title").value.trim();
+      const announcementText = document.getElementById("set-ann-text").value.trim();
+      await setDoc(doc(db, "settings", "store"), { announcementTitle, announcementText }, { merge: true });
+      alert("✅ 店家公告已儲存！");
+    });
+
+    document.getElementById("add-holiday-btn").addEventListener("click", () => {
+      const container = document.getElementById("holidays-list");
+      if (container.querySelector("p")) container.innerHTML = "";
+      const today = new Date().toISOString().slice(0, 10);
+      const div = document.createElement("div");
+      div.className = "grid grid-cols-3 gap-1.5 items-center bg-red-50/50 p-2 rounded-xl border border-red-200 holiday-row";
+      div.innerHTML =
+        '<input type="date" value="' + today + '" class="border rounded-lg p-1.5 text-[11px] font-bold bg-white hol-start">' +
+        '<input type="date" value="' + today + '" class="border rounded-lg p-1.5 text-[11px] font-bold bg-white hol-end">' +
+        '<div class="flex gap-1">' +
+          '<input type="text" placeholder="原因(如店休)" class="border rounded-lg p-1.5 text-[11px] font-bold bg-white w-full hol-note">' +
+          '<button type="button" class="remove-holiday-btn bg-red-100 text-red-600 px-2 rounded-lg font-extrabold">✕</button>' +
+        '</div>';
+      container.appendChild(div);
+    });
+
+    document.getElementById("holidays-list").addEventListener("click", (e) => {
+      const btn = e.target.closest(".remove-holiday-btn");
+      if (btn) btn.closest(".holiday-row").remove();
+    });
+
+    document.getElementById("save-holidays-btn").addEventListener("click", async () => {
+      const holidays = [];
+      document.querySelectorAll(".holiday-row").forEach((r) => {
+        const startDate = r.querySelector(".hol-start").value;
+        const endDate = r.querySelector(".hol-end").value;
+        const note = r.querySelector(".hol-note").value.trim();
+        if (startDate && endDate) holidays.push({ startDate, endDate, note });
+      });
+      await setDoc(doc(db, "settings", "store"), { holidays }, { merge: true });
+      alert("✅ 臨時店休設定已儲存！");
+    });
+
+    // 優惠碼與黑名單事件
+    document.getElementById("add-promo-row-btn").addEventListener("click", () => {
+      const container = document.getElementById("promo-codes-list");
+      if (container.querySelector("p")) container.innerHTML = "";
+      const div = document.createElement("div");
+      div.className = "grid grid-cols-4 gap-2 bg-gray-50 p-2.5 rounded-xl border text-xs items-center promo-row";
+      div.innerHTML =
+        '<input type="text" placeholder="代碼(如NODAY20)" class="border rounded-lg p-1.5 font-extrabold uppercase bg-white promo-code-val">' +
+        '<select class="border rounded-lg p-1.5 font-bold bg-white promo-type-val">' +
+          '<option value="fixed" selected>折現($)</option>' +
+          '<option value="percent">打折(%)</option>' +
+        '</select>' +
+        '<input type="number" placeholder="數值(如20)" class="border rounded-lg p-1.5 font-bold bg-white promo-val-val">' +
+        '<div class="flex gap-1">' +
+          '<input type="number" value="0" placeholder="低消" class="border rounded-lg p-1.5 font-bold bg-white w-full promo-min-val">' +
+          '<button type="button" class="remove-promo-btn bg-red-100 text-red-600 px-2.5 py-1 rounded-lg font-extrabold shrink-0">✕</button>' +
+        '</div>';
+      container.appendChild(div);
+    });
+
+    document.getElementById("promo-codes-list").addEventListener("click", (e) => {
+      const btn = e.target.closest(".remove-promo-btn");
+      if (btn) btn.closest(".promo-row").remove();
+    });
+
+    document.getElementById("save-promo-codes-btn").addEventListener("click", async () => {
+      const promoCodes = [];
+      document.querySelectorAll(".promo-row").forEach((r) => {
+        const code = r.querySelector(".promo-code-val").value.trim().toUpperCase();
+        const type = r.querySelector(".promo-type-val").value;
+        const value = Number(r.querySelector(".promo-val-val").value || 0);
+        const minSpend = Number(r.querySelector(".promo-min-val").value || 0);
+        if (code && value > 0) promoCodes.push({ code, type, value, minSpend, enabled: true });
+      });
+      await setDoc(doc(db, "settings", "store"), { promoCodes }, { merge: true });
+      alert("✅ 優惠碼設定已儲存！");
+    });
+
+    async function blockOrUnblockPhone(shouldBlock) {
+      const phone = document.getElementById("block-phone-input").value.trim();
+      if (!/^09\d{8}$/.test(phone)) { alert("請輸入正確的 10 碼手機號碼！"); return; }
+      await setDoc(doc(db, "blocked_phones", phone), { isBlocked: shouldBlock }, { merge: true });
+      alert(shouldBlock ? "🚫 已封鎖手機號碼：" + phone : "🟢 已解除封鎖手機號碼：" + phone);
+      document.getElementById("block-phone-input").value = "";
+    }
+
+    document.getElementById("btn-block-phone").addEventListener("click", () => blockOrUnblockPhone(true));
+    document.getElementById("btn-unblock-phone").addEventListener("click", () => blockOrUnblockPhone(false));
+
+    // 一鍵傳送提醒彈窗事件
     document.getElementById("close-reply-modal-x").addEventListener("click", () => {
       document.getElementById("reply-modal").classList.add("hidden");
     });
@@ -803,89 +1375,15 @@
     document.getElementById("send-reply-btn").addEventListener("click", async () => {
       const orderId = document.getElementById("reply-order-id").value;
       const text = document.getElementById("reply-custom-text").value.trim();
-      if (!text) { alert("請選擇或輸入要通知客人的訊息！"); return; }
+      if (!text) { alert("請輸入要通知客人的訊息！"); return; }
       const order = allOrders.find((o) => o.id === orderId);
-      try {
-        await updateDoc(doc(db, "orders", orderId), { baristaMessage: text });
-        if (order) {
-          await pushLineMessageToCustomer(order, "💬 【NODAY 吧台通知】關於您的訂單 " + (order.orderNumber || "") + "：\n" + text);
-        }
-        document.getElementById("reply-modal").classList.add("hidden");
-        alert("✅ 已傳送通知！客人點餐畫面與 LINE 將同步收到提醒。");
-      } catch (e) {
-        alert("發送失敗：" + e.message);
+      await updateDoc(doc(db, "orders", orderId), { baristaMessage: text });
+      if (order) {
+        await pushLineMessageToCustomer(order, "💬 【NODAY 吧台通知】關於您的訂單 " + (order.orderNumber || "") + "：\n" + text);
       }
+      document.getElementById("reply-modal").classList.add("hidden");
+      alert("✅ 已傳送通知！");
     });
-
-    // 營業設定與優惠碼事件
-    document.getElementById("save-store-settings-btn").addEventListener("click", async () => {
-      const storeMode = document.getElementById("set-store-mode").value;
-      const announcementTitle = document.getElementById("set-ann-title").value.trim();
-      const announcementText = document.getElementById("set-ann-text").value.trim();
-      try {
-        await setDoc(doc(db, "settings", "store"), { storeMode, announcementTitle, announcementText }, { merge: true });
-        alert("✅ 營業模式與公告已儲存並同步至前台！");
-      } catch (e) {
-        alert("儲存失敗：" + e.message);
-      }
-    });
-
-    document.getElementById("add-promo-row-btn").addEventListener("click", () => {
-      const container = document.getElementById("promo-codes-list");
-      if (container.querySelector("p")) container.innerHTML = "";
-      const div = document.createElement("div");
-      div.className = "grid grid-cols-4 gap-2 bg-slate-900 p-2.5 rounded-xl border border-slate-700 text-xs items-center promo-row";
-      div.innerHTML =
-        '<input type="text" placeholder="代碼(如NODAY20)" class="bg-slate-800 border border-slate-700 rounded-lg p-1.5 font-extrabold uppercase text-white promo-code-val">' +
-        '<select class="bg-slate-800 border border-slate-700 rounded-lg p-1.5 font-bold text-white promo-type-val">' +
-          '<option value="fixed" selected>折現($)</option>' +
-          '<option value="percent">打折(%)</option>' +
-        '</select>' +
-        '<input type="number" placeholder="數值(如20)" class="bg-slate-800 border border-slate-700 rounded-lg p-1.5 font-bold text-white promo-val-val">' +
-        '<div class="flex gap-1">' +
-          '<input type="number" value="0" placeholder="低消" class="bg-slate-800 border border-slate-700 rounded-lg p-1.5 font-bold text-white w-full promo-min-val">' +
-          '<button type="button" class="remove-promo-btn bg-red-900/70 text-red-200 px-2.5 py-1 rounded-lg font-extrabold shrink-0">✕</button>' +
-        '</div>';
-      container.appendChild(div);
-    });
-
-    document.getElementById("promo-codes-list").addEventListener("click", (e) => {
-      const btn = e.target.closest(".remove-promo-btn");
-      if (btn) btn.closest(".promo-row").remove();
-    });
-
-    document.getElementById("save-promo-codes-btn").addEventListener("click", async () => {
-      const rows = document.querySelectorAll(".promo-row");
-      const promoCodes = [];
-      rows.forEach((r) => {
-        const code = r.querySelector(".promo-code-val").value.trim().toUpperCase();
-        const type = r.querySelector(".promo-type-val").value;
-        const value = Number(r.querySelector(".promo-val-val").value || 0);
-        const minSpend = Number(r.querySelector(".promo-min-val").value || 0);
-        if (code && value > 0) promoCodes.push({ code, type, value, minSpend, enabled: true });
-      });
-      try {
-        await setDoc(doc(db, "settings", "store"), { promoCodes: promoCodes }, { merge: true });
-        alert("✅ 優惠碼設定已成功儲存！");
-      } catch (e) {
-        alert("儲存失敗：" + e.message);
-      }
-    });
-
-    async function blockOrUnblockPhone(shouldBlock) {
-      const phone = document.getElementById("block-phone-input").value.trim();
-      if (!/^09\d{8}$/.test(phone)) { alert("請輸入正確的 10 碼手機號碼！"); return; }
-      try {
-        await setDoc(doc(db, "blocked_phones", phone), { isBlocked: shouldBlock }, { merge: true });
-        alert(shouldBlock ? "🚫 已封鎖手機號碼：" + phone : "🟢 已解除封鎖手機號碼：" + phone);
-        document.getElementById("block-phone-input").value = "";
-      } catch (e) {
-        alert("操作失敗：" + e.message);
-      }
-    }
-
-    document.getElementById("btn-block-phone").addEventListener("click", () => blockOrUnblockPhone(true));
-    document.getElementById("btn-unblock-phone").addEventListener("click", () => blockOrUnblockPhone(false));
   </script>
 </body>
 </html>
