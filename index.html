@@ -64,13 +64,13 @@
       </a>
     </div>
 
-    <!-- 非營業時間 / 暫停接單 / 開放明日預訂 提示橫幅 -->
-    <div id="closed-notice-banner" class="hidden bg-amber-50 border-2 border-amber-400 p-4 rounded-2xl shadow-sm space-y-1.5">
+    <!-- 非營業時間 / 暫停接單 提示橫幅 (僅供瀏覽) -->
+    <div id="closed-notice-banner" class="hidden bg-red-50 border-2 border-red-300 p-4 rounded-2xl shadow-sm space-y-1.5">
       <div class="flex justify-between items-center">
-        <p id="closed-notice-title" class="text-sm font-extrabold text-amber-900">🌙 目前非即時製作時段（開放明日預訂）</p>
-        <button onclick="toggleScheduleModal()" class="text-[11px] bg-white border border-amber-300 text-amber-800 px-2.5 py-1 rounded-lg font-bold">營業時間</button>
+        <p id="closed-notice-title" class="text-sm font-extrabold text-red-800">🌙 目前非營業時段（僅供瀏覽菜單）</p>
+        <button onclick="toggleScheduleModal()" class="text-[11px] bg-white border border-red-300 text-red-700 px-2.5 py-1 rounded-lg font-bold">營業時間</button>
       </div>
-      <p id="closed-notice-sub" class="text-xs text-amber-800 font-bold">現場吧台目前已休息或忙碌中，系統已自動為您切換為「🌅 預訂明日取餐」，歡迎提前下單！</p>
+      <p id="closed-notice-sub" class="text-xs text-red-700 font-bold">目前暫停線上點餐服務，您仍可瀏覽菜單與價格，請於營業時間內再行下單喔！</p>
     </div>
 
     <!-- 即時訂單狀態追蹤卡 -->
@@ -119,7 +119,7 @@
       <p id="reorder-summary" class="text-[11px] text-gray-600 font-bold"></p>
     </div>
 
-    <!-- 取餐人姓名、真實電話綁定 ＆ 預計取餐時間（含明日預訂） -->
+    <!-- 取餐人姓名、真實電話綁定 ＆ 預計取餐時間 -->
     <div class="bg-white p-3.5 rounded-2xl shadow-sm border space-y-3">
       <div class="grid grid-cols-2 gap-2.5">
         <div>
@@ -140,27 +140,17 @@
 
       <div class="pt-1 border-t">
         <label class="text-[11px] font-extrabold text-gray-600 block mb-1.5">⏰ 預計取餐時間：</label>
-        <div class="grid grid-cols-5 gap-1 text-[11px]">
-          <button type="button" onclick="selectPickupMode('現場立即製作')" id="pk-now" class="py-2 rounded-xl font-extrabold border bg-[#213c64] text-white">立即</button>
+        <div class="grid grid-cols-4 gap-1.5 text-[11px]">
+          <button type="button" onclick="selectPickupMode('現場立即製作')" id="pk-now" class="py-2 rounded-xl font-extrabold border bg-[#213c64] text-white">立即製作</button>
           <button type="button" onclick="selectPickupMode('15分鐘後取餐')" id="pk-15" class="py-2 rounded-xl font-bold border bg-gray-50 text-gray-700">15分後</button>
           <button type="button" onclick="selectPickupMode('30分鐘後取餐')" id="pk-30" class="py-2 rounded-xl font-bold border bg-gray-50 text-gray-700">30分後</button>
           <button type="button" onclick="selectPickupMode('custom')" id="pk-custom" class="py-2 rounded-xl font-bold border bg-gray-50 text-gray-700">指定時間</button>
-          <button type="button" onclick="selectPickupMode('tomorrow')" id="pk-tomorrow" class="py-2 rounded-xl font-bold border bg-amber-50 text-amber-900 border-amber-300">🌅明日預訂</button>
         </div>
 
         <!-- 今日指定時間 -->
         <div id="custom-pickup-box" class="hidden mt-2 flex items-center gap-2">
           <span class="text-xs font-bold text-gray-600">今日取餐時間：</span>
           <input type="time" id="custom-pickup-time" class="border rounded-xl p-2 text-xs font-extrabold bg-gray-50 flex-1">
-        </div>
-
-        <!-- 明日預訂專屬選擇框 -->
-        <div id="tomorrow-pickup-box" class="hidden mt-2 bg-amber-50 border border-amber-300 p-2.5 rounded-xl space-y-1.5">
-          <div class="flex items-center justify-between">
-            <span id="tomorrow-date-label" class="text-[11px] font-extrabold text-amber-900">🌅 預訂明日早上/下午取餐：</span>
-            <input type="time" id="tomorrow-pickup-time" value="08:00" min="07:00" max="17:30" class="border border-amber-400 rounded-lg px-2.5 py-1 text-xs font-extrabold bg-white text-[#213c64]">
-          </div>
-          <p class="text-[10px] text-amber-800 font-bold">💡 吧台將於隔日您指定的時間前為您現磨沖煮完成！</p>
         </div>
       </div>
     </div>
@@ -177,7 +167,7 @@
         <p class="text-[11px] text-gray-500 font-bold">已選購 <span id="bottom-cart-count" class="text-[#213c64] font-extrabold">0</span> 杯</p>
         <p id="bottom-cart-total" class="text-base font-extrabold text-amber-800">NT$0</p>
       </div>
-      <button onclick="openCart()" class="bg-[#213c64] hover:bg-[#192e4d] text-white px-6 py-3 rounded-xl font-extrabold text-xs shadow-lg transition">
+      <button onclick="openCart()" id="bottom-checkout-btn" class="bg-[#213c64] hover:bg-[#192e4d] text-white px-6 py-3 rounded-xl font-extrabold text-xs shadow-lg transition">
         前往結帳送單 ➔
       </button>
     </div>
@@ -365,17 +355,6 @@
     let hasPendingUnacceptedOrder = false;
     let currentPourOverFilter = "all";
     let appliedPromo = null;
-
-    // 初始化明日日期標籤
-    function initTomorrowLabel() {
-      const tmr = new Date();
-      tmr.setDate(tmr.getDate() + 1);
-      const m = tmr.getMonth() + 1;
-      const d = tmr.getDate();
-      const wk = ["日", "一", "二", "三", "四", "五", "六"][tmr.getDay()];
-      document.getElementById('tomorrow-date-label').innerText = `🌅 預訂明日 ${m}/${d} (週${wk}) 取餐時間：`;
-    }
-    initTomorrowLabel();
 
     // ==================== 1. LINE LIFF 初始化與安全身分檢核 ====================
     async function initLiffAndMember() {
@@ -600,6 +579,10 @@
     loadLastOrderHistory();
 
     window.reorderLastItems = function() {
+      if (!isStoreCurrentlyOpen) {
+        alert(`🌙 目前為「${storeCloseReason}」，僅供瀏覽菜單，暫不開放點餐喔！`);
+        return;
+      }
       try {
         const lastItems = JSON.parse(localStorage.getItem('noday_last_order') || '[]');
         if (lastItems.length > 0) {
@@ -610,41 +593,34 @@
       } catch (e) {}
     };
 
-    // ==================== 4. 取餐時間與「明日預訂」切換 ====================
+    // ==================== 4. 取餐時間切換 ====================
     window.selectPickupMode = function(mode) {
-      if (!isStoreCurrentlyOpen && mode !== 'tomorrow') {
-        alert(`🌙 目前現場為「${storeCloseReason}」，僅開放選擇「🌅 明日預訂」喔！`);
-        mode = 'tomorrow';
-      }
       pickupMode = mode;
-      const modes = { '現場立即製作': 'pk-now', '15分鐘後取餐': 'pk-15', '30分鐘後取餐': 'pk-30', 'custom': 'pk-custom', 'tomorrow': 'pk-tomorrow' };
+      const modes = { '現場立即製作': 'pk-now', '15分鐘後取餐': 'pk-15', '30分鐘後取餐': 'pk-30', 'custom': 'pk-custom' };
       Object.entries(modes).forEach(([k, id]) => {
         const btn = document.getElementById(id);
         if (!btn) return;
         if (k === mode) {
           btn.className = "py-2 rounded-xl font-extrabold border bg-[#213c64] text-white shadow-sm";
-        } else if (k === 'tomorrow') {
-          btn.className = "py-2 rounded-xl font-bold border bg-amber-50 text-amber-900 border-amber-300";
         } else {
-          btn.className = `py-2 rounded-xl font-bold border bg-gray-50 text-gray-700 ${!isStoreCurrentlyOpen ? 'opacity-40' : ''}`;
+          btn.className = "py-2 rounded-xl font-bold border bg-gray-50 text-gray-700";
         }
       });
       document.getElementById('custom-pickup-box').classList.toggle('hidden', mode !== 'custom');
-      document.getElementById('tomorrow-pickup-box').classList.toggle('hidden', mode !== 'tomorrow');
     };
 
-    // ==================== 5. 營業狀態與「吧台暫停接單 15 分鐘」判斷 ====================
+    // ==================== 5. 營業狀態與「非營業時間僅供瀏覽」判斷 ====================
     const dayNames = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
     function evaluateOpenStatus(settings) {
       if (settings.pauseUntil && Number(settings.pauseUntil) > Date.now()) {
         const resumeDate = new Date(Number(settings.pauseUntil));
         const resumeStr = `${String(resumeDate.getHours()).padStart(2, '0')}:${String(resumeDate.getMinutes()).padStart(2, '0')}`;
-        return { isOpen: false, isPaused: true, reason: `🔥 吧台現場沖煮忙碌中（預計 ${resumeStr} 恢復即時接單）` };
+        return { isOpen: false, isPaused: true, reason: `🔥 吧台現場沖煮忙碌中（預計 ${resumeStr} 恢復接單）` };
       }
 
       const mode = settings.storeMode || 'auto';
       if (mode === 'open') return { isOpen: true, reason: '外帶自取・營業接單中' };
-      if (mode === 'closed') return { isOpen: false, reason: '目前店家休息中（可預訂明日取餐）' };
+      if (mode === 'closed') return { isOpen: false, reason: '目前店家休息中（僅供瀏覽菜單）' };
 
       const now = new Date();
       const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -652,12 +628,12 @@
       const dayIdx = String(now.getDay());
 
       const matchedHoliday = (settings.holidays || []).find(h => todayStr >= h.startDate && todayStr <= h.endDate);
-      if (matchedHoliday) return { isOpen: false, reason: `今日店休（${matchedHoliday.note || '公休'}，可預訂明日）` };
+      if (matchedHoliday) return { isOpen: false, reason: `今日店休（${matchedHoliday.note || '公休'}，僅供瀏覽菜單）` };
 
       const wh = settings.weeklyHours || {};
       const dayCfg = wh[dayIdx] || { open: true, start: "07:00", end: "17:00" };
-      if (!dayCfg.open) return { isOpen: false, reason: `今日固定公休（可預訂明日取餐）` };
-      if (timeStr < dayCfg.start || timeStr > dayCfg.end) return { isOpen: false, reason: '目前非營業時間（開放明日預訂）' };
+      if (!dayCfg.open) return { isOpen: false, reason: `今日固定公休（僅供瀏覽菜單）` };
+      if (timeStr < dayCfg.start || timeStr > dayCfg.end) return { isOpen: false, reason: `目前非營業時間 (${dayCfg.start}-${dayCfg.end})・僅供瀏覽` };
       return { isOpen: true, reason: `營業接單中（至 ${dayCfg.end}）` };
     }
 
@@ -675,13 +651,16 @@
       if (st.isOpen) {
         dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
         closedBanner.classList.add('hidden');
-        submitBtn.innerText = pickupMode === 'tomorrow' ? "🌅 確認送出明日預訂訂單" : "🚀 確認送出外帶訂單";
+        submitBtn.disabled = false;
+        submitBtn.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-extrabold text-sm shadow-lg transition";
+        submitBtn.innerText = "🚀 確認送出外帶訂單";
       } else {
-        dot.className = "w-2 h-2 rounded-full bg-amber-400";
+        dot.className = "w-2 h-2 rounded-full bg-red-400";
         closedBanner.classList.remove('hidden');
-        closedTitle.innerText = st.isPaused ? st.reason : "🌙 目前非即時製作時段（開放明日預訂）";
-        selectPickupMode('tomorrow');
-        submitBtn.innerText = "🌅 確認送出明日預訂訂單";
+        closedTitle.innerText = st.isPaused ? st.reason : "🌙 目前非營業時段（僅供瀏覽菜單）";
+        submitBtn.disabled = true;
+        submitBtn.className = "w-full bg-gray-400 text-white py-3.5 rounded-xl font-extrabold text-sm cursor-not-allowed";
+        submitBtn.innerText = "🌙 目前非營業時間・暫停點餐";
       }
     }
 
@@ -715,7 +694,7 @@
       modal.classList.toggle('hidden');
     };
 
-    // ==================== 6. 菜單載入 ＆ 單品手沖「4 大烘焙度篩選 + 風味小卡」（不跳出拿鐵） ====================
+    // ==================== 6. 菜單載入 ＆ 單品手沖「4 大烘焙度篩選 + 風味小卡」 ====================
     async function loadMenu() {
       try {
         const querySnapshot = await getDocs(collection(db, "menu"));
@@ -1023,6 +1002,11 @@
 
     window.confirmAddToCart = function() {
       if (!activeItem) return;
+      if (!isStoreCurrentlyOpen) {
+        alert(`🌙 目前為「${storeCloseReason}」，僅供瀏覽菜單，請於營業時間內再行點餐喔！`);
+        closeModal();
+        return;
+      }
       const modifiers = [];
       let finalUnitPrice = activeItem.price;
       const tempEl = document.querySelector('input[name="opt-temp"]:checked');
@@ -1095,6 +1079,10 @@
     }
 
     window.quickAddUpsell = function(itemId) {
+      if (!isStoreCurrentlyOpen) {
+        alert(`🌙 目前為「${storeCloseReason}」，僅供瀏覽菜單，暫不開放點餐喔！`);
+        return;
+      }
       let found = null;
       catalog.forEach(c => {
         const hit = (c.items || []).find(i => i.id === itemId);
@@ -1331,8 +1319,10 @@
 
     window.submitOrder = async function() {
       applyStoreStatusUI();
-      if (!isStoreCurrentlyOpen && pickupMode !== 'tomorrow') {
-        selectPickupMode('tomorrow');
+      if (!isStoreCurrentlyOpen) {
+        alert(`🌙 很抱歉，${storeCloseReason}，目前僅供瀏覽菜單，暫不開放線上送單喔！`);
+        closeCart();
+        return;
       }
       if (currentMemberDoc?.isBlocked) { document.getElementById('blocked-overlay').classList.remove('hidden'); closeCart(); return; }
       if (hasPendingUnacceptedOrder) { alert("⏳ 您目前有一筆訂單正在等待吧台確認接單中！\n為避免重複下單，請待吧台按下接收後再加點喔！"); closeCart(); return; }
@@ -1373,10 +1363,6 @@
         const customVal = document.getElementById('custom-pickup-time').value;
         if (!customVal) { alert('請選擇您的今日指定取餐時間！'); closeCart(); return; }
       }
-      if (pickupMode === 'tomorrow') {
-        const tmrVal = document.getElementById('tomorrow-pickup-time').value;
-        if (!tmrVal) { alert('請選擇您的明日預訂取餐時間！'); closeCart(); return; }
-      }
 
       if (!currentMemberDoc?.phoneLocked) {
         closeCart();
@@ -1402,15 +1388,8 @@
       const taxId = document.getElementById('tax-id-input').value.trim();
 
       let finalPickupTime = pickupMode;
-      let isPreorderTomorrow = false;
       if (pickupMode === 'custom') {
         finalPickupTime = `今日 ${document.getElementById('custom-pickup-time').value} 取餐`;
-      } else if (pickupMode === 'tomorrow') {
-        const tmr = new Date();
-        tmr.setDate(tmr.getDate() + 1);
-        const dateStr = `${tmr.getMonth() + 1}/${tmr.getDate()}`;
-        finalPickupTime = `🌅 明日預訂 (${dateStr} ${document.getElementById('tomorrow-pickup-time').value} 取餐)`;
-        isPreorderTomorrow = true;
       }
 
       try {
@@ -1449,9 +1428,9 @@
 
         const orderPayload = {
           orderNumber: orderNumber,
-          orderType: isPreorderTomorrow ? "明日預訂" : "外帶自取",
-          isPreorderTomorrow: isPreorderTomorrow,
-          isPreorder: isPreorderTomorrow,
+          orderType: "外帶自取",
+          isPreorderTomorrow: false,
+          isPreorder: false,
           pickupTime: finalPickupTime,
           customerName: customerName,
           customerPhone: cleanPhone,
