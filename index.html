@@ -155,7 +155,9 @@
       </div>
     </div>
 
-    <div id="category-tabs" class="flex gap-2 overflow-x-auto py-1 sticky top-[68px] bg-gray-50/95 backdrop-blur z-20 no-scrollbar"></div>
+    <!-- 改為自動換行、不需要左右滑動的分類導覽列 -->
+    <div id="category-tabs" class="flex flex-wrap gap-1.5 py-1 sticky top-[68px] bg-gray-50/95 backdrop-blur z-20"></div>
+    
     <div id="menu-container" class="space-y-6">
       <p class="text-center text-gray-400 py-10 text-xs">正在載入雲端菜單...</p>
     </div>
@@ -773,8 +775,10 @@
     function renderMenu() {
       const tabs = document.getElementById('category-tabs');
       const container = document.getElementById('menu-container');
+      
+      // 改為 flex-wrap 自動換行顯示分類按鈕
       tabs.innerHTML = catalog.map((cat, idx) => `
-        <button onclick="scrollToCat('${cat.category}')" class="whitespace-nowrap px-3.5 py-1.5 rounded-xl text-xs font-bold ${idx === 0 && currentPourOverFilter === 'all' ? 'bg-[#213c64] text-white' : 'bg-white text-gray-700 border'} shadow-sm">
+        <button onclick="scrollToCat('${cat.category}')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${idx === 0 && currentPourOverFilter === 'all' ? 'bg-[#213c64] text-white' : 'bg-white text-gray-700 border'} shadow-sm">
           ${cat.category}
         </button>
       `).join('');
@@ -787,12 +791,12 @@
         const isPourOver = cat.category.includes('手沖') || cat.category.includes('PourOver');
         const filterBarHtml = isPourOver ? `
           <div class="space-y-1.5">
-            <div class="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
-              <button onclick="setPourOverFilter('all')" class="px-3 py-1.5 rounded-lg text-[11px] font-extrabold border shrink-0 transition ${currentPourOverFilter === 'all' ? 'bg-[#213c64] text-white border-[#213c64]' : 'bg-white text-gray-600'}">全部豆單</button>
-              <button onclick="setPourOverFilter('淺焙')" class="px-3 py-1.5 rounded-lg text-[11px] font-extrabold border shrink-0 transition ${currentPourOverFilter === '淺焙' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-600'}">淺焙</button>
-              <button onclick="setPourOverFilter('中淺焙')" class="px-3 py-1.5 rounded-lg text-[11px] font-extrabold border shrink-0 transition ${currentPourOverFilter === '中淺焙' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-600'}">中淺焙</button>
-              <button onclick="setPourOverFilter('中烘焙')" class="px-3 py-1.5 rounded-lg text-[11px] font-extrabold border shrink-0 transition ${currentPourOverFilter === '中烘焙' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-600'}">中烘焙</button>
-              <button onclick="setPourOverFilter('中深烘焙')" class="px-3 py-1.5 rounded-lg text-[11px] font-extrabold border shrink-0 transition ${currentPourOverFilter === '中深烘焙' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-600'}">中深烘焙</button>
+            <div class="flex flex-wrap gap-1.5 pb-1">
+              <button onclick="setPourOverFilter('all')" class="px-3 py-1.5 rounded-lg text-[11px] font-extrabold border transition ${currentPourOverFilter === 'all' ? 'bg-[#213c64] text-white border-[#213c64]' : 'bg-white text-gray-600'}">全部豆單</button>
+              <button onclick="setPourOverFilter('淺焙')" class="px-3 py-1.5 rounded-lg text-[11px] font-extrabold border transition ${currentPourOverFilter === '淺焙' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-600'}">淺焙</button>
+              <button onclick="setPourOverFilter('中淺焙')" class="px-3 py-1.5 rounded-lg text-[11px] font-extrabold border transition ${currentPourOverFilter === '中淺焙' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-600'}">中淺焙</button>
+              <button onclick="setPourOverFilter('中烘焙')" class="px-3 py-1.5 rounded-lg text-[11px] font-extrabold border transition ${currentPourOverFilter === '中烘焙' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-600'}">中烘焙</button>
+              <button onclick="setPourOverFilter('中深烘焙')" class="px-3 py-1.5 rounded-lg text-[11px] font-extrabold border transition ${currentPourOverFilter === '中深烘焙' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-600'}">中深烘焙</button>
             </div>
             ${currentPourOverFilter !== 'all' ? `
               <div class="flex items-center justify-between bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl text-[11px]">
