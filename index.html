@@ -30,7 +30,7 @@
   </div>
 
   <!-- 頂部品牌列 -->
-  <header class="bg-[#213c64] text-white p-4 shadow-md sticky top-0 z-30">
+  <header id="main-header" class="bg-[#213c64] text-white p-4 shadow-md sticky top-0 z-30">
     <div class="max-w-md mx-auto flex justify-between items-center">
       <div>
         <h1 class="text-lg font-extrabold tracking-wide">NODAY Coffee Roasters</h1>
@@ -155,10 +155,10 @@
       </div>
     </div>
 
-    <!-- 改為自動換行、不需要左右滑動的分類導覽列 -->
-    <div id="category-tabs" class="flex flex-wrap gap-1.5 py-1 sticky top-[68px] bg-gray-50/95 backdrop-blur z-20"></div>
+    <!-- 修正頂部切字與背景遮擋的分類導覽列 -->
+    <div id="category-tabs" class="flex flex-wrap gap-1.5 py-2.5 px-1 -mx-1 sticky top-[72px] bg-gray-50/95 backdrop-blur-md z-20 border-b border-gray-200/80 shadow-sm"></div>
     
-    <div id="menu-container" class="space-y-6">
+    <div id="menu-container" class="space-y-6 pt-1">
       <p class="text-center text-gray-400 py-10 text-xs">正在載入雲端菜單...</p>
     </div>
   </main>
@@ -356,6 +356,7 @@
     let currentMemberDoc = null;
     let hasPendingUnacceptedOrder = false;
     let currentPourOverFilter = "all";
+    let activeCategory = "";
     let appliedPromo = null;
 
     // ==================== 1. LINE LIFF 初始化與安全身分檢核 ====================
@@ -696,7 +697,7 @@
       modal.classList.toggle('hidden');
     };
 
-    // ==================== 6. 菜單載入 ＆ 單品手沖「4 大烘焙度篩選 + 風味小卡」 ====================
+    // ==================== 6. 菜單載入 ＆ 分類按鈕動態變色 ====================
     async function loadMenu() {
       try {
         const querySnapshot = await getDocs(collection(db, "menu"));
@@ -704,6 +705,9 @@
         catalog = [];
         querySnapshot.forEach(d => catalog.push(d.data()));
         catalog.sort((a, b) => a.order - b.order);
+        if (catalog.length > 0 && !activeCategory) {
+          activeCategory = catalog[0].category;
+        }
         renderMenu();
       } catch (e) { console.error(e); }
     }
@@ -734,6 +738,8 @@
 
     window.setPourOverFilter = function(filterType) {
       currentPourOverFilter = filterType;
+      const pourOverCat = catalog.find(c => c.category.includes('手沖') || c.category.includes('PourOver'));
+      if (pourOverCat) activeCategory = pourOverCat.category;
       renderMenu();
       const pourOverEl = document.querySelector('[id^="cat-單品手沖"]');
       if (pourOverEl) {
@@ -772,16 +778,22 @@
       return `<p class="text-[11px] text-gray-500 leading-relaxed">${desc}</p>`;
     }
 
-    function renderMenu() {
+    function updateCategoryTabsUI() {
       const tabs = document.getElementById('category-tabs');
+      if (!tabs) return;
+      tabs.innerHTML = catalog.map((cat) => {
+        const isActive = (cat.category === activeCategory);
+        return `
+          <button type="button" onclick="scrollToCat('${cat.category}')" class="px-3 py-1.5 rounded-xl text-xs font-extrabold transition shadow-sm ${isActive ? 'bg-[#213c64] text-white border border-[#213c64]' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-100'}">
+            ${cat.category}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function renderMenu() {
       const container = document.getElementById('menu-container');
-      
-      // 改為 flex-wrap 自動換行顯示分類按鈕
-      tabs.innerHTML = catalog.map((cat, idx) => `
-        <button onclick="scrollToCat('${cat.category}')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${idx === 0 && currentPourOverFilter === 'all' ? 'bg-[#213c64] text-white' : 'bg-white text-gray-700 border'} shadow-sm">
-          ${cat.category}
-        </button>
-      `).join('');
+      updateCategoryTabsUI();
 
       const visibleCategories = currentPourOverFilter === 'all'
         ? catalog
@@ -810,7 +822,7 @@
         const filteredItems = isPourOver ? cat.items.filter(i => matchPourOverFilter(i, currentPourOverFilter)) : cat.items;
 
         return `
-        <div id="cat-${cat.category}" class="space-y-2.5 scroll-mt-28">
+        <div id="cat-${cat.category}" data-cat-section="${cat.category}" class="space-y-2.5 scroll-mt-52">
           <h2 class="font-extrabold text-sm text-[#213c64] border-b pb-1.5">${cat.category}</h2>
           ${filterBarHtml}
           <div class="grid grid-cols-1 gap-2.5">
@@ -836,14 +848,46 @@
       `}).join('');
     }
 
+    let isManualScrolling = false;
     window.scrollToCat = function(catName) {
+      activeCategory = catName;
       if (currentPourOverFilter !== 'all') {
         currentPourOverFilter = 'all';
         renderMenu();
+      } else {
+        updateCategoryTabsUI();
       }
       const targetEl = document.getElementById(`cat-${catName}`);
-      if (targetEl) targetEl.scrollIntoView({ behavior: 'smooth' });
+      if (targetEl) {
+        isManualScrolling = true;
+        const headerH = document.getElementById('main-header')?.offsetHeight || 72;
+        const tabsH = document.getElementById('category-tabs')?.offsetHeight || 110;
+        const topPos = targetEl.getBoundingClientRect().top + window.scrollY - headerH - tabsH - 12;
+        window.scrollTo({ top: Math.max(0, topPos), behavior: 'smooth' });
+        setTimeout(() => { isManualScrolling = false; }, 700);
+      }
     };
+
+    // 手指上下滑動瀏覽時，自動將對應分類按鈕變成深藍色
+    window.addEventListener('scroll', () => {
+      if (isManualScrolling || currentPourOverFilter !== 'all') return;
+      const headerH = document.getElementById('main-header')?.offsetHeight || 72;
+      const tabsH = document.getElementById('category-tabs')?.offsetHeight || 110;
+      const threshold = headerH + tabsH + 35;
+
+      let currentCat = activeCategory;
+      document.querySelectorAll('[data-cat-section]').forEach(sec => {
+        const rect = sec.getBoundingClientRect();
+        if (rect.top <= threshold) {
+          currentCat = sec.getAttribute('data-cat-section');
+        }
+      });
+
+      if (currentCat && currentCat !== activeCategory) {
+        activeCategory = currentCat;
+        updateCategoryTabsUI();
+      }
+    }, { passive: true });
 
     // ==================== 7. 熟客「我的專屬口味」記憶功能 ====================
     function refreshTasteMemoryBar() {
